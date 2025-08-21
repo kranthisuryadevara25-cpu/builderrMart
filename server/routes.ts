@@ -7,6 +7,9 @@ import { insertUserSchema, insertCategorySchema, insertProductSchema, updateCate
 import { z } from "zod";
 import { AIEstimationService } from "./aiEstimation";
 import { ObjectStorageService } from "./objectStorage";
+import { initializeDummyData } from "./seedData";
+import { AIRecommendationService } from "./aiRecommendations";
+import { DynamicPricingEngine } from "./pricingEngine";
 
 declare module "express-session" {
   interface SessionData {
@@ -15,6 +18,11 @@ declare module "express-session" {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize dummy data
+  setTimeout(() => {
+    initializeDummyData();
+  }, 2000);
+
   // Session middleware
   app.use(session({
     secret: process.env.SESSION_SECRET || 'buildmart-ai-secret',
@@ -135,9 +143,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI Construction Estimation Routes
+  // AI Services
   const aiEstimationService = new AIEstimationService();
   const objectStorageService = new ObjectStorageService();
+  const aiRecommendationService = new AIRecommendationService();
+  const pricingEngine = new DynamicPricingEngine();
 
   // Get upload URL for construction images
   app.post("/api/construction/upload-url", requireAuth, async (req, res) => {
@@ -352,6 +362,259 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Product deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Enhanced E-commerce Routes
+
+  // AI Recommendations
+  app.get("/api/products/featured", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 8;
+      const featured = await aiRecommendationService.getFeaturedProducts(limit);
+      res.json(featured);
+    } catch (error: any) {
+      console.error("Error getting featured products:", error);
+      res.status(500).json({ message: "Failed to get featured products" });
+    }
+  });
+
+  app.get("/api/products/trending", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 6;
+      const trending = await aiRecommendationService.getTrendingProducts(limit);
+      res.json(trending);
+    } catch (error: any) {
+      console.error("Error getting trending products:", error);
+      res.status(500).json({ message: "Failed to get trending products" });
+    }
+  });
+
+  app.post("/api/products/recommendations", requireAuth, async (req, res) => {
+    try {
+      const { categoryId, currentProductId, userBehavior, contextualData } = req.body;
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      const recommendations = await aiRecommendationService.getProductRecommendations({
+        userId: req.user?.id,
+        categoryId,
+        currentProductId,
+        userBehavior,
+        contextualData
+      }, limit);
+      
+      res.json(recommendations);
+    } catch (error: any) {
+      console.error("Error getting recommendations:", error);
+      res.status(500).json({ message: "Failed to get recommendations" });
+    }
+  });
+
+  // Dynamic Pricing Routes
+  app.post("/api/pricing/calculate", requireAuth, async (req, res) => {
+    try {
+      const { productId, quantity, location, deliveryDate, userType, paymentMethod, urgency } = req.body;
+      
+      if (!productId || !quantity) {
+        return res.status(400).json({ message: "Product ID and quantity are required" });
+      }
+
+      const pricing = await pricingEngine.calculateProductPricing(productId, {
+        quantity: parseInt(quantity),
+        location,
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
+        userType,
+        paymentMethod,
+        urgency
+      });
+      
+      res.json(pricing);
+    } catch (error: any) {
+      console.error("Error calculating pricing:", error);
+      res.status(500).json({ message: "Failed to calculate pricing: " + error.message });
+    }
+  });
+
+  app.post("/api/quotations/generate", requireAuth, async (req, res) => {
+    try {
+      const { items, customerName, customerEmail, deliveryAddress, location, userType, urgency } = req.body;
+      
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Items array is required" });
+      }
+
+      const quotation = await pricingEngine.generateQuotation(items, {
+        customerName,
+        customerEmail,
+        deliveryAddress,
+        location,
+        userType,
+        urgency
+      });
+      
+      res.json(quotation);
+    } catch (error: any) {
+      console.error("Error generating quotation:", error);
+      res.status(500).json({ message: "Failed to generate quotation: " + error.message });
+    }
+  });
+
+  app.get("/api/pricing/market-analysis/:productId", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const analysis = await pricingEngine.getMarketPriceAnalysis(productId);
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Error getting market analysis:", error);
+      res.status(500).json({ message: "Failed to get market analysis: " + error.message });
+    }
+  });
+
+  // Enhanced Product Search and Filtering
+  app.get("/api/products/search", async (req, res) => {
+    try {
+      const { 
+        q: query, 
+        category, 
+        minPrice, 
+        maxPrice, 
+        inStock, 
+        brand, 
+        sortBy, 
+        sortOrder = 'asc',
+        page = '1',
+        limit = '20'
+      } = req.query;
+
+      let products = await storage.getProducts();
+
+      // Apply filters
+      if (query) {
+        const searchTerm = (query as string).toLowerCase();
+        products = products.filter(p => 
+          p.name.toLowerCase().includes(searchTerm) || 
+          p.description.toLowerCase().includes(searchTerm) ||
+          (p.specifications && JSON.stringify(p.specifications).toLowerCase().includes(searchTerm))
+        );
+      }
+
+      if (category) {
+        products = products.filter(p => p.categoryId === category);
+      }
+
+      if (minPrice || maxPrice) {
+        const min = minPrice ? parseFloat(minPrice as string) : 0;
+        const max = maxPrice ? parseFloat(maxPrice as string) : Infinity;
+        products = products.filter(p => {
+          const price = parseFloat(p.basePrice);
+          return price >= min && price <= max;
+        });
+      }
+
+      if (inStock === 'true') {
+        products = products.filter(p => (p.stockQuantity || 0) > 0);
+      }
+
+      if (brand) {
+        products = products.filter(p => {
+          const specs = p.specifications as any;
+          return specs?.brand?.toLowerCase() === (brand as string).toLowerCase();
+        });
+      }
+
+      // Apply sorting
+      if (sortBy) {
+        products.sort((a, b) => {
+          let aVal, bVal;
+          switch (sortBy) {
+            case 'price':
+              aVal = parseFloat(a.basePrice);
+              bVal = parseFloat(b.basePrice);
+              break;
+            case 'name':
+              aVal = a.name;
+              bVal = b.name;
+              break;
+            case 'stock':
+              aVal = a.stockQuantity || 0;
+              bVal = b.stockQuantity || 0;
+              break;
+            case 'created':
+              aVal = new Date(a.createdAt || 0).getTime();
+              bVal = new Date(b.createdAt || 0).getTime();
+              break;
+            default:
+              return 0;
+          }
+          
+          if (sortOrder === 'desc') {
+            return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+          }
+          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+        });
+      }
+
+      // Apply pagination
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const startIndex = (pageNum - 1) * limitNum;
+      const endIndex = startIndex + limitNum;
+      const paginatedProducts = products.slice(startIndex, endIndex);
+
+      res.json({
+        products: paginatedProducts,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: products.length,
+          totalPages: Math.ceil(products.length / limitNum)
+        },
+        filters: {
+          totalResults: products.length,
+          appliedFilters: {
+            query: query || null,
+            category: category || null,
+            priceRange: minPrice || maxPrice ? { min: minPrice, max: maxPrice } : null,
+            brand: brand || null,
+            inStock: inStock === 'true'
+          }
+        }
+      });
+    } catch (error: any) {
+      console.error("Error searching products:", error);
+      res.status(500).json({ message: "Failed to search products" });
+    }
+  });
+
+  // Categories with hierarchy
+  app.get("/api/categories/hierarchy", async (req, res) => {
+    try {
+      const categories = await storage.getCategories();
+      
+      // Build hierarchy
+      const categoryMap = new Map();
+      const rootCategories: any[] = [];
+      
+      categories.forEach(cat => {
+        categoryMap.set(cat.id, { ...cat, children: [] });
+      });
+      
+      categories.forEach(cat => {
+        const categoryWithChildren = categoryMap.get(cat.id);
+        if (cat.parentId) {
+          const parent = categoryMap.get(cat.parentId);
+          if (parent) {
+            parent.children.push(categoryWithChildren);
+          }
+        } else {
+          rootCategories.push(categoryWithChildren);
+        }
+      });
+      
+      res.json(rootCategories);
+    } catch (error: any) {
+      console.error("Error getting category hierarchy:", error);
+      res.status(500).json({ message: "Failed to get categories" });
     }
   });
 
