@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { insertProductSchema, type InsertProduct, type Product } from "@shared/schema";
+import { insertProductSchema, type InsertProduct, type Product, type Category } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/auth-context";
@@ -86,7 +86,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
     },
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
@@ -274,6 +274,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
                             placeholder="Product description and details"
                             rows={3}
                             {...field}
+                            value={field.value || ""}
                           />
                         </FormControl>
                         <FormMessage />
@@ -317,6 +318,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
                             type="number"
                             placeholder="0"
                             {...field}
+                            value={field.value || 0}
                             onChange={(e) => field.onChange(Number(e.target.value))}
                           />
                         </FormControl>

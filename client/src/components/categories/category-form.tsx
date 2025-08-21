@@ -48,7 +48,7 @@ export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps
     },
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
@@ -139,6 +139,7 @@ export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps
                       placeholder="Category description"
                       rows={3}
                       {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />

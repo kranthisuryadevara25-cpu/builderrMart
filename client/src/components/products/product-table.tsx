@@ -48,11 +48,11 @@ export function ProductTable({ vendorId }: ProductTableProps) {
   const [pricingProduct, setPricingProduct] = useState<Product | undefined>();
   const [deletingProduct, setDeletingProduct] = useState<Product | undefined>();
 
-  const { data: products, isLoading: productsLoading } = useQuery({
+  const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["/api/products", { vendorId, categoryId: selectedCategory, search: "" }],
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 

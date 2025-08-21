@@ -36,7 +36,7 @@ export default function Categories() {
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
   const [deletingCategory, setDeletingCategory] = useState<Category | undefined>();
 
-  const { data: categories, isLoading } = useQuery({
+  const { data: categories, isLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
