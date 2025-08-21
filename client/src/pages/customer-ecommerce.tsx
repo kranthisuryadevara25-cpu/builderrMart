@@ -260,6 +260,7 @@ export default function CustomerEcommerce() {
 
   // New Search Handler
   const handleSearchChange = (value: string) => {
+    console.log('🔍 Search input:', value); // Debug log
     setSearchTerm(value);
     setIsSearching(true);
     
@@ -267,17 +268,21 @@ export default function CustomerEcommerce() {
       setSearchResults([]);
       setIsSearching(false);
       setCurrentSection('home');
+      console.log('🔍 Cleared search results');
       return;
     }
 
     // Perform search
     const term = value.toLowerCase();
+    console.log('🔍 Searching for:', term, 'in', products.length, 'products');
+    
     const results = products.filter(product => 
       product.name?.toLowerCase().includes(term) ||
       product.description?.toLowerCase().includes(term) ||
       categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase().includes(term)
     );
     
+    console.log('🔍 Found', results.length, 'results:', results.map(p => p.name));
     setSearchResults(results);
     setIsSearching(false);
     setCurrentSection('home'); // Show search results
@@ -465,7 +470,7 @@ export default function CustomerEcommerce() {
     if (product.quantitySlabs) {
       const slabs = Array.isArray(product.quantitySlabs) 
         ? product.quantitySlabs 
-        : JSON.parse(product.quantitySlabs || '[]');
+        : JSON.parse(product.quantitySlabs as string || '[]');
       
       applicableSlab = slabs.find((slab: any) => 
         qty >= slab.min_qty && qty <= slab.max_qty
@@ -614,7 +619,10 @@ export default function CustomerEcommerce() {
               type="text"
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => {
+                console.log('🔍 Input onChange triggered:', e.target.value);
+                handleSearchChange(e.target.value);
+              }}
               className="pl-10 pr-4 py-2 w-full"
             />
             {searchTerm && (
@@ -759,7 +767,7 @@ export default function CustomerEcommerce() {
             {/* Brand/Specs */}
             {product.specs && (
               <div className="flex flex-wrap gap-2 mb-3">
-                {Object.entries(typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs || {}).slice(0, 2).map(([key, value]) => (
+                {Object.entries(typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs || {}).slice(0, 2).map(([key, value]: [string, any]) => (
                   <Badge key={key} variant="outline" className="text-xs">
                     {key}: {String(value)}
                   </Badge>
