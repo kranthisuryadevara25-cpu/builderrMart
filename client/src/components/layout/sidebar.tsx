@@ -34,7 +34,7 @@ const navigation = [
   // Admin Role Navigation
   {
     name: "Admin Panel",
-    href: "/admin-panel",
+    href: "/admin",
     icon: HardHat,
     roles: ["owner_admin"],
   },

@@ -42,7 +42,8 @@ import {
   Eye,
   DollarSign,
   Layers,
-  UserCheck
+  UserCheck,
+  Star
 } from "lucide-react";
 
 export default function AdminPanel() {

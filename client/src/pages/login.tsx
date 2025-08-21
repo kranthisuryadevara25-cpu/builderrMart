@@ -17,7 +17,7 @@ export default function Login() {
     username: "",
     email: "",
     password: "",
-    role: "vendor",
+    role: "user",
   });
 
   // Redirect if already logged in
@@ -176,9 +176,8 @@ export default function Login() {
                         <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="vendor">Vendor</SelectItem>
-                        <SelectItem value="vendor_manager">Vendor Manager</SelectItem>
-                        <SelectItem value="owner_admin">Owner Admin</SelectItem>
+                        <SelectItem value="user">USERS</SelectItem>
+                        <SelectItem value="vendor">VENDORS</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

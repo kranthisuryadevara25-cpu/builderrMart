@@ -107,7 +107,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/admin-panel">
+      <Route path="/admin">
         <ProtectedRoute>
           <AdminPanel />
         </ProtectedRoute>
