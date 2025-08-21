@@ -3,7 +3,11 @@ import { createServer, type Server } from "http";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertUserSchema, insertCategorySchema, insertProductSchema, insertDiscountSchema, insertQuoteSchema, insertBookingSchema, updateCategorySchema, updateProductSchema, updateDiscountSchema, updateQuoteSchema, updateBookingSchema } from "@shared/schema";
+import { 
+  insertUserSchema, insertCategorySchema, insertProductSchema, insertDiscountSchema, insertQuoteSchema, insertBookingSchema,
+  insertMarketingMaterialSchema, insertContractorSchema, insertAdvanceSchema, insertOrderSchema, insertPricingRuleSchema,
+  updateCategorySchema, updateProductSchema, updateDiscountSchema, updateQuoteSchema, updateBookingSchema 
+} from "@shared/schema";
 import { z } from "zod";
 import { AIEstimationService } from "./aiEstimation";
 import { ObjectStorageService } from "./objectStorage";
@@ -14,6 +18,12 @@ import { DynamicPricingEngine } from "./pricingEngine";
 declare module "express-session" {
   interface SessionData {
     userId?: string;
+  }
+}
+
+declare module "express" {
+  interface Request {
+    user?: any;
   }
 }
 
@@ -57,6 +67,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next();
     };
   };
+
+  const requireAdminRole = requireRole(['owner_admin', 'vendor_manager']);
 
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
@@ -856,6 +868,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(mockBookings);
     } catch (error: any) {
       res.status(500).json({ message: 'Failed to fetch bookings' });
+    }
+  });
+
+  // Marketing Materials routes
+  app.get("/api/marketing-materials", requireAuth, async (req, res) => {
+    try {
+      const materials = await storage.getMarketingMaterials();
+      res.json(materials);
+    } catch (error) {
+      console.error("Error fetching marketing materials:", error);
+      res.status(500).json({ message: "Failed to fetch marketing materials" });
+    }
+  });
+
+  app.post("/api/marketing-materials", requireAuth, requireAdminRole, async (req, res) => {
+    try {
+      const validatedData = insertMarketingMaterialSchema.parse(req.body);
+      const material = await storage.createMarketingMaterial({ ...validatedData, createdBy: req.user.id });
+      res.status(201).json(material);
+    } catch (error) {
+      console.error("Error creating marketing material:", error);
+      res.status(400).json({ message: "Failed to create marketing material" });
+    }
+  });
+
+  app.delete("/api/marketing-materials/:id", requireAuth, requireAdminRole, async (req, res) => {
+    try {
+      const success = await storage.deleteMarketingMaterial(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Marketing material not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting marketing material:", error);
+      res.status(500).json({ message: "Failed to delete marketing material" });
+    }
+  });
+
+  // Contractors routes
+  app.get("/api/contractors", requireAuth, async (req, res) => {
+    try {
+      const contractors = await storage.getContractors();
+      res.json(contractors);
+    } catch (error) {
+      console.error("Error fetching contractors:", error);
+      res.status(500).json({ message: "Failed to fetch contractors" });
+    }
+  });
+
+  app.post("/api/contractors", requireAuth, requireAdminRole, async (req, res) => {
+    try {
+      const validatedData = insertContractorSchema.parse(req.body);
+      const contractor = await storage.createContractor(validatedData);
+      res.status(201).json(contractor);
+    } catch (error) {
+      console.error("Error creating contractor:", error);
+      res.status(400).json({ message: "Failed to create contractor" });
+    }
+  });
+
+  app.delete("/api/contractors/:id", requireAuth, requireAdminRole, async (req, res) => {
+    try {
+      const success = await storage.deleteContractor(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Contractor not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting contractor:", error);
+      res.status(500).json({ message: "Failed to delete contractor" });
+    }
+  });
+
+  // Orders and Advances routes
+  app.get("/api/orders", requireAuth, async (req, res) => {
+    try {
+      const orders = await storage.getOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/advances", requireAuth, async (req, res) => {
+    try {
+      const advances = await storage.getAdvances();
+      res.json(advances);
+    } catch (error) {
+      console.error("Error fetching advances:", error);
+      res.status(500).json({ message: "Failed to fetch advances" });
+    }
+  });
+
+  // Pricing Rules routes
+  app.get("/api/pricing-rules", requireAuth, async (req, res) => {
+    try {
+      const rules = await storage.getPricingRules();
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching pricing rules:", error);
+      res.status(500).json({ message: "Failed to fetch pricing rules" });
+    }
+  });
+
+  app.post("/api/pricing-rules", requireAuth, requireAdminRole, async (req, res) => {
+    try {
+      const validatedData = insertPricingRuleSchema.parse(req.body);
+      const rule = await storage.createPricingRule({ ...validatedData, createdBy: req.user.id });
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error creating pricing rule:", error);
+      res.status(400).json({ message: "Failed to create pricing rule" });
+    }
+  });
+
+  // Data Export routes
+  app.get("/api/export/:type", requireAuth, requireAdminRole, async (req, res) => {
+    try {
+      const { type } = req.params;
+      const { startDate, endDate } = req.query;
+      const data = await storage.getExportData(type, startDate as string, endDate as string);
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${type}_export_${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(data);
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
+  // Featured products management (admin only)
+  app.patch("/api/products/:id/featured", requireAuth, requireAdminRole, async (req, res) => {
+    try {
+      const { isFeatured } = req.body;
+      const product = await storage.updateProduct(req.params.id, { isFeatured });
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating featured status:", error);
+      res.status(500).json({ message: "Failed to update featured status" });
     }
   });
 

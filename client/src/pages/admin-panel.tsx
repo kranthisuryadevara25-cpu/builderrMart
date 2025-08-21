@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/auth-context";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
-import { type Product, type Category, type User } from "@shared/schema";
+import { type Product, type Category, type User, type MarketingMaterial, type Contractor, type Advance, type Order, type PricingRule } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,9 +58,14 @@ export default function AdminPanel() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showVendorModal, setShowVendorModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [pendingVendor, setPendingVendor] = useState<any | undefined>();
+  const [viewingItem, setViewingItem] = useState<any | undefined>();
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState('orders');
+  const [exportDateRange, setExportDateRange] = useState({ startDate: '', endDate: '' });
 
   // Category form state
   const [categoryForm, setCategoryForm] = useState({
@@ -185,6 +190,79 @@ export default function AdminPanel() {
 
   const { data: products } = useQuery<Product[]>({
     queryKey: ["/api/products"],
+  });
+
+  // New entity queries
+  const { data: marketingMaterials } = useQuery({
+    queryKey: ["/api/marketing-materials"],
+  });
+
+  const { data: contractors } = useQuery({
+    queryKey: ["/api/contractors"],
+  });
+
+  const { data: advances } = useQuery({
+    queryKey: ["/api/advances"],
+  });
+
+  const { data: orders } = useQuery({
+    queryKey: ["/api/orders"],
+  });
+
+  const { data: pricingRules } = useQuery({
+    queryKey: ["/api/pricing-rules"],
+  });
+
+  // Dynamic action handlers
+  const handleView = (item: any, type: string) => {
+    setViewingItem({ ...item, type });
+    setShowViewModal(true);
+  };
+
+  const handleDelete = (id: string, type: string) => {
+    if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
+      deleteItem.mutate({ id, type });
+    }
+  };
+
+  const deleteItem = useMutation({
+    mutationFn: async ({ id, type }: { id: string; type: string }) => {
+      const endpoints = {
+        category: "/api/categories",
+        product: "/api/products",
+        user: "/api/users",
+        'marketing-material': "/api/marketing-materials",
+        contractor: "/api/contractors",
+        advance: "/api/advances",
+        order: "/api/orders",
+        'pricing-rule': "/api/pricing-rules"
+      };
+      await apiRequest("DELETE", `${endpoints[type as keyof typeof endpoints]}/${id}`);
+    },
+    onSuccess: (_, { type }) => {
+      const queryKeys = {
+        category: ["/api/categories"],
+        product: ["/api/products"],
+        user: ["/api/users"],
+        'marketing-material': ["/api/marketing-materials"],
+        contractor: ["/api/contractors"],
+        advance: ["/api/advances"],
+        order: ["/api/orders"],
+        'pricing-rule': ["/api/pricing-rules"]
+      };
+      queryClient.invalidateQueries({ queryKey: queryKeys[type as keyof typeof queryKeys] });
+      toast({
+        title: "Success",
+        description: `${type} deleted successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete item",
+        variant: "destructive",
+      });
+    },
   });
 
   // Mock pending vendors data
@@ -388,12 +466,14 @@ export default function AdminPanel() {
         
         <div className="flex-1 overflow-auto p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="categories">Categories</TabsTrigger>
               <TabsTrigger value="products">Products</TabsTrigger>
-              <TabsTrigger value="vendors">Vendor Management</TabsTrigger>
+              <TabsTrigger value="vendors">Vendors</TabsTrigger>
               <TabsTrigger value="pricing">Pricing</TabsTrigger>
+              <TabsTrigger value="marketing">Marketing</TabsTrigger>
+              <TabsTrigger value="data">Data</TabsTrigger>
               <TabsTrigger value="platform">Platform</TabsTrigger>
             </TabsList>
 
@@ -900,7 +980,7 @@ export default function AdminPanel() {
                   <SelectValue placeholder="Select parent category (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Root Category)</SelectItem>
+                  <SelectItem value="none">None (Root Category)</SelectItem>
                   {categories?.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
@@ -1280,6 +1360,94 @@ export default function AdminPanel() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Export Data Modal */}
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Data</DialogTitle>
+            <DialogDescription>
+              Export data with date filters in JSON format
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Data Type</Label>
+              <Select value={exportType} onValueChange={setExportType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select data type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="orders">Orders</SelectItem>
+                  <SelectItem value="advances">Advances</SelectItem>
+                  <SelectItem value="quotes">Quotations</SelectItem>
+                  <SelectItem value="contractors">Contractors</SelectItem>
+                  <SelectItem value="users">Users</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <Input
+                  type="date"
+                  value={exportDateRange.startDate}
+                  onChange={(e) => setExportDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Input
+                  type="date"
+                  value={exportDateRange.endDate}
+                  onChange={(e) => setExportDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                />
+              </div>
+            </div>
+            <Button 
+              className="w-full"
+              onClick={() => {
+                const params = new URLSearchParams({
+                  ...(exportDateRange.startDate && { startDate: exportDateRange.startDate }),
+                  ...(exportDateRange.endDate && { endDate: exportDateRange.endDate })
+                });
+                window.open(`/api/export/${exportType}?${params.toString()}`, '_blank');
+                setShowExportModal(false);
+              }}
+            >
+              Export Data
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Item Modal */}
+      <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>View {viewingItem?.type}</DialogTitle>
+            <DialogDescription>
+              Detailed information about this {viewingItem?.type}
+            </DialogDescription>
+          </DialogHeader>
+          {viewingItem && (
+            <div className="space-y-4">
+              {Object.entries(viewingItem)
+                .filter(([key]) => key !== 'type')
+                .map(([key, value]) => (
+                  <div key={key} className="grid grid-cols-3 gap-4">
+                    <Label className="font-medium">{key}:</Label>
+                    <span className="col-span-2">{
+                      typeof value === 'object' 
+                        ? JSON.stringify(value, null, 2) 
+                        : String(value)
+                    }</span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

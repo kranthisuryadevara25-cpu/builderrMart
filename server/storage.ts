@@ -1,7 +1,20 @@
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, and, desc, ilike, or } from "drizzle-orm";
-import { users, categories, products, discounts, quotes, bookings, type User, type InsertUser, type UpdateUser, type Category, type InsertCategory, type UpdateCategory, type Product, type InsertProduct, type UpdateProduct, type Discount, type InsertDiscount, type UpdateDiscount, type Quote, type InsertQuote, type UpdateQuote, type Booking, type InsertBooking, type UpdateBooking } from "@shared/schema";
+import { eq, and, desc, ilike, or, gte, lte } from "drizzle-orm";
+import { 
+  users, categories, products, discounts, quotes, bookings, marketingMaterials, contractors, advances, orders, pricingRules,
+  type User, type InsertUser, type UpdateUser, 
+  type Category, type InsertCategory, type UpdateCategory, 
+  type Product, type InsertProduct, type UpdateProduct, 
+  type Discount, type InsertDiscount, type UpdateDiscount, 
+  type Quote, type InsertQuote, type UpdateQuote, 
+  type Booking, type InsertBooking, type UpdateBooking,
+  type MarketingMaterial, type InsertMarketingMaterial,
+  type Contractor, type InsertContractor,
+  type Advance, type InsertAdvance,
+  type Order, type InsertOrder,
+  type PricingRule, type InsertPricingRule
+} from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is required");
@@ -57,6 +70,44 @@ export interface IStorage {
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBooking(id: string, booking: UpdateBooking): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<boolean>;
+
+  // Marketing Materials
+  getMarketingMaterials(): Promise<MarketingMaterial[]>;
+  getMarketingMaterial(id: string): Promise<MarketingMaterial | undefined>;
+  createMarketingMaterial(material: InsertMarketingMaterial): Promise<MarketingMaterial>;
+  updateMarketingMaterial(id: string, material: Partial<InsertMarketingMaterial>): Promise<MarketingMaterial>;
+  deleteMarketingMaterial(id: string): Promise<boolean>;
+  
+  // Contractors
+  getContractors(): Promise<Contractor[]>;
+  getContractor(id: string): Promise<Contractor | undefined>;
+  createContractor(contractor: InsertContractor): Promise<Contractor>;
+  updateContractor(id: string, contractor: Partial<InsertContractor>): Promise<Contractor>;
+  deleteContractor(id: string): Promise<boolean>;
+  
+  // Advances
+  getAdvances(): Promise<Advance[]>;
+  getAdvance(id: string): Promise<Advance | undefined>;
+  createAdvance(advance: InsertAdvance): Promise<Advance>;
+  updateAdvance(id: string, advance: Partial<InsertAdvance>): Promise<Advance>;
+  deleteAdvance(id: string): Promise<boolean>;
+  
+  // Orders
+  getOrders(): Promise<Order[]>;
+  getOrder(id: string): Promise<Order | undefined>;
+  createOrder(order: InsertOrder): Promise<Order>;
+  updateOrder(id: string, order: Partial<InsertOrder>): Promise<Order>;
+  deleteOrder(id: string): Promise<boolean>;
+  
+  // Pricing Rules
+  getPricingRules(): Promise<PricingRule[]>;
+  getPricingRule(id: string): Promise<PricingRule | undefined>;
+  createPricingRule(rule: InsertPricingRule): Promise<PricingRule>;
+  updatePricingRule(id: string, rule: Partial<InsertPricingRule>): Promise<PricingRule>;
+  deletePricingRule(id: string): Promise<boolean>;
+  
+  // Data Export Functions
+  getExportData(type: string, startDate?: string, endDate?: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -260,6 +311,197 @@ export class DatabaseStorage implements IStorage {
   async deleteBooking(id: string): Promise<boolean> {
     const result = await db.delete(bookings).where(eq(bookings.id, id));
     return result.rowCount > 0;
+  }
+
+  // Marketing Materials Implementation
+  async getMarketingMaterials(): Promise<MarketingMaterial[]> {
+    return await db.select().from(marketingMaterials).orderBy(desc(marketingMaterials.createdAt));
+  }
+  
+  async getMarketingMaterial(id: string): Promise<MarketingMaterial | undefined> {
+    const result = await db.select().from(marketingMaterials).where(eq(marketingMaterials.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async createMarketingMaterial(material: InsertMarketingMaterial): Promise<MarketingMaterial> {
+    const result = await db.insert(marketingMaterials).values(material).returning();
+    return result[0];
+  }
+  
+  async updateMarketingMaterial(id: string, material: Partial<InsertMarketingMaterial>): Promise<MarketingMaterial> {
+    const result = await db
+      .update(marketingMaterials)
+      .set(material)
+      .where(eq(marketingMaterials.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteMarketingMaterial(id: string): Promise<boolean> {
+    const result = await db.delete(marketingMaterials).where(eq(marketingMaterials.id, id));
+    return result.rowCount > 0;
+  }
+  
+  // Contractors Implementation
+  async getContractors(): Promise<Contractor[]> {
+    return await db.select().from(contractors).orderBy(desc(contractors.createdAt));
+  }
+  
+  async getContractor(id: string): Promise<Contractor | undefined> {
+    const result = await db.select().from(contractors).where(eq(contractors.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async createContractor(contractor: InsertContractor): Promise<Contractor> {
+    const result = await db.insert(contractors).values(contractor).returning();
+    return result[0];
+  }
+  
+  async updateContractor(id: string, contractor: Partial<InsertContractor>): Promise<Contractor> {
+    const result = await db
+      .update(contractors)
+      .set(contractor)
+      .where(eq(contractors.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteContractor(id: string): Promise<boolean> {
+    const result = await db.delete(contractors).where(eq(contractors.id, id));
+    return result.rowCount > 0;
+  }
+  
+  // Advances Implementation
+  async getAdvances(): Promise<Advance[]> {
+    return await db.select().from(advances).orderBy(desc(advances.createdAt));
+  }
+  
+  async getAdvance(id: string): Promise<Advance | undefined> {
+    const result = await db.select().from(advances).where(eq(advances.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async createAdvance(advance: InsertAdvance): Promise<Advance> {
+    const advanceNumber = `ADV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    const result = await db.insert(advances).values({ ...advance, advanceNumber }).returning();
+    return result[0];
+  }
+  
+  async updateAdvance(id: string, advance: Partial<InsertAdvance>): Promise<Advance> {
+    const result = await db
+      .update(advances)
+      .set(advance)
+      .where(eq(advances.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteAdvance(id: string): Promise<boolean> {
+    const result = await db.delete(advances).where(eq(advances.id, id));
+    return result.rowCount > 0;
+  }
+  
+  // Orders Implementation
+  async getOrders(): Promise<Order[]> {
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+  
+  async getOrder(id: string): Promise<Order | undefined> {
+    const result = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    const result = await db.insert(orders).values({ ...order, orderNumber }).returning();
+    return result[0];
+  }
+  
+  async updateOrder(id: string, order: Partial<InsertOrder>): Promise<Order> {
+    const result = await db
+      .update(orders)
+      .set(order)
+      .where(eq(orders.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteOrder(id: string): Promise<boolean> {
+    const result = await db.delete(orders).where(eq(orders.id, id));
+    return result.rowCount > 0;
+  }
+  
+  // Pricing Rules Implementation
+  async getPricingRules(): Promise<PricingRule[]> {
+    return await db.select().from(pricingRules).orderBy(desc(pricingRules.createdAt));
+  }
+  
+  async getPricingRule(id: string): Promise<PricingRule | undefined> {
+    const result = await db.select().from(pricingRules).where(eq(pricingRules.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async createPricingRule(rule: InsertPricingRule): Promise<PricingRule> {
+    const result = await db.insert(pricingRules).values(rule).returning();
+    return result[0];
+  }
+  
+  async updatePricingRule(id: string, rule: Partial<InsertPricingRule>): Promise<PricingRule> {
+    const result = await db
+      .update(pricingRules)
+      .set(rule)
+      .where(eq(pricingRules.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deletePricingRule(id: string): Promise<boolean> {
+    const result = await db.delete(pricingRules).where(eq(pricingRules.id, id));
+    return result.rowCount > 0;
+  }
+  
+  // Data Export Implementation
+  async getExportData(type: string, startDate?: string, endDate?: string): Promise<any[]> {
+    let query;
+    const start = startDate ? new Date(startDate) : new Date('1970-01-01');
+    const end = endDate ? new Date(endDate) : new Date();
+    
+    switch (type) {
+      case 'orders':
+        query = db.select().from(orders).where(and(
+          gte(orders.createdAt, start),
+          lte(orders.createdAt, end)
+        ));
+        break;
+      case 'advances':
+        query = db.select().from(advances).where(and(
+          gte(advances.createdAt, start),
+          lte(advances.createdAt, end)
+        ));
+        break;
+      case 'quotes':
+        query = db.select().from(quotes).where(and(
+          gte(quotes.createdAt, start),
+          lte(quotes.createdAt, end)
+        ));
+        break;
+      case 'contractors':
+        query = db.select().from(contractors).where(and(
+          gte(contractors.createdAt, start),
+          lte(contractors.createdAt, end)
+        ));
+        break;
+      case 'users':
+        query = db.select().from(users).where(and(
+          gte(users.createdAt, start),
+          lte(users.createdAt, end)
+        ));
+        break;
+      default:
+        return [];
+    }
+    
+    return await query;
   }
 }
 
