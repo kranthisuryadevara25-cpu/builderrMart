@@ -81,7 +81,7 @@ interface CartItem {
 
 // Form schemas
 const quoteFormSchema = z.object({
-  productId: z.string().optional(),
+  productName: z.string().optional(),
   customerName: z.string().min(1, 'Name is required'),
   customerEmail: z.string().email('Valid email required'),
   customerPhone: z.string().min(10, 'Phone number required'),
@@ -92,7 +92,7 @@ const quoteFormSchema = z.object({
 });
 
 const bookingFormSchema = z.object({
-  productId: z.string().optional(),
+  productName: z.string().optional(),
   customerName: z.string().min(1, 'Name is required'),
   customerEmail: z.string().email('Valid email required'),
   customerPhone: z.string().min(10, 'Phone number required'),
@@ -438,7 +438,7 @@ export default function CustomerEcommerce() {
     if (product.quantitySlabs) {
       const slabs = Array.isArray(product.quantitySlabs) 
         ? product.quantitySlabs 
-        : JSON.parse(product.quantitySlabs);
+        : JSON.parse(product.quantitySlabs || '[]');
       
       applicableSlab = slabs.find((slab: any) => 
         qty >= slab.min_qty && qty <= slab.max_qty
@@ -746,7 +746,7 @@ export default function CustomerEcommerce() {
             {/* Brand/Specs */}
             {product.specs && (
               <div className="flex flex-wrap gap-2 mb-3">
-                {Object.entries(typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs).slice(0, 2).map(([key, value]) => (
+                {Object.entries(typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs || {}).slice(0, 2).map(([key, value]) => (
                   <Badge key={key} variant="outline" className="text-xs">
                     {key}: {String(value)}
                   </Badge>
@@ -1513,7 +1513,7 @@ export default function CustomerEcommerce() {
     const form = useForm({
       resolver: zodResolver(quoteFormSchema),
       defaultValues: {
-        productId: quoteProduct?.id || '',
+        productName: quoteProduct?.name || '',
         customerName: user?.username || '',
         customerEmail: user?.email || '',
         customerPhone: '',
@@ -1564,7 +1564,7 @@ export default function CustomerEcommerce() {
               {!quoteProduct && (
                 <FormField
                   control={form.control}
-                  name="productId"
+                  name="productName"
                   render={({ field }) => {
                     const filteredProducts = products.filter(product => 
                       product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
@@ -1782,6 +1782,7 @@ export default function CustomerEcommerce() {
         customerName: user?.username || '',
         customerEmail: user?.email || '',
         customerPhone: '',
+        productName: bookingProduct?.name || '',
         serviceType: 'delivery' as const,
         scheduledDate: '',
         scheduledTime: '',
@@ -1821,7 +1822,7 @@ export default function CustomerEcommerce() {
               {!bookingProduct && (
                 <FormField
                   control={form.control}
-                  name="productId"
+                  name="productName"
                   render={({ field }) => {
                     const filteredProducts = products.filter(product => 
                       product.name.toLowerCase().includes(bookingProductSearchTerm.toLowerCase())
