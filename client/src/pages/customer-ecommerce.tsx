@@ -47,10 +47,20 @@ import {
   Percent,
   Award,
   ThumbsUp,
-  Flame
+  Bot,
+  Scale,
+  Trophy,
+  Box,
+  Share2,
+  MessageCircle
 } from "lucide-react";
 import type { Product, Category } from "@shared/schema";
 import AIEstimator from "@/components/construction/AIEstimator";
+import ProductComparison from "@/components/ProductComparison";
+import AIShoppingAssistant from "@/components/AIShoppingAssistant";
+import LoyaltyProgram from "@/components/LoyaltyProgram";
+import ARProductViewer from "@/components/ARProductViewer";
+import SocialSharing from "@/components/SocialSharing";
 
 interface CartItem {
   product: Product;
@@ -87,6 +97,15 @@ export default function CustomerEcommerce() {
   // AI features
   const [showAIEstimator, setShowAIEstimator] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<Product[]>([]);
+  
+  // Advanced features
+  const [showComparison, setShowComparison] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [showLoyaltyProgram, setShowLoyaltyProgram] = useState(false);
+  const [showARViewer, setShowARViewer] = useState(false);
+  const [showSocialSharing, setShowSocialSharing] = useState(false);
+  const [comparisonProducts, setComparisonProducts] = useState<Product[]>([]);
+  const [sharingProduct, setSharingProduct] = useState<Product | null>(null);
 
   // Data fetching - Public access (no auth required)
   const { data: categories = [] } = useQuery<Category[]>({
@@ -176,6 +195,47 @@ export default function CustomerEcommerce() {
       title: "Added to Cart!",
       description: `${product.name} (${quantity}) added to your cart`,
     });
+  };
+  
+  // Advanced features helper functions
+  const addToComparison = (product: Product) => {
+    if (comparisonProducts.length >= 4) {
+      toast({
+        title: "Comparison Limit Reached",
+        description: "You can compare up to 4 products at once",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (comparisonProducts.find(p => p.id === product.id)) {
+      toast({
+        title: "Already in Comparison", 
+        description: "This product is already added for comparison",
+      });
+      return;
+    }
+    
+    setComparisonProducts(prev => [...prev, product]);
+    toast({
+      title: "Added to Comparison",
+      description: `${product.name} added to comparison list`,
+    });
+  };
+  
+  const startComparison = (products: Product[]) => {
+    setComparisonProducts(products);
+    setShowComparison(true);
+  };
+  
+  const shareProduct = (product: Product) => {
+    setSharingProduct(product);
+    setShowSocialSharing(true);
+  };
+  
+  const viewInAR = (product: Product) => {
+    setSelectedProduct(product);
+    setShowARViewer(true);
   };
 
   // Calculate bulk discount
@@ -272,7 +332,21 @@ export default function CustomerEcommerce() {
             />
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowAIAssistant(true)}>
+              <Bot className="w-4 h-4 mr-1" />
+              AI Assistant
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowLoyaltyProgram(true)}>
+              <Trophy className="w-4 h-4 mr-1" />
+              Rewards
+            </Button>
+            {comparisonProducts.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setShowComparison(true)}>
+                <Scale className="w-4 h-4 mr-1" />
+                Compare ({comparisonProducts.length})
+              </Button>
+            )}
             <Button 
               variant="outline" 
               className="relative"
@@ -388,7 +462,7 @@ export default function CustomerEcommerce() {
             {/* Brand/Specs */}
             {product.specs && (
               <div className="flex flex-wrap gap-2 mb-3">
-                {Object.entries(product.specs as any).slice(0, 2).map(([key, value]) => (
+                {Object.entries(typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs).slice(0, 2).map(([key, value]) => (
                   <Badge key={key} variant="outline" className="text-xs">
                     {key}: {String(value)}
                   </Badge>
@@ -432,28 +506,70 @@ export default function CustomerEcommerce() {
             </div>
             
             {/* Action Buttons */}
-            <div className="flex gap-2">
-              <Button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addToCart(product, bulkQuantity);
-                }}
-                className="flex-1"
-                disabled={!product.stockQuantity || product.stockQuantity <= 0}
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Add to Cart
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Quick view functionality
-                }}
-              >
-                <Eye className="w-4 h-4" />
-              </Button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToCart(product, bulkQuantity);
+                  }}
+                  className="flex-1"
+                  disabled={!product.stockQuantity || product.stockQuantity <= 0}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Add to Cart
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Quick view functionality
+                  }}
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              {/* New Feature Buttons */}
+              <div className="flex gap-1">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToComparison(product);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  <Scale className="w-3 h-3 mr-1" />
+                  Compare
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    viewInAR(product);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  <Box className="w-3 h-3 mr-1" />
+                  AR View
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    shareProduct(product);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  <Share2 className="w-3 h-3 mr-1" />
+                  Share
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -1009,6 +1125,52 @@ export default function CustomerEcommerce() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Advanced Feature Modals */}
+      <ProductComparison 
+        isOpen={showComparison}
+        onOpenChange={setShowComparison}
+        initialProducts={comparisonProducts}
+        onAddToCart={(product) => addToCart(product, 1)}
+      />
+      
+      <AIShoppingAssistant
+        isOpen={showAIAssistant}
+        onOpenChange={setShowAIAssistant}
+        onAddToCart={(product) => addToCart(product, 1)}
+        onStartComparison={startComparison}
+        currentContext={{
+          viewingCategory: selectedCategoryId || undefined,
+          viewingProduct: selectedProduct || undefined,
+          cartItems: cartItems.map(item => item.product),
+          recentSearches: [searchTerm].filter(Boolean)
+        }}
+      />
+      
+      <LoyaltyProgram
+        isOpen={showLoyaltyProgram}
+        onOpenChange={setShowLoyaltyProgram}
+        userPurchases={cartItems.length}
+        totalSpent={cartItems.reduce((total, item) => 
+          total + (parseFloat(item.product.basePrice) * item.quantity), 0
+        )}
+      />
+      
+      {selectedProduct && (
+        <ARProductViewer
+          isOpen={showARViewer}
+          onOpenChange={setShowARViewer}
+          product={selectedProduct}
+          onShare={shareProduct}
+        />
+      )}
+      
+      <SocialSharing
+        isOpen={showSocialSharing}
+        onOpenChange={setShowSocialSharing}
+        product={sharingProduct || undefined}
+        shareType="product"
+      />
     </div>
   );
 }

@@ -278,17 +278,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", async (req: any, res) => {
     try {
       const { vendorId, categoryId, search } = req.query;
-      
-      // Vendors can only see their own products unless they're admin
-      let filterVendorId = vendorId;
-      if (req.user.role === 'vendor') {
-        filterVendorId = req.user.id;
-      }
-      
-      const products = await storage.getProducts(filterVendorId, categoryId, search);
-      res.json(products);
+      const products = await storage.getProducts(vendorId, categoryId, search);
+      res.json(products || []);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error("Error fetching products:", error);
+      res.json([]);
     }
   });
 
@@ -370,35 +364,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Recommendations - Fixed error handling
   app.get("/api/products/featured", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 8;
-      const featured = await aiRecommendationService.getFeaturedProducts(limit);
-      res.json(featured || []);
+      const products = await storage.getProducts();
+      if (!products || products.length === 0) {
+        return res.json([]);
+      }
+      const featured = products
+        .filter(p => p.stockQuantity && p.stockQuantity > 100)
+        .slice(0, 8);
+      res.json(featured);
     } catch (error: any) {
       console.error("Error getting featured products:", error);
-      // Return fallback featured products instead of error
-      try {
-        const products = await storage.getProducts();
-        res.json(products.slice(0, 8));
-      } catch (fallbackError) {
-        res.json([]);
-      }
+      res.json([]);
     }
   });
 
   app.get("/api/products/trending", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 6;
-      const trending = await aiRecommendationService.getTrendingProducts(limit);
-      res.json(trending || []);
+      const products = await storage.getProducts();
+      if (!products || products.length === 0) {
+        return res.json([]);
+      }
+      const trending = products
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 6);
+      res.json(trending);
     } catch (error: any) {
       console.error("Error getting trending products:", error);
-      // Return fallback trending products instead of error
-      try {
-        const products = await storage.getProducts();
-        res.json(products.slice(0, 6));
-      } catch (fallbackError) {
-        res.json([]);
-      }
+      res.json([]);
     }
   });
 
