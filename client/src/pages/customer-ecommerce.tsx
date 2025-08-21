@@ -57,7 +57,8 @@ import {
   Trophy,
   Box,
   Share2,
-  MessageCircle
+  MessageCircle,
+  Flame
 } from "lucide-react";
 import type { Product, Category } from "@shared/schema";
 import AIEstimator from "@/components/construction/AIEstimator";

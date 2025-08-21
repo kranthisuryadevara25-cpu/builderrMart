@@ -227,6 +227,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/categories/hierarchy", async (req, res) => {
+    try {
+      const categories = await storage.getCategories();
+      res.json(categories);
+    } catch (error: any) {
+      console.error("Error getting categories hierarchy:", error);
+      res.json([]);
+    }
+  });
+
   app.get("/api/categories/:id", async (req, res) => {
     try {
       const category = await storage.getCategory(req.params.id);
@@ -286,15 +296,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Specific product routes (must come before :id route)
+  app.get("/api/products/featured", async (req, res) => {
+    try {
+      const products = await storage.getFeaturedProducts();
+      res.json(products || []);
+    } catch (error: any) {
+      console.error("Error getting featured products:", error);
+      res.json([]);
+    }
+  });
+
+  app.get("/api/products/trending", async (req, res) => {
+    try {
+      const products = await storage.getTrendingProducts();
+      res.json(products || []);
+    } catch (error: any) {
+      console.error("Error getting trending products:", error);
+      res.json([]);
+    }
+  });
+
   app.get("/api/products/:id", async (req: any, res) => {
     try {
+      // Skip special routes
+      if (req.params.id === 'featured' || req.params.id === 'trending') {
+        return res.status(404).json({ message: "Route not found" });
+      }
+      
       const product = await storage.getProduct(req.params.id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
 
       // Vendors can only see their own products
-      if (req.user.role === 'vendor' && product.vendorId !== req.user.id) {
+      if (req.user && req.user.role === 'vendor' && product.vendorId !== req.user.id) {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -361,40 +397,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enhanced E-commerce Routes
 
-  // AI Recommendations - Fixed error handling
-  app.get("/api/products/featured", async (req, res) => {
-    try {
-      const products = await storage.getProducts();
-      if (!products || products.length === 0) {
-        return res.json([]);
-      }
-      const featured = products
-        .filter(p => p.stockQuantity && p.stockQuantity > 100)
-        .slice(0, 8);
-      res.json(featured);
-    } catch (error: any) {
-      console.error("Error getting featured products:", error);
-      res.json([]);
-    }
-  });
+  // AI Recommendations - routes moved above to avoid conflicts
 
-  app.get("/api/products/trending", async (req, res) => {
-    try {
-      const products = await storage.getProducts();
-      if (!products || products.length === 0) {
-        return res.json([]);
-      }
-      const trending = products
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 6);
-      res.json(trending);
-    } catch (error: any) {
-      console.error("Error getting trending products:", error);
-      res.json([]);
-    }
-  });
-
-  app.post("/api/products/recommendations", requireAuth, async (req, res) => {
+  app.post("/api/products/recommendations", async (req, res) => {
     try {
       const { categoryId, currentProductId, userBehavior, contextualData } = req.body;
       const limit = parseInt(req.query.limit as string) || 10;

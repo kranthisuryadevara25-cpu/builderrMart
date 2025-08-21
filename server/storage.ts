@@ -170,14 +170,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(products).where(and(
       eq(products.isFeatured, true),
       eq(products.isActive, true)
-    )).orderBy(desc(products.createdAt));
+    )).orderBy(desc(products.createdAt)).limit(6);
   }
 
   async getTrendingProducts(): Promise<Product[]> {
     return await db.select().from(products).where(and(
       eq(products.isTrending, true),
       eq(products.isActive, true)
-    )).orderBy(desc(products.createdAt));
+    )).orderBy(desc(products.createdAt)).limit(6);
   }
 
   // Discount methods

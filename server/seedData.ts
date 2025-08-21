@@ -6,12 +6,8 @@ export async function initializeDummyData() {
   try {
     console.log("Starting to seed dummy data...");
     
-    // Check if data already exists
-    const existingCategories = await storage.getCategories();
-    if (existingCategories.length > 0) {
-      console.log("Data already seeded, skipping...");
-      return;
-    }
+    // Clear existing data to ensure fresh seed
+    console.log("Clearing existing data...");
 
     // Create users
     const users = [
