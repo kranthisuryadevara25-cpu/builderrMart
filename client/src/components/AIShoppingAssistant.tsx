@@ -429,9 +429,9 @@ What type of construction project are you working on?`;
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 relative">
           {/* Chat Messages */}
-          <ScrollArea className="flex-1 px-1">
+          <ScrollArea className="flex-1 px-1" id="ai-chat-scroll">
             <div className="space-y-4 py-4">
               {messages.map(renderMessage)}
               
@@ -452,6 +452,40 @@ What type of construction project are you working on?`;
               )}
             </div>
           </ScrollArea>
+          
+          {/* Scroll Controls */}
+          {messages.length > 3 && (
+            <div className="absolute right-2 top-2 flex flex-col gap-1 z-10">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
+                onClick={() => {
+                  const scrollArea = document.getElementById('ai-chat-scroll');
+                  if (scrollArea) {
+                    scrollArea.scrollTop = 0;
+                  }
+                }}
+                title="Scroll to top"
+              >
+                ↑
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
+                onClick={() => {
+                  const scrollArea = document.getElementById('ai-chat-scroll');
+                  if (scrollArea) {
+                    scrollArea.scrollTop = scrollArea.scrollHeight;
+                  }
+                }}
+                title="Scroll to bottom"
+              >
+                ↓
+              </Button>
+            </div>
+          )}
           
           {/* Quick Suggestions */}
           {messages.length <= 1 && (

@@ -602,9 +602,10 @@ export default function CustomerEcommerce() {
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
               onChange={(e) => {
+                e.preventDefault();
                 const value = e.target.value;
                 setSearchTerm(value);
-                if (value) {
+                if (value.trim()) {
                   setCurrentSection('home');
                 }
               }}
@@ -1575,14 +1576,15 @@ export default function CustomerEcommerce() {
                               placeholder="Type to search products..."
                               value={productSearchTerm}
                               onChange={(e) => {
-                                setProductSearchTerm(e.target.value);
-                                // If user types and there's exactly one match, auto-select it
-                                const matches = products.filter(p => 
-                                  p.name.toLowerCase().includes(e.target.value.toLowerCase())
+                                const value = e.target.value;
+                                setProductSearchTerm(value);
+                                // Auto-select if exact match
+                                const exactMatch = products.find(p => 
+                                  p.name.toLowerCase() === value.toLowerCase()
                                 );
-                                if (matches.length === 1) {
-                                  field.onChange(matches[0].id);
-                                  setQuoteProduct(matches[0]);
+                                if (exactMatch) {
+                                  field.onChange(exactMatch.name);
+                                  setQuoteProduct(exactMatch);
                                 }
                               }}
                               className="w-full"
@@ -1594,7 +1596,7 @@ export default function CustomerEcommerce() {
                                     key={product.id}
                                     className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition-colors"
                                     onClick={() => {
-                                      field.onChange(product.id);
+                                      field.onChange(product.name);
                                       setQuoteProduct(product);
                                       setProductSearchTerm(product.name);
                                     }}
@@ -1835,14 +1837,15 @@ export default function CustomerEcommerce() {
                               placeholder="Type to search products..."
                               value={bookingProductSearchTerm}
                               onChange={(e) => {
-                                setBookingProductSearchTerm(e.target.value);
-                                // If user types and there's exactly one match, auto-select it
-                                const matches = products.filter(p => 
-                                  p.name.toLowerCase().includes(e.target.value.toLowerCase())
+                                const value = e.target.value;
+                                setBookingProductSearchTerm(value);
+                                // Auto-select if exact match
+                                const exactMatch = products.find(p => 
+                                  p.name.toLowerCase() === value.toLowerCase()
                                 );
-                                if (matches.length === 1) {
-                                  field.onChange(matches[0].id);
-                                  setBookingProduct(matches[0]);
+                                if (exactMatch) {
+                                  field.onChange(exactMatch.name);
+                                  setBookingProduct(exactMatch);
                                 }
                               }}
                               className="w-full"
@@ -1854,7 +1857,7 @@ export default function CustomerEcommerce() {
                                     key={product.id}
                                     className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition-colors"
                                     onClick={() => {
-                                      field.onChange(product.id);
+                                      field.onChange(product.name);
                                       setBookingProduct(product);
                                       setBookingProductSearchTerm(product.name);
                                     }}
