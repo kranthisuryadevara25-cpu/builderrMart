@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -60,8 +60,7 @@ import {
   MessageCircle,
   Flame,
   Quote,
-  FileText,
-  Trash2
+  FileText
 } from "lucide-react";
 import type { Product, Category } from "@shared/schema";
 import AIEstimator from "@/components/construction/AIEstimator";
@@ -104,22 +103,26 @@ const bookingFormSchema = z.object({
 });
 
 export default function CustomerEcommerce() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
+  
+  // URL routing for product details
   const [match, params] = useRoute("/product/:id");
-  const [location, navigate] = useLocation();
-
-  // Core state
-  const [currentSection, setCurrentSection] = useState('home');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [categoryMatch, categoryParams] = useRoute("/category/:categoryId");
+  
+  // State management
+  const [currentSection, setCurrentSection] = useState<'home' | 'category' | 'product-detail' | 'cart'>('home');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState('featured');
-  const [priceRange, setPriceRange] = useState([0, 100000]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [priceRange, setPriceRange] = useState([0, 50000]);
+  const [sortBy, setSortBy] = useState<string>("name");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
-
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  
   // Cart and pricing management
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     if (typeof window !== 'undefined') {
@@ -128,7 +131,6 @@ export default function CustomerEcommerce() {
     }
     return [];
   });
-  
   const [productQuantities, setProductQuantities] = useState<{[key: string]: number}>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('buildmart-quantities');
@@ -136,19 +138,11 @@ export default function CustomerEcommerce() {
     }
     return {};
   });
-
-  // Dialog states
-  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
-  const [showBookingDialog, setShowBookingDialog] = useState(false);
-  const [showProductComparison, setShowProductComparison] = useState(false);
-  const [showAIEstimator, setShowAIEstimator] = useState(false);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
-
-  // Product context states
-  const [quoteProduct, setQuoteProduct] = useState<Product | null>(null);
-  const [bookingProduct, setBookingProduct] = useState<Product | null>(null);
-
-  // Wishlist and comparison
+  const [selectedQuantitySlabs, setSelectedQuantitySlabs] = useState<{[key: string]: any}>({});
+  const [bulkQuantity, setBulkQuantity] = useState<number>(1);
+  const [deliveryDays, setDeliveryDays] = useState<number>(4);
+  
+  // Wishlist state
   const [wishlistItems, setWishlistItems] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('buildmart-wishlist');
@@ -157,29 +151,27 @@ export default function CustomerEcommerce() {
     return [];
   });
   const [compareList, setCompareList] = useState<Product[]>([]);
+  
+  // AI features
+  const [showAIEstimator, setShowAIEstimator] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState<Product[]>([]);
+  
+  // Advanced features
+  const [showComparison, setShowComparison] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [showLoyaltyProgram, setShowLoyaltyProgram] = useState(false);
+  const [showARViewer, setShowARViewer] = useState(false);
+  const [showSocialSharing, setShowSocialSharing] = useState(false);
+  const [comparisonProducts, setComparisonProducts] = useState<Product[]>([]);
+  const [sharingProduct, setSharingProduct] = useState<Product | null>(null);
+  
+  // Quote and Booking features
+  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [quoteProduct, setQuoteProduct] = useState<Product | null>(null);
+  const [bookingProduct, setBookingProduct] = useState<Product | null>(null);
 
-  // Data fetching
-  const { data: products = [] } = useQuery({
-    queryKey: ['/api/products'],
-    refetchOnWindowFocus: false,
-  });
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['/api/categories/hierarchy'],
-    refetchOnWindowFocus: false,
-  });
-
-  const { data: featuredProducts = [] } = useQuery({
-    queryKey: ['/api/products/featured'],
-    refetchOnWindowFocus: false,
-  });
-
-  const { data: trendingProducts = [] } = useQuery({
-    queryKey: ['/api/products/trending'],
-    refetchOnWindowFocus: false,
-  });
-
-  // Quote mutation
+  // Quote and booking mutations - Real-time with admin sharing
   const createQuoteMutation = useMutation({
     mutationFn: (data: any) => {
       if (!quoteProduct) {
@@ -208,6 +200,7 @@ export default function CustomerEcommerce() {
         duration: 5000
       });
       setShowQuoteDialog(false);
+      // Invalidate admin queries to show new lead
       queryClient.invalidateQueries({ queryKey: ['/api/admin/quotes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/leads'] });
     },
@@ -216,47 +209,80 @@ export default function CustomerEcommerce() {
     },
   });
 
-  // Booking mutation
   const createBookingMutation = useMutation({
     mutationFn: (data: any) => {
       if (!bookingProduct) {
         throw new Error('No product selected for booking');
       }
       const pricing = getProductPricing(bookingProduct, data.quantity);
-      const advanceAmount = pricing.totalPrice * 0.1;
+      const totalAmount = pricing.totalPrice;
+      const advanceAmount = Math.max(totalAmount * 0.1, 100); // Minimum 10% or ₹100
+      
       const bookingData = {
         ...data,
         productId: bookingProduct.id,
         productName: bookingProduct.name,
-        cost: (pricing.totalPrice + (data.advancePayment || advanceAmount)).toString(),
-        estimatedDuration: data.serviceType === 'delivery' ? 180 : 300,
-        status: 'confirmed',
-        advancePayment: data.advancePayment || advanceAmount,
-        scheduledDate: new Date(data.scheduledDate),
-        requirements: {
-          productId: bookingProduct.id,
-          productName: bookingProduct.name,
-          quantity: data.quantity,
-          details: data.requirements,
-        }
+        productBasePrice: pricing.basePrice,
+        productFinalPrice: pricing.finalPrice,
+        totalAmount,
+        advancePayment: advanceAmount,
+        paymentStatus: 'advance_pending',
+        bookingStatus: 'pending_payment',
+        leadType: 'booking_request',
+        submittedAt: new Date().toISOString(),
+        requiresFollowUp: true
       };
       return apiRequest('POST', '/api/bookings', bookingData);
     },
     onSuccess: (response: any) => {
       toast({ 
-        title: 'Booking Confirmed!', 
-        description: `Booking #${response.bookingNumber || 'BK001'} confirmed. You'll receive confirmation details shortly.`,
+        title: 'Booking Request Sent!', 
+        description: `Booking #${response.bookingNumber || 'BK001'} created. Pay 10% advance (₹${response.advancePayment}) to confirm!`,
         duration: 5000
       });
       setShowBookingDialog(false);
+      // Invalidate admin queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/leads'] });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 
-  // LocalStorage persistence
+  // Helper functions for quote and booking
+  const openQuoteDialog = (product?: Product) => {
+    if (product) {
+      setQuoteProduct(product);
+    }
+    setShowQuoteDialog(true);
+  };
+
+  const openBookingDialog = (product?: Product) => {
+    if (product) {
+      setBookingProduct(product);
+    }
+    setShowBookingDialog(true);
+  };
+
+  // Data fetching - Public access (no auth required)
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/categories/hierarchy'],
+  });
+
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
+  });
+
+  const { data: featuredProducts = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products/featured'],
+  });
+
+  const { data: trendingProducts = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products/trending'],
+  });
+
+  // Save state to localStorage
   useEffect(() => {
     if (cartItems.length > 0) {
       localStorage.setItem('buildmart-cart', JSON.stringify(cartItems));
@@ -282,31 +308,45 @@ export default function CustomerEcommerce() {
       if (product) {
         setSelectedProduct(product);
         setCurrentSection('product-detail');
+        getProductRecommendations(product);
       }
+    } else if (categoryMatch && categoryParams?.categoryId) {
+      setSelectedCategoryId(categoryParams.categoryId);
+      setCurrentSection('category');
+    } else {
+      setCurrentSection('home');
+      setSelectedProduct(null);
+      setSelectedCategoryId(null);
     }
-  }, [match, params, products]);
+  }, [match, params, categoryMatch, categoryParams, products]);
 
-  // Navigation functions
-  const navigateHome = () => {
-    setCurrentSection('home');
-    setSelectedProduct(null);
-    setSelectedCategoryId('');
-    navigate('/');
+  // Get AI recommendations for a product
+  const getProductRecommendations = async (product: Product) => {
+    try {
+      const response = await apiRequest('POST', '/api/products/recommendations', {
+        currentProductId: product.id,
+        categoryId: product.categoryId,
+      });
+      const products = Array.isArray(response) ? response : [];
+      setAiRecommendations(products.slice(0, 6));
+    } catch (error) {
+      console.error('Failed to get recommendations:', error);
+      setAiRecommendations([]);
+    }
   };
 
+  // Navigation functions
   const navigateToCategory = (categoryId: string) => {
-    setSelectedCategoryId(categoryId);
-    setCurrentSection('category');
-    setSelectedProduct(null);
+    setLocation(`/category/${categoryId}`);
   };
 
   const navigateToProduct = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      setSelectedProduct(product);
-      setCurrentSection('product-detail');
-      navigate(`/product/${productId}`);
-    }
+    setLocation(`/product/${productId}`);
+  };
+
+  const navigateHome = () => {
+    setCurrentSection('home');
+    setLocation('/');
   };
 
   // Cart management functions
@@ -355,6 +395,17 @@ export default function CustomerEcommerce() {
     setCartItems(updatedCart);
     localStorage.setItem('buildmart-cart', JSON.stringify(updatedCart));
   };
+  
+  // Wishlist functions
+  const addToWishlist = (productId: string) => {
+    if (wishlistItems.includes(productId)) {
+      setWishlistItems(prev => prev.filter(id => id !== productId));
+      toast({ title: "Removed from Wishlist", description: "Product removed from your wishlist" });
+    } else {
+      setWishlistItems(prev => [...prev, productId]);
+      toast({ title: "Added to Wishlist", description: "Product added to your wishlist" });
+    }
+  };
 
   // Product quantity management
   const getProductQuantity = (productId: string) => productQuantities[productId] || 1;
@@ -363,6 +414,7 @@ export default function CustomerEcommerce() {
     const newQuantity = Math.max(1, quantity);
     setProductQuantities(prev => {
       const updated = { ...prev, [productId]: newQuantity };
+      // Immediately save to localStorage
       localStorage.setItem('buildmart-quantities', JSON.stringify(updated));
       return updated;
     });
@@ -380,7 +432,7 @@ export default function CustomerEcommerce() {
     if (product.quantitySlabs) {
       const slabs = Array.isArray(product.quantitySlabs) 
         ? product.quantitySlabs 
-        : JSON.parse(product.quantitySlabs as string);
+        : JSON.parse(product.quantitySlabs);
       
       applicableSlab = slabs.find((slab: any) => 
         qty >= slab.min_qty && qty <= slab.max_qty
@@ -393,6 +445,85 @@ export default function CustomerEcommerce() {
     }
     
     return { finalPrice, basePrice, discount, quantity: qty, applicableSlab, totalPrice: finalPrice * qty };
+  };
+
+  // Advanced features helper functions
+  const addToComparison = (product: Product) => {
+    if (comparisonProducts.length >= 4) {
+      setShowComparison(true); // Auto-open when limit reached
+      toast({
+        title: "Auto-Starting Comparison",
+        description: "You have 4 products - starting comparison now!",
+      });
+      return;
+    }
+    
+    if (comparisonProducts.find(p => p.id === product.id)) {
+      toast({
+        title: "Already in Comparison", 
+        description: "This product is already added for comparison",
+      });
+      return;
+    }
+    
+    const newList = [...comparisonProducts, product];
+    setComparisonProducts(newList);
+    
+    if (newList.length === 4) {
+      setShowComparison(true);
+      toast({
+        title: "Auto-Starting Comparison",
+        description: "You have 4 products - starting comparison now!",
+      });
+    } else {
+      toast({
+        title: "Added to Comparison",
+        description: `${product.name} added (${newList.length}/4 products)`,
+      });
+    }
+  };
+  
+  const startComparison = (products: Product[]) => {
+    setComparisonProducts(products);
+    setShowComparison(true);
+  };
+  
+  const shareProduct = (product: Product) => {
+    setSharingProduct(product);
+    setShowSocialSharing(true);
+  };
+  
+  const viewInAR = (product: Product) => {
+    setSelectedProduct(product);
+    setShowARViewer(true);
+  };
+
+  // Calculate bulk discount
+  const calculateBulkDiscount = (basePrice: number, quantity: number): { price: number; discount: number } => {
+    let discount = 0;
+    if (quantity >= 100) discount = 0.15;
+    else if (quantity >= 50) discount = 0.10;
+    else if (quantity >= 20) discount = 0.05;
+    
+    const discountedPrice = basePrice * (1 - discount);
+    return { price: discountedPrice, discount: discount * 100 };
+  };
+
+  // Calculate delivery-based pricing
+  const calculateDeliveryPricing = (basePrice: number, days: number): { price: number; discount: number } => {
+    let multiplier = 1;
+    let discount = 0;
+    
+    if (days <= 2) {
+      multiplier = 1.20;
+    } else if (days <= 4) {
+      multiplier = 1.10;
+    } else if (days >= 7) {
+      multiplier = 0.95;
+      discount = 5;
+    }
+    
+    return { price: basePrice * multiplier, discount };
   };
 
   // Filter products
@@ -444,20 +575,22 @@ export default function CustomerEcommerce() {
 
   // Header Component
   const Header = () => (
-    <header className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 shadow-xl border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-18 py-3">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200">
-              <Package className="w-6 h-6 text-white font-bold" />
-            </div>
-            <span className="text-3xl font-black text-white tracking-tight drop-shadow-lg text-sharp">BuildMart AI</span>
+    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={navigateHome}
+              className="text-2xl font-bold text-blue-600 hover:text-blue-700 flex items-center"
+            >
+              <Building2 className="w-8 h-8 mr-2" />
+              BuildMart AI
+            </button>
           </div>
-
+          
           {/* Search Bar */}
-          <div className="flex-1 max-w-3xl mx-8 relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <div className="flex-1 max-w-2xl mx-8 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <Input
               type="text"
               placeholder="Search for cement, steel, bricks, plumbing materials..."
@@ -465,420 +598,807 @@ export default function CustomerEcommerce() {
               onChange={(e) => {
                 const value = e.target.value;
                 setSearchTerm(value);
+                if (value) {
+                  setCurrentSection('home');
+                }
               }}
-              className="pl-12 pr-6 py-3 w-full text-lg font-medium bg-white/95 backdrop-blur-sm border-2 border-white/20 rounded-xl shadow-lg focus:ring-4 focus:ring-blue-300/50 focus:border-yellow-400 transition-all duration-300 text-sharp"
+              className="pl-10 pr-4 py-2 w-full"
             />
           </div>
-
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Button variant="ghost" onClick={() => setCurrentSection('home')} className="text-white hover:bg-white/20 hover:text-yellow-300 font-semibold transition-all duration-200 rounded-lg px-4 py-2 text-sharp">
-              <Home className="w-5 h-5 mr-2" />
-              Home
-            </Button>
-            <Button variant="ghost" onClick={() => setCurrentSection('categories')} className="text-white hover:bg-white/20 hover:text-yellow-300 font-semibold transition-all duration-200 rounded-lg px-4 py-2 text-sharp">
-              Categories
-            </Button>
-            <Button variant="ghost" onClick={() => setShowAIEstimator(true)} className="text-white hover:bg-white/20 hover:text-yellow-300 font-semibold transition-all duration-200 rounded-lg px-4 py-2 text-sharp">
-              <Bot className="w-5 h-5 mr-2" />
-              AI Estimator
-            </Button>
-            <Button variant="ghost" onClick={() => setShowAIAssistant(true)} className="text-white hover:bg-white/20 hover:text-yellow-300 font-semibold transition-all duration-200 rounded-lg px-4 py-2 text-sharp">
-              <MessageCircle className="w-5 h-5 mr-2" />
+          
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowAIAssistant(true)}>
+              <Bot className="w-4 h-4 mr-1" />
               AI Assistant
             </Button>
-          </nav>
-
-          {/* Cart Icon */}
-          <Button 
-            variant="outline" 
-            onClick={() => setCurrentSection('cart')}
-            className="relative bg-white/90 hover:bg-yellow-400 hover:text-blue-900 border-2 border-white/30 text-blue-900 font-bold transition-all duration-300 shadow-lg rounded-xl px-4 py-2 transform hover:scale-105"
-          >
-            <ShoppingCart className="w-6 h-6" />
-            {cartItems.length > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 text-sm font-bold bg-red-500 text-white shadow-lg animate-pulse"
-              >
-                {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-              </Badge>
+            <Button variant="ghost" size="sm" onClick={() => setShowLoyaltyProgram(true)}>
+              <Trophy className="w-4 h-4 mr-1" />
+              Rewards
+            </Button>
+            {comparisonProducts.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setShowComparison(true)}>
+                <Scale className="w-4 h-4 mr-1" />
+                Compare ({comparisonProducts.length})
+              </Button>
             )}
-          </Button>
+            <Button 
+              variant="outline" 
+              className="relative"
+              onClick={() => setCurrentSection('cart')}
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {cartItems.length > 0 && (
+                <Badge className="absolute -top-2 -right-2 px-2 py-1 min-w-[1.25rem] h-5 text-xs">
+                  {cartItems.length}
+                </Badge>
+              )}
+            </Button>
+            
+            {user ? (
+              <Button variant="outline" className="flex items-center">
+                <User className="w-4 h-4 mr-2" />
+                {user.username}
+              </Button>
+            ) : (
+              <Button onClick={() => setShowAuthDialog(true)}>
+                Sign In
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </header>
   );
 
-  // Home Page Component  
-  const HomePage = () => {
-    const displayProducts = useMemo(() => getFilteredProducts(), [products, searchTerm, selectedCategoryId, priceRange, sortBy, featuredProducts, trendingProducts, categories]);
-
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        {!searchTerm && (
-          <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-8 mb-8 shadow-lg border border-blue-100">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="flex-1 text-center md:text-left">
-                <h1 className="text-5xl font-black text-gray-900 mb-4 text-sharp">
-                  Premium Construction Materials
-                </h1>
-                <p className="text-xl text-gray-600 mb-6 leading-relaxed">
-                  Build your dreams with quality materials at unbeatable prices. AI-powered recommendations, instant quotes, and fast delivery.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button 
-                    size="lg" 
-                    onClick={() => setShowAIEstimator(true)}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200"
-                  >
-                    <Calculator className="w-5 h-5 mr-2" />
-                    AI Material Estimator
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    onClick={() => setShowAIAssistant(true)}
-                    className="border-2 border-blue-300 text-blue-700 hover:bg-blue-50 font-bold px-8 py-3 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200"
-                  >
-                    <Bot className="w-5 h-5 mr-2" />
-                    Ask AI Assistant
-                  </Button>
-                </div>
-              </div>
-              <div className="hidden md:block">
-                <div className="w-64 h-64 bg-gradient-to-br from-blue-200 to-purple-300 rounded-2xl flex items-center justify-center shadow-xl">
-                  <Building2 className="w-32 h-32 text-blue-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Actions */}
-        {!searchTerm && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-105 duration-200 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200" onClick={() => setSearchTerm('cement')}>
-              <div className="text-center">
-                <Box className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-                <h3 className="font-bold text-orange-800 text-sharp">Cement</h3>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-105 duration-200 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200" onClick={() => setSearchTerm('steel')}>
-              <div className="text-center">
-                <Scale className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-                <h3 className="font-bold text-gray-800 text-sharp">Steel</h3>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-105 duration-200 bg-gradient-to-br from-red-50 to-red-100 border-red-200" onClick={() => setSearchTerm('bricks')}>
-              <div className="text-center">
-                <Building2 className="w-8 h-8 mx-auto mb-2 text-red-600" />
-                <h3 className="font-bold text-red-800 text-sharp">Bricks</h3>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-105 duration-200 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200" onClick={() => setSearchTerm('plumbing')}>
-              <div className="text-center">
-                <Truck className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                <h3 className="font-bold text-blue-800 text-sharp">Plumbing</h3>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Featured/Trending Products */}
-        {!searchTerm && (
-          <div className="space-y-8">
-            {/* Featured Products */}
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <Star className="w-6 h-6 text-yellow-500" />
-                <h2 className="text-3xl font-bold text-gray-900 text-sharp">Featured Products</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {featuredProducts.slice(0, 4).map((product: Product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            </div>
-
-            {/* Trending Products */}
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <TrendingUp className="w-6 h-6 text-green-500" />
-                <h2 className="text-3xl font-bold text-gray-900 text-sharp">Trending Now</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {trendingProducts.slice(0, 4).map((product: Product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Search Results */}
-        {searchTerm && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 text-sharp">
-                Search Results for "{searchTerm}" ({displayProducts.length} items)
-              </h2>
-              
-              <div className="flex items-center gap-4">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="featured">Featured</SelectItem>
-                    <SelectItem value="price_low">Price: Low to High</SelectItem>
-                    <SelectItem value="price_high">Price: High to Low</SelectItem>
-                    <SelectItem value="name">Name: A to Z</SelectItem>
-                    <SelectItem value="newest">Newest</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <Grid3X3 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className={viewMode === 'grid' 
-              ? "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6" 
-              : "space-y-4"
-            }>
-              {displayProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} viewMode={viewMode} />
-              ))}
-            </div>
-
-            {displayProducts.length === 0 && (
-              <div className="text-center py-12">
-                <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">No products found</h3>
-                <p className="text-gray-500">Try adjusting your search terms or browse our categories</p>
-              </div>
-            )}
-          </div>
-        )}
+  // Category Grid Component
+  const CategoryGrid = () => (
+    <section className="py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-2xl font-bold mb-6 text-center">Shop by Category</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          {categories.slice(0, 8).map((category, index) => {
+            const icons = ['🏗️', '🔧', '🧱', '⚙️', '🚰', '⚡', '🏠', '🎨'];
+            return (
+              <Card 
+                key={category.id} 
+                className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+                onClick={() => navigateToCategory(category.id)}
+              >
+                <CardContent className="p-4 text-center">
+                  <div className="text-4xl mb-2">{icons[index] || '📦'}</div>
+                  <h3 className="font-semibold text-sm text-center line-clamp-2">
+                    {category.name}
+                  </h3>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
-    );
-  };
+    </section>
+  );
 
   // Product Card Component
-  const ProductCard = ({ product, viewMode = 'grid' }: { product: Product, viewMode?: string }) => {
-    const pricing = getProductPricing(product);
-    const quantity = getProductQuantity(product.id);
-
+  const ProductCard = ({ 
+    product, 
+    featured = false,
+    trending = false,
+    viewMode = 'grid' 
+  }: { 
+    product: Product; 
+    featured?: boolean;
+    trending?: boolean; 
+    viewMode?: 'grid' | 'list';
+  }) => {
+    const currentQuantity = getProductQuantity(product.id);
+    const pricing = getProductPricing(product, currentQuantity);
+    const isInWishlist = wishlistItems.includes(product.id);
+    
     return (
-      <Card 
-        className={`group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-blue-200 ${
-          viewMode === 'list' ? 'flex flex-row' : ''
-        }`}
-        onClick={() => navigateToProduct(product.id)}
-      >
-        {/* Product Image */}
-        <div className={viewMode === 'list' ? 'w-32 h-32 flex-shrink-0' : 'h-48'}>
-          <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
-            <Package className="w-12 h-12 text-gray-500" />
-          </div>
-        </div>
-        
-        {/* Product Info */}
-        <div className={`p-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-          <div className="flex items-start justify-between mb-2">
-            <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors text-sharp">
-              {product.name}
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Toggle wishlist
-              }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Heart className="w-4 h-4" />
-            </Button>
-          </div>
-          
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
-          
-          {/* Pricing */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl font-bold text-green-600">
-              ₹{pricing.totalPrice.toLocaleString()}
-            </span>
-            {pricing.discount > 0 && (
-              <span className="text-sm text-gray-400 line-through">
-                ₹{(pricing.basePrice * quantity).toLocaleString()}
-              </span>
-            )}
-            {pricing.discount > 0 && (
-              <Badge variant="destructive" className="text-xs">
-                {pricing.discount}% OFF
-              </Badge>
-            )}
-          </div>
-
-          {/* Quantity Controls */}
-          <div className="flex items-center gap-2 mb-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setProductQuantity(product.id, quantity - 1);
-              }}
-            >
-              <Minus className="w-4 h-4" />
-            </Button>
-            <span className="w-12 text-center font-medium">{quantity}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setProductQuantity(product.id, quantity + 1);
-              }}
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="space-y-2">
-            <Button 
-              onClick={(e) => {
-                e.stopPropagation();
-                addToCart(product, quantity);
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Add to Cart
-            </Button>
+      <Card className="cursor-pointer hover:shadow-lg transition-all group">
+        <div 
+          className={viewMode === 'list' ? 'flex gap-4 p-4' : 'relative'}
+          onClick={() => navigateToProduct(product.id)}
+        >
+          {/* Product Image */}
+          <div className={viewMode === 'list' ? 'w-32 h-32 flex-shrink-0' : 'h-48'}>
+            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
+              <Package className="w-12 h-12 text-gray-500" />
+            </div>
             
-            <div className="grid grid-cols-2 gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setQuoteProduct(product);
-                  setShowQuoteDialog(true);
-                }}
-                className="text-xs"
-              >
-                <Quote className="w-3 h-3 mr-1" />
-                Quote
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setBookingProduct(product);
-                  setShowBookingDialog(true);
-                }}
-                className="text-xs"
-              >
-                <Calendar className="w-3 h-3 mr-1" />
-                Book
-              </Button>
+            {/* Badges */}
+            <div className="absolute top-2 left-2 flex flex-col gap-1">
+              {featured && (
+                <Badge className="bg-yellow-500 text-white">
+                  <Star className="w-3 h-3 mr-1" />
+                  Featured
+                </Badge>
+              )}
+              {trending && (
+                <Badge className="bg-red-500 text-white">
+                  <Flame className="w-3 h-3 mr-1" />
+                  Trending
+                </Badge>
+              )}
             </div>
           </div>
-
-          {product.isFeatured && (
-            <Badge className="absolute top-2 left-2 bg-yellow-500 text-yellow-900">
-              <Star className="w-3 h-3 mr-1" />
-              Featured
-            </Badge>
-          )}
           
-          {product.isTrending && (
-            <Badge className="absolute top-2 right-2 bg-green-500 text-green-900">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              Trending
-            </Badge>
-          )}
+          {/* Product Info */}
+          <div className={viewMode === 'list' ? 'flex-1' : 'p-4'}>
+            <h3 className="font-semibold text-lg group-hover:text-blue-600 transition-colors mb-2">
+              {product.name}
+            </h3>
+            
+            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+              {product.description || "High-quality construction material"}
+            </p>
+            
+            {/* Brand/Specs */}
+            {product.specs && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {Object.entries(typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs).slice(0, 2).map(([key, value]) => (
+                  <Badge key={key} variant="outline" className="text-xs">
+                    {key}: {String(value)}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            
+            {/* Quantity Controls */}
+            <div className="flex items-center gap-2 mb-3">
+              <Label className="text-sm">Qty:</Label>
+              <div className="flex items-center border rounded">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProductQuantity(product.id, currentQuantity - 1);
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <Input
+                  value={currentQuantity}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    const qty = parseInt(e.target.value) || 1;
+                    setProductQuantity(product.id, qty);
+                  }}
+                  className="w-16 text-center border-0"
+                  min="1"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProductQuantity(product.id, currentQuantity + 1);
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Dynamic Pricing */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-green-600">
+                  ₹{pricing.finalPrice.toLocaleString()}
+                </span>
+                {pricing.discount > 0 && (
+                  <span className="text-gray-400 line-through">
+                    ₹{pricing.basePrice.toLocaleString()}
+                  </span>
+                )}
+              </div>
+              
+              {/* Quantity Slab Discount Info */}
+              {pricing.discount > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  <Percent className="w-3 h-3 mr-1" />
+                  {pricing.discount}% Volume Discount
+                </Badge>
+              )}
+              
+              {/* Show quantity slab info and total */}
+              {product.quantitySlabs && (
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>Buy {currentQuantity} @ ₹{pricing.finalPrice} each</div>
+                  <div className="font-semibold text-green-600">
+                    Total: ₹{pricing.totalPrice.toLocaleString()}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Stock and Delivery */}
+            <div className="flex items-center justify-between mb-4">
+              <Badge variant={product.stockQuantity && product.stockQuantity > 0 ? "secondary" : "destructive"}>
+                {product.stockQuantity && product.stockQuantity > 0 
+                  ? `${product.stockQuantity.toLocaleString()} in stock` 
+                  : 'Out of stock'}
+              </Badge>
+              <div className="flex items-center text-sm text-gray-500">
+                <Truck className="w-4 h-4 mr-1" />
+                Fast Delivery
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToCart(product, currentQuantity, selectedQuantitySlabs[product.id]);
+                  }}
+                  className="flex-1"
+                  disabled={!product.stockQuantity || product.stockQuantity <= 0}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Add to Cart
+                </Button>
+                <Button 
+                  variant={isInWishlist ? "default" : "outline"} 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToWishlist(product.id);
+                  }}
+                >
+                  <Heart className={`w-4 h-4 ${isInWishlist ? 'fill-current' : ''}`} />
+                </Button>
+              </div>
+              
+              {/* Feature Buttons */}
+              <div className="flex gap-1">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToComparison(product);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  <Scale className="w-3 h-3 mr-1" />
+                  Compare
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openQuoteDialog(product);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  <Quote className="w-3 h-3 mr-1" />
+                  Quote
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openBookingDialog(product);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  <Box className="w-3 h-3 mr-1" />
+                  AR View
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    shareProduct(product);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  <Share2 className="w-3 h-3 mr-1" />
+                  Share
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </Card>
     );
   };
 
-  // Cart Section
-  const CartSection = () => (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <ShoppingCart className="w-8 h-8 text-blue-600" />
-        <h1 className="text-3xl font-bold text-gray-900 text-sharp">Shopping Cart</h1>
-        <Badge variant="secondary" className="text-lg px-3 py-1">
-          {cartItems.reduce((sum, item) => sum + item.quantity, 0)} items
-        </Badge>
-      </div>
-
-      {cartItems.length === 0 ? (
-        <div className="text-center py-16">
-          <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-600 mb-4 text-sharp">Your cart is empty</h2>
-          <p className="text-gray-500 mb-8">Add some great products to get started!</p>
+  // Featured Products Section
+  const FeaturedSection = () => (
+    <section className="py-8 px-4 bg-gray-50">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold flex items-center">
+            <Star className="w-6 h-6 mr-2 text-yellow-500" />
+            Featured Products
+          </h2>
           <Button 
-            onClick={() => setCurrentSection('home')}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3"
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setCurrentSection('home');
+              setSearchTerm('featured');
+            }}
           >
+            View All <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featuredProducts.slice(0, 8).map((product) => (
+            <ProductCard key={product.id} product={product} featured />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // Trending Products Section
+  const TrendingSection = () => (
+    <section className="py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold flex items-center">
+            <TrendingUp className="w-6 h-6 mr-2 text-red-500" />
+            Trending Now
+          </h2>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setCurrentSection('home');
+              setSearchTerm('trending');
+            }}
+          >
+            View All <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {trendingProducts.slice(0, 6).map((product) => (
+            <ProductCard key={product.id} product={product} trending />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // Home Page Component
+  const HomePage = () => {
+    const filteredProducts = getFilteredProducts();
+    const hasSearchResults = searchTerm && filteredProducts.length > 0;
+    const hasSearchButNoResults = searchTerm && filteredProducts.length === 0;
+    
+    return (
+      <>
+        {/* Search Results Section */}
+        {hasSearchResults && (
+          <section className="py-8 px-4">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-2xl font-bold mb-6">
+                Search Results for "{searchTerm}" ({filteredProducts.length} found)
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {filteredProducts.slice(0, 12).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              {filteredProducts.length > 12 && (
+                <div className="text-center mt-6">
+                  <Button variant="outline" onClick={() => setCurrentSection('category')}>
+                    View All {filteredProducts.length} Results
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+        
+        {/* No Search Results */}
+        {hasSearchButNoResults && (
+          <section className="py-8 px-4">
+            <div className="max-w-7xl mx-auto text-center">
+              <h2 className="text-2xl font-bold mb-4">No Results Found</h2>
+              <p className="text-gray-600 mb-6">
+                We couldn't find any products matching "{searchTerm}". Try different keywords or browse our categories.
+              </p>
+              <Button onClick={() => setSearchTerm('')}>
+                Clear Search
+              </Button>
+            </div>
+          </section>
+        )}
+        
+        {/* Default Homepage Content */}
+        {!searchTerm && (
+          <>
+            <CategoryGrid />
+            <FeaturedSection />
+            <TrendingSection />
+          </>
+        )}
+        
+        {/* AI Tools Section */}
+        <section className="py-8 px-4 bg-blue-50">
+          <div className="max-w-7xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-6">AI-Powered Construction Tools</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Brain className="w-12 h-12 mx-auto text-purple-600 mb-4" />
+                <h3 className="font-semibold mb-2">Material Estimator</h3>
+                <p className="text-sm text-gray-600 mb-4">Upload construction images to get AI-powered material estimates</p>
+                <Button onClick={() => setShowAIEstimator(true)}>
+                  Try Now
+                </Button>
+              </Card>
+              
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Calculator className="w-12 h-12 mx-auto text-green-600 mb-4" />
+                <h3 className="font-semibold mb-2">Smart Quotation</h3>
+                <p className="text-sm text-gray-600 mb-4">Get instant quotes with bulk discounts and delivery options</p>
+                <Button variant="outline" onClick={() => openQuoteDialog()}>
+                  Get Quote
+                </Button>
+              </Card>
+              
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Calendar className="w-12 h-12 mx-auto text-blue-600 mb-4" />
+                <h3 className="font-semibold mb-2">Advance Booking</h3>
+                <p className="text-sm text-gray-600 mb-4">Book materials in advance with flexible payment options</p>
+                <Button variant="outline" onClick={() => openBookingDialog()}>
+                  Book Now
+                </Button>
+              </Card>
+            </div>
+          </div>
+        </section>
+      </>
+    );
+  };
+
+  // Category Page Component
+  const CategoryPage = () => {
+    const category = categories.find(c => c.id === selectedCategoryId);
+    const filteredProducts = getFilteredProducts();
+
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Breadcrumb */}
+        <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
+          <button onClick={navigateHome} className="hover:text-blue-600">Home</button>
+          <ChevronRight className="w-4 h-4" />
+          <span className="font-medium">{category?.name}</span>
+        </nav>
+
+        <div className="flex gap-6">
+          {/* Filters Sidebar */}
+          <div className="w-64 flex-shrink-0">
+            <Card className="sticky top-20">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Filter className="w-5 h-5 mr-2" />
+                  Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Price Range */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">
+                    Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
+                  </Label>
+                  <Slider
+                    value={priceRange}
+                    onValueChange={setPriceRange}
+                    max={50000}
+                    min={0}
+                    step={500}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Sort Options */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Sort By</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="price_low">Price: Low to High</SelectItem>
+                      <SelectItem value="price_high">Price: High to Low</SelectItem>
+                      <SelectItem value="newest">Newest First</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Bulk Quantity */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">
+                    Bulk Quantity: {bulkQuantity}
+                  </Label>
+                  <Slider
+                    value={[bulkQuantity]}
+                    onValueChange={(value) => setBulkQuantity(value[0])}
+                    max={200}
+                    min={1}
+                    step={1}
+                    className="w-full"
+                  />
+                  {bulkQuantity >= 20 && (
+                    <Badge variant="secondary" className="mt-2">
+                      {bulkQuantity >= 100 ? '15%' : bulkQuantity >= 50 ? '10%' : '5%'} Bulk Discount
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Delivery Options */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Delivery</Label>
+                  <div className="space-y-2">
+                    {[2, 4, 7].map(days => {
+                      const pricing = calculateDeliveryPricing(1000, days);
+                      return (
+                        <div key={days} className="flex items-center justify-between p-2 border rounded">
+                          <Checkbox 
+                            checked={deliveryDays === days}
+                            onCheckedChange={() => setDeliveryDays(days)}
+                          />
+                          <Label className="flex-1 ml-2">
+                            {days <= 2 ? 'Express' : days <= 4 ? 'Fast' : 'Standard'} ({days} days)
+                          </Label>
+                          {pricing.discount > 0 && (
+                            <Badge variant="secondary">{pricing.discount}% OFF</Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Products Grid */}
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-bold">{category?.name}</h1>
+                <p className="text-gray-600">{filteredProducts.length} products</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className={viewMode === 'grid' 
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
+              : 'space-y-4'
+            }>
+              {filteredProducts.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  viewMode={viewMode}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Product Detail Page Component
+  const ProductDetailPage = () => {
+    if (!selectedProduct) return null;
+    
+    const basePrice = parseFloat(selectedProduct.basePrice);
+    const quantity = getProductQuantity(selectedProduct.id);
+    const bulkPricing = calculateBulkDiscount(basePrice, quantity);
+    const deliveryPricing = calculateDeliveryPricing(bulkPricing.price, deliveryDays);
+    
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Breadcrumb */}
+        <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
+          <button onClick={navigateHome} className="hover:text-blue-600">Home</button>
+          <ChevronRight className="w-4 h-4" />
+          <button 
+            onClick={() => navigateToCategory(selectedProduct.categoryId)}
+            className="hover:text-blue-600"
+          >
+            {categories.find(c => c.id === selectedProduct.categoryId)?.name}
+          </button>
+          <ChevronRight className="w-4 h-4" />
+          <span className="font-medium">{selectedProduct.name}</span>
+        </nav>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Product Images */}
+          <div>
+            <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center mb-4">
+              <Package className="w-24 h-24 text-gray-500" />
+            </div>
+          </div>
+          
+          {/* Product Information */}
+          <div>
+            <h1 className="text-3xl font-bold mb-4">{selectedProduct.name}</h1>
+            <p className="text-gray-600 mb-6">{selectedProduct.description}</p>
+            
+            {/* Pricing */}
+            <div className="bg-gray-50 p-6 rounded-lg mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl font-bold text-green-600">
+                  ₹{(deliveryPricing.price * quantity).toLocaleString()}
+                </span>
+                {(bulkPricing.discount > 0 || deliveryPricing.discount > 0) && (
+                  <span className="text-gray-400 line-through text-xl">
+                    ₹{(basePrice * quantity).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              
+              {/* Quantity Selector */}
+              <div className="flex items-center gap-4 mb-6">
+                <Label>Quantity:</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setProductQuantity(selectedProduct.id, Math.max(1, quantity - 1))}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <Input
+                    value={quantity}
+                    onChange={(e) => {
+                      const qty = parseInt(e.target.value) || 1;
+                      setProductQuantity(selectedProduct.id, qty);
+                    }}
+                    className="w-16 text-center"
+                    min="1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setProductQuantity(selectedProduct.id, quantity + 1)}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => {
+                    addToCart(selectedProduct, quantity);
+                    toast({
+                      title: "Added to Cart!",
+                      description: `${selectedProduct.name} (${quantity}) added successfully`,
+                      duration: 3000,
+                    });
+                  }}
+                  className="w-full text-lg py-3"
+                  disabled={!selectedProduct.stockQuantity || selectedProduct.stockQuantity <= 0}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Add {quantity} to Cart
+                </Button>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" onClick={() => openQuoteDialog(selectedProduct)}>
+                    <Calculator className="w-4 h-4 mr-2" />
+                    Get Quote
+                  </Button>
+                  <Button variant="outline">
+                    <Heart className="w-4 h-4 mr-2" />
+                    Wishlist
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Product Specifications */}
+            {selectedProduct.specs && (
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold mb-3">Specifications</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(selectedProduct.specs as any).map(([key, value]) => (
+                    <div key={key} className="flex justify-between p-2 bg-gray-50 rounded">
+                      <span className="capitalize font-medium">{key}:</span>
+                      <span>{String(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* AI Recommendations */}
+        {aiRecommendations.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
+              <Sparkles className="w-6 h-6 mr-2 text-purple-600" />
+              You might also like
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {aiRecommendations.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Cart Component
+  const CartSection = () => (
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <h1 className="text-2xl font-bold mb-6 flex items-center">
+        <ShoppingCart className="w-6 h-6 mr-2" />
+        Shopping Cart ({cartItems.length})
+      </h1>
+      
+      {cartItems.length === 0 ? (
+        <div className="text-center py-12">
+          <ShoppingCart className="w-24 h-24 mx-auto text-gray-300 mb-4" />
+          <p className="text-xl text-gray-600 mb-4">Your cart is empty</p>
+          <Button onClick={navigateHome}>
             Continue Shopping
           </Button>
         </div>
       ) : (
         <div className="space-y-4">
           {cartItems.map((item) => {
-            const pricing = getProductPricing(item.product, item.quantity);
+            const basePrice = parseFloat(item.product.basePrice);
+            const totalPrice = basePrice * item.quantity;
             
             return (
-              <Card key={item.product.id} className="p-6 border-2 hover:border-blue-200 transition-colors">
-                <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
-                    <Package className="w-8 h-8 text-gray-500" />
+              <Card key={item.product.id} className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+                    <Package className="w-6 h-6 text-gray-500" />
                   </div>
                   
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 text-sharp">{item.product.name}</h3>
-                    <p className="text-gray-600 mb-3">{item.product.description}</p>
-                    <div className="flex items-center gap-4">
-                      <span className="text-2xl font-bold text-green-600">
-                        ₹{pricing.totalPrice.toLocaleString()}
+                    <h3 className="font-semibold">{item.product.name}</h3>
+                    <p className="text-sm text-gray-600">{item.product.description}</p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <span className="font-bold text-green-600">
+                        ₹{totalPrice.toLocaleString()}
                       </span>
-                      {pricing.discount > 0 && (
-                        <span className="text-lg text-gray-400 line-through">
-                          ₹{(pricing.basePrice * item.quantity).toLocaleString()}
-                        </span>
-                      )}
-                      {pricing.discount > 0 && (
-                        <Badge variant="destructive">
-                          {pricing.discount}% OFF
-                        </Badge>
-                      )}
+                      <span className="text-gray-500">Qty: {item.quantity}</span>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -886,7 +1406,7 @@ export default function CustomerEcommerce() {
                     >
                       <Minus className="w-4 h-4" />
                     </Button>
-                    <span className="w-12 text-center text-lg font-semibold">{item.quantity}</span>
+                    <span className="w-8 text-center">{item.quantity}</span>
                     <Button
                       variant="outline"
                       size="sm"
@@ -909,47 +1429,53 @@ export default function CustomerEcommerce() {
           })}
           
           {/* Cart Summary */}
-          <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-2xl font-bold text-gray-900 text-sharp">Total:</span>
-              <span className="text-3xl font-black text-green-600">
+          <Card className="p-6 bg-gray-50">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-xl font-semibold">Total:</span>
+              <span className="text-2xl font-bold text-green-600">
                 ₹{cartItems.reduce((total, item) => {
                   const pricing = getProductPricing(item.product, item.quantity);
                   return total + pricing.totalPrice;
                 }, 0).toLocaleString()}
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentSection('home')}
-                className="font-semibold border-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-              >
-                Continue Shopping
-              </Button>
-              <Button 
-                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold shadow-lg"
-                onClick={() => {
-                  toast({
-                    title: "Order Placed Successfully!",
-                    description: `Order total: ₹${cartItems.reduce((total, item) => {
-                      const pricing = getProductPricing(item.product, item.quantity);
-                      return total + pricing.totalPrice;
-                    }, 0).toLocaleString()}. You will receive confirmation shortly.`,
-                    duration: 5000
-                  });
-                  setCartItems([]);
-                }}
-              >
-                <CreditCard className="w-5 h-5 mr-2" />
-                Proceed to Checkout
-              </Button>
-            </div>
+            <Button 
+              className="w-full"
+              onClick={() => {
+                // Navigate to checkout page with cart data
+                // For now, show success message and clear cart
+                toast({
+                  title: "Order Placed Successfully!",
+                  description: `Order total: ₹${cartItems.reduce((total, item) => {
+                    const pricing = getProductPricing(item.product, item.quantity);
+                    return total + pricing.totalPrice;
+                  }, 0).toLocaleString()}. You will receive confirmation shortly.`,
+                  duration: 5000
+                });
+                setCartItems([]);
+              }}
+            >
+              Proceed to Checkout
+            </Button>
           </Card>
         </div>
       )}
     </div>
   );
+
+  // Main render
+  const renderCurrentSection = () => {
+    switch (currentSection) {
+      case 'category':
+        return <CategoryPage />;
+      case 'product-detail':
+        return <ProductDetailPage />;
+      case 'cart':
+        return <CartSection />;
+      default:
+        return <HomePage />;
+    }
+  };
 
   // Quote Dialog Component
   const QuoteDialog = () => {
@@ -968,21 +1494,96 @@ export default function CustomerEcommerce() {
     });
 
     const onSubmit = (values: any) => {
-      createQuoteMutation.mutate(values);
+      const quoteData = {
+        ...values,
+        items: quoteProduct ? [
+          {
+            productId: quoteProduct.id,
+            productName: quoteProduct.name,
+            quantity: values.quantity,
+            unitPrice: parseFloat(quoteProduct.basePrice),
+            totalPrice: parseFloat(quoteProduct.basePrice) * values.quantity,
+          }
+        ] : [],
+        requirements: {
+          projectType: values.projectType,
+          location: values.projectLocation,
+          details: values.requirements,
+        },
+        subtotal: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity).toString() : '0',
+        taxAmount: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity * 0.18).toString() : '0',
+        totalAmount: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity * 1.18).toString() : '0',
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      createQuoteMutation.mutate(quoteData);
     };
 
     return (
       <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-sharp">Request Quote</DialogTitle>
+            <DialogTitle>Request Quote</DialogTitle>
             <DialogDescription>
-              {quoteProduct ? `Get a detailed quote for ${quoteProduct.name}` : 'Get a customized quote for your construction needs'}
+              {quoteProduct ? `Get a quote for ${quoteProduct.name}` : 'Get a custom quote for your construction materials'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Product Selection - Only show when no product is pre-selected */}
+              {!quoteProduct && (
+                <FormField
+                  control={form.control}
+                  name="productId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Product</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        const product = products.find(p => p.id === value);
+                        if (product) setQuoteProduct(product);
+                      }} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a product for quote" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - ₹{product.basePrice}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Product Summary - Show selected product details */}
+              {quoteProduct && (
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-semibold text-blue-900">{quoteProduct.name}</h4>
+                      <p className="text-sm text-blue-700 mt-1">{quoteProduct.description}</p>
+                      <p className="text-sm font-medium text-blue-800 mt-2">Base Price: ₹{quoteProduct.basePrice}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setQuoteProduct(null)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="customerName"
@@ -1001,9 +1602,9 @@ export default function CustomerEcommerce() {
                   name="customerEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Address</FormLabel>
+                      <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="your@email.com" {...field} />
+                        <Input placeholder="your.email@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1011,7 +1612,7 @@ export default function CustomerEcommerce() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="customerPhone"
@@ -1019,7 +1620,7 @@ export default function CustomerEcommerce() {
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="+91 98765 43210" {...field} />
+                        <Input placeholder="+91 9876543210" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1049,7 +1650,7 @@ export default function CustomerEcommerce() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="projectLocation"
@@ -1093,7 +1694,7 @@ export default function CustomerEcommerce() {
                     <FormControl>
                       <Textarea 
                         placeholder="Please describe any specific requirements, timeline, or questions you have..." 
-                        className="min-h-[100px]"
+                        className="min-h-[80px]"
                         {...field} 
                       />
                     </FormControl>
@@ -1106,7 +1707,7 @@ export default function CustomerEcommerce() {
                 <Button variant="outline" onClick={() => setShowQuoteDialog(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createQuoteMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
+                <Button type="submit" disabled={createQuoteMutation.isPending}>
                   {createQuoteMutation.isPending ? 'Submitting...' : 'Request Quote'}
                 </Button>
               </div>
@@ -1122,7 +1723,6 @@ export default function CustomerEcommerce() {
     const form = useForm({
       resolver: zodResolver(bookingFormSchema),
       defaultValues: {
-        productId: bookingProduct?.id || '',
         customerName: user?.username || '',
         customerEmail: user?.email || '',
         customerPhone: '',
@@ -1132,26 +1732,91 @@ export default function CustomerEcommerce() {
         location: '',
         requirements: '',
         quantity: 1,
-        advancePayment: 0,
       },
     });
 
     const onSubmit = (values: any) => {
-      createBookingMutation.mutate(values);
+      const bookingData = {
+        ...values,
+        requirements: {
+          productId: bookingProduct?.id,
+          productName: bookingProduct?.name,
+          quantity: values.quantity,
+          details: values.requirements,
+        },
+        estimatedDuration: values.serviceType === 'delivery' ? 180 : 300,
+        cost: bookingProduct ? (parseFloat(bookingProduct.basePrice) * values.quantity * 1.15).toString() : '1000',
+      };
+      createBookingMutation.mutate(bookingData);
     };
 
     return (
       <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-sharp">Book Service</DialogTitle>
+            <DialogTitle>Book Service</DialogTitle>
             <DialogDescription>
               {bookingProduct ? `Book a service for ${bookingProduct.name}` : 'Schedule delivery, installation, or consultation'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Product Selection - Only show when no product is pre-selected */}
+              {!bookingProduct && (
+                <FormField
+                  control={form.control}
+                  name="productId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Product</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        const product = products.find(p => p.id === value);
+                        if (product) setBookingProduct(product);
+                      }} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a product to book" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - ₹{product.basePrice}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Product Summary - Show selected product details */}
+              {bookingProduct && (
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-semibold text-green-900">{bookingProduct.name}</h4>
+                      <p className="text-sm text-green-700 mt-1">{bookingProduct.description}</p>
+                      <p className="text-sm font-medium text-green-800 mt-2">Base Price: ₹{bookingProduct.basePrice}</p>
+                      <p className="text-xs text-green-600 mt-1">10% advance payment required</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setBookingProduct(null)}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="customerName"
@@ -1170,9 +1835,9 @@ export default function CustomerEcommerce() {
                   name="customerEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Address</FormLabel>
+                      <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="your@email.com" {...field} />
+                        <Input placeholder="your.email@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1180,7 +1845,7 @@ export default function CustomerEcommerce() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="customerPhone"
@@ -1188,7 +1853,7 @@ export default function CustomerEcommerce() {
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="+91 98765 43210" {...field} />
+                        <Input placeholder="+91 9876543210" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1218,7 +1883,7 @@ export default function CustomerEcommerce() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="scheduledDate"
@@ -1226,7 +1891,7 @@ export default function CustomerEcommerce() {
                     <FormItem>
                       <FormLabel>Preferred Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" min={new Date().toISOString().split('T')[0]} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1245,9 +1910,9 @@ export default function CustomerEcommerce() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="morning">Morning (9 AM - 12 PM)</SelectItem>
-                          <SelectItem value="afternoon">Afternoon (12 PM - 5 PM)</SelectItem>
-                          <SelectItem value="evening">Evening (5 PM - 8 PM)</SelectItem>
+                          <SelectItem value="9:00 AM - 12:00 PM">Morning (9 AM - 12 PM)</SelectItem>
+                          <SelectItem value="12:00 PM - 3:00 PM">Afternoon (12 PM - 3 PM)</SelectItem>
+                          <SelectItem value="3:00 PM - 6:00 PM">Evening (3 PM - 6 PM)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -1256,21 +1921,20 @@ export default function CustomerEcommerce() {
                 />
               </div>
               
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Service Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Full address for service" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Service Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Full address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="quantity"
@@ -1290,25 +1954,6 @@ export default function CustomerEcommerce() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="advancePayment"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Advance Payment (₹)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          placeholder="1000" 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
               
               <FormField
@@ -1316,11 +1961,11 @@ export default function CustomerEcommerce() {
                 name="requirements"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Special Requirements (Optional)</FormLabel>
+                    <FormLabel>Special Instructions (Optional)</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Any special instructions or requirements..." 
-                        className="min-h-[100px]"
+                        placeholder="Any special instructions or requirements for the service..." 
+                        className="min-h-[80px]"
                         {...field} 
                       />
                     </FormControl>
@@ -1333,8 +1978,8 @@ export default function CustomerEcommerce() {
                 <Button variant="outline" onClick={() => setShowBookingDialog(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createBookingMutation.isPending} className="bg-green-600 hover:bg-green-700">
-                  {createBookingMutation.isPending ? 'Booking...' : 'Confirm Booking'}
+                <Button type="submit" disabled={createBookingMutation.isPending}>
+                  {createBookingMutation.isPending ? 'Booking...' : 'Book Service'}
                 </Button>
               </div>
             </form>
@@ -1344,53 +1989,117 @@ export default function CustomerEcommerce() {
     );
   };
 
-  // Main render
-  const renderCurrentSection = () => {
-    switch (currentSection) {
-      case 'cart':
-        return <CartSection />;
-      default:
-        return <HomePage />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gray-50">
       <Header />
       {renderCurrentSection()}
       
-      {/* Dialogs */}
+      {/* AI Estimator Dialog */}
+      <Dialog open={showAIEstimator} onOpenChange={setShowAIEstimator}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Brain className="w-6 h-6 mr-2 text-purple-600" />
+              AI Material Estimator
+            </DialogTitle>
+            <DialogDescription>
+              Upload construction images or enter project details for AI-powered material estimates
+            </DialogDescription>
+          </DialogHeader>
+          <AIEstimator onAddToCart={(materials) => {
+            materials.forEach(material => {
+              const product: Product = {
+                id: `ai-${material.material.toLowerCase().replace(/\s+/g, '-')}`,
+                name: material.material,
+                description: material.description,
+                basePrice: material.estimatedPrice.toString(),
+                categoryId: material.category,
+                specs: { unit: material.unit },
+                vendorId: 'ai-estimator',
+                stockQuantity: 1000,
+                isActive: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                quantitySlabs: null,
+                dynamicCharges: null,
+                imageUrl: null
+              };
+              addToCart(product, material.adjustedQuantity || material.quantity);
+            });
+            setShowAIEstimator(false);
+          }} />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Authentication Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign In Required</DialogTitle>
+            <DialogDescription>
+              Sign in to add items to cart, save wishlist, and access personalized features.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-4">
+            <Button asChild className="flex-1">
+              <Link href="/login">Sign In</Link>
+            </Button>
+            <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
+              Continue Browsing
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Quote and Booking Dialogs */}
       <QuoteDialog />
       <BookingDialog />
       
-      {/* AI Tools */}
-      {showAIEstimator && (
-        <Dialog open={showAIEstimator} onOpenChange={setShowAIEstimator}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-sharp">AI Material Estimator</DialogTitle>
-              <DialogDescription>
-                Get intelligent material estimates for your construction project
-              </DialogDescription>
-            </DialogHeader>
-            <AIEstimator />
-          </DialogContent>
-        </Dialog>
+      {/* Advanced Feature Modals */}
+      <ProductComparison 
+        isOpen={showComparison}
+        onOpenChange={setShowComparison}
+        initialProducts={comparisonProducts}
+        onAddToCart={(product) => addToCart(product, 1)}
+      />
+      
+      <AIShoppingAssistant
+        isOpen={showAIAssistant}
+        onOpenChange={setShowAIAssistant}
+        onAddToCart={(product) => addToCart(product, 1)}
+        onStartComparison={startComparison}
+        currentContext={{
+          viewingCategory: selectedCategoryId || undefined,
+          viewingProduct: selectedProduct || undefined,
+          cartItems: cartItems.map(item => item.product),
+          recentSearches: [searchTerm].filter(Boolean)
+        }}
+      />
+      
+      <LoyaltyProgram
+        isOpen={showLoyaltyProgram}
+        onOpenChange={setShowLoyaltyProgram}
+        userPurchases={cartItems.length}
+        totalSpent={cartItems.reduce((total, item) => 
+          total + (parseFloat(item.product.basePrice) * item.quantity), 0
+        )}
+      />
+      
+      {selectedProduct && (
+        <ARProductViewer
+          isOpen={showARViewer}
+          onOpenChange={setShowARViewer}
+          product={selectedProduct}
+          onShare={shareProduct}
+        />
       )}
       
-      {showAIAssistant && (
-        <Dialog open={showAIAssistant} onOpenChange={setShowAIAssistant}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-sharp">AI Shopping Assistant</DialogTitle>
-              <DialogDescription>
-                Get personalized product recommendations and answers to your questions
-              </DialogDescription>
-            </DialogHeader>
-            <AIShoppingAssistant />
-          </DialogContent>
-        </Dialog>
-      )}
+      <SocialSharing
+        isOpen={showSocialSharing}
+        onOpenChange={setShowSocialSharing}
+        product={sharingProduct || undefined}
+        shareType="product"
+      />
     </div>
   );
 }
