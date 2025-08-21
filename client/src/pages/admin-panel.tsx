@@ -43,7 +43,10 @@ import {
   DollarSign,
   Layers,
   UserCheck,
-  Star
+  Star,
+  X,
+  Upload,
+  FileText
 } from "lucide-react";
 
 export default function AdminPanel() {
@@ -82,6 +85,99 @@ export default function AdminPanel() {
     bulkDiscountSlabs: "[]",
     deliveryDiscountSlabs: "[]"
   });
+
+  // Dynamic form arrays for enhanced UI
+  const [quantitySlabs, setQuantitySlabs] = useState([
+    { id: 1, fromQty: '', toQty: '', price: '' }
+  ]);
+  const [deliveryDiscountSlabs, setDeliveryDiscountSlabs] = useState([
+    { id: 1, days: '', discount: '' }
+  ]);
+  const [dynamicCharges, setDynamicCharges] = useState([
+    { id: 1, chargeName: '', amount: '' }
+  ]);
+  const [specifications, setSpecifications] = useState([
+    { id: 1, key: '', value: '' }
+  ]);
+  const [showCSVUpload, setShowCSVUpload] = useState(false);
+  const [csvUploadType, setCsvUploadType] = useState('products');
+
+  // CSV Upload handlers
+  const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csv = e.target?.result as string;
+      parseCSVData(csv, csvUploadType);
+    };
+    reader.readAsText(file);
+  };
+
+  const parseCSVData = (csv: string, type: string) => {
+    const lines = csv.split('\n').filter(line => line.trim());
+    const headers = lines[0].split(',').map(h => h.trim());
+    const data = lines.slice(1).map(line => {
+      const values = line.split(',').map(v => v.trim());
+      const obj: any = {};
+      headers.forEach((header, index) => {
+        obj[header] = values[index] || '';
+      });
+      return obj;
+    });
+
+    if (type === 'products') {
+      uploadProductsFromCSV(data);
+    } else if (type === 'categories') {
+      uploadCategoriesFromCSV(data);
+    }
+  };
+
+  const uploadProductsFromCSV = (products: any[]) => {
+    products.forEach(product => {
+      const productData = {
+        name: product.name || '',
+        description: product.description || '',
+        basePrice: parseFloat(product.basePrice) || 0,
+        categoryId: product.categoryId || '',
+        stockQuantity: parseInt(product.stockQuantity) || 0,
+        brand: product.brand || '',
+        company: product.company || '',
+        gstRate: parseFloat(product.gstRate) || 18,
+        specifications: product.specifications ? JSON.parse(product.specifications) : {},
+        quantitySlabs: product.quantitySlabs ? JSON.parse(product.quantitySlabs) : [],
+        dynamicCharges: product.dynamicCharges ? JSON.parse(product.dynamicCharges) : {},
+        bulkDiscountSlabs: product.bulkDiscountSlabs ? JSON.parse(product.bulkDiscountSlabs) : [],
+        deliveryDiscountSlabs: product.deliveryDiscountSlabs ? JSON.parse(product.deliveryDiscountSlabs) : [],
+        vendorId: user?.id
+      };
+      
+      createProductMutation.mutate(productData);
+    });
+    
+    toast({
+      title: "CSV Upload Started",
+      description: `Processing ${products.length} products from CSV`
+    });
+  };
+
+  const uploadCategoriesFromCSV = (categories: any[]) => {
+    categories.forEach(category => {
+      const categoryData = {
+        name: category.name || '',
+        description: category.description || '',
+        parentId: category.parentId || null
+      };
+      
+      createCategoryMutation.mutate(categoryData);
+    });
+    
+    toast({
+      title: "CSV Upload Started", 
+      description: `Processing ${categories.length} categories from CSV`
+    });
+  };
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -167,31 +263,88 @@ export default function AdminPanel() {
     }
   };
 
+  // Helper functions for dynamic arrays
+  const addQuantitySlab = () => {
+    setQuantitySlabs([...quantitySlabs, { id: Date.now(), fromQty: '', toQty: '', price: '' }]);
+  };
+
+  const removeQuantitySlab = (id: number) => {
+    setQuantitySlabs(quantitySlabs.filter(slab => slab.id !== id));
+  };
+
+  const addDeliveryDiscountSlab = () => {
+    setDeliveryDiscountSlabs([...deliveryDiscountSlabs, { id: Date.now(), days: '', discount: '' }]);
+  };
+
+  const removeDeliveryDiscountSlab = (id: number) => {
+    setDeliveryDiscountSlabs(deliveryDiscountSlabs.filter(slab => slab.id !== id));
+  };
+
+  const addDynamicCharge = () => {
+    setDynamicCharges([...dynamicCharges, { id: Date.now(), chargeName: '', amount: '' }]);
+  };
+
+  const removeDynamicCharge = (id: number) => {
+    setDynamicCharges(dynamicCharges.filter(charge => charge.id !== id));
+  };
+
+  const addSpecification = () => {
+    setSpecifications([...specifications, { id: Date.now(), key: '', value: '' }]);
+  };
+
+  const removeSpecification = (id: number) => {
+    setSpecifications(specifications.filter(spec => spec.id !== id));
+  };
+
   const handleSubmitProduct = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const specifications = JSON.parse(productForm.specifications || "{}");
-      const quantitySlabs = JSON.parse(productForm.quantitySlabs || "[]");
-      const dynamicCharges = JSON.parse(productForm.dynamicCharges || "{}");
-      const bulkDiscountSlabs = JSON.parse(productForm.bulkDiscountSlabs || "[]");
-      const deliveryDiscountSlabs = JSON.parse(productForm.deliveryDiscountSlabs || "[]");
+      // Convert dynamic arrays to JSON format
+      const specsObj: Record<string, string> = {};
+      specifications.forEach(spec => {
+        if (spec.key && spec.value) {
+          specsObj[spec.key] = spec.value;
+        }
+      });
+
+      const quantitySlabsArray = quantitySlabs
+        .filter(slab => slab.fromQty && slab.toQty && slab.price)
+        .map(slab => ({
+          minQty: parseInt(slab.fromQty),
+          maxQty: parseInt(slab.toQty),
+          price: parseFloat(slab.price)
+        }));
+
+      const deliveryDiscountSlabsArray = deliveryDiscountSlabs
+        .filter(slab => slab.days && slab.discount)
+        .map(slab => ({
+          days: parseInt(slab.days),
+          discount: parseFloat(slab.discount)
+        }));
+
+      const dynamicChargesObj: Record<string, number> = {};
+      dynamicCharges.forEach(charge => {
+        if (charge.chargeName && charge.amount) {
+          dynamicChargesObj[charge.chargeName] = parseFloat(charge.amount);
+        }
+      });
       
       createProductMutation.mutate({
         ...productForm,
         basePrice: parseFloat(productForm.basePrice),
         stockQuantity: parseInt(productForm.stockQuantity),
         gstRate: parseFloat(productForm.gstRate),
-        specifications,
-        quantitySlabs,
-        dynamicCharges,
-        bulkDiscountSlabs,
-        deliveryDiscountSlabs,
+        specifications: specsObj,
+        quantitySlabs: quantitySlabsArray,
+        dynamicCharges: dynamicChargesObj,
+        bulkDiscountSlabs: deliveryDiscountSlabsArray, // Using delivery discount for bulk discount
+        deliveryDiscountSlabs: deliveryDiscountSlabsArray,
         vendorId: user?.id // Admin creates for system
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Invalid JSON in specifications, quantity slabs, dynamic charges, or discount slabs",
+        description: "Error processing form data",
         variant: "destructive"
       });
     }
@@ -398,10 +551,16 @@ export default function AdminPanel() {
             <TabsContent value="products" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Product Management</h2>
-                <Button onClick={() => setShowProductModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowCSVUpload(true)}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    CSV Upload
+                  </Button>
+                  <Button onClick={() => setShowProductModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                </div>
               </div>
 
               <Card>
@@ -866,54 +1025,186 @@ export default function AdminPanel() {
               </div>
             </div>
             
+            {/* Specifications */}
             <div>
-              <Label htmlFor="specifications">Specifications (JSON)</Label>
-              <Textarea
-                id="specifications"
-                placeholder='{"grade": "53", "size": "50kg"}'
-                value={productForm.specifications}
-                onChange={(e) => setProductForm({...productForm, specifications: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="quantitySlabs">Quantity Slabs (JSON)</Label>
-              <Textarea
-                id="quantitySlabs"
-                placeholder='[{"minQty": 1, "maxQty": 10, "price": 500}, {"minQty": 11, "maxQty": 50, "price": 480}]'
-                value={productForm.quantitySlabs}
-                onChange={(e) => setProductForm({...productForm, quantitySlabs: e.target.value})}
-              />
+              <div className="flex items-center justify-between mb-2">
+                <Label>Product Specifications</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addSpecification}>
+                  <Plus className="w-4 h-4 mr-1" /> Add Specification
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {specifications.map((spec) => (
+                  <div key={spec.id} className="flex gap-2">
+                    <Input
+                      placeholder="Key (e.g., Grade)"
+                      value={spec.key}
+                      onChange={(e) => setSpecifications(specifications.map(s => 
+                        s.id === spec.id ? {...s, key: e.target.value} : s
+                      ))}
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="Value (e.g., 53)"
+                      value={spec.value}
+                      onChange={(e) => setSpecifications(specifications.map(s => 
+                        s.id === spec.id ? {...s, value: e.target.value} : s
+                      ))}
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => removeSpecification(spec.id)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
 
+            {/* Quantity Slabs */}
             <div>
-              <Label htmlFor="bulkDiscountSlabs">Bulk Discount Slabs (JSON)</Label>
-              <Textarea
-                id="bulkDiscountSlabs"
-                placeholder='[{"minQty": 20, "maxQty": 50, "discount": 5}, {"minQty": 51, "maxQty": 100, "discount": 10}]'
-                value={productForm.bulkDiscountSlabs}
-                onChange={(e) => setProductForm({...productForm, bulkDiscountSlabs: e.target.value})}
-              />
+              <div className="flex items-center justify-between mb-2">
+                <Label>Quantity Pricing Slabs</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addQuantitySlab}>
+                  <Plus className="w-4 h-4 mr-1" /> Add Quantity Slab
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {quantitySlabs.map((slab) => (
+                  <div key={slab.id} className="flex gap-2 items-center">
+                    <Input
+                      type="number"
+                      placeholder="From Qty"
+                      value={slab.fromQty}
+                      onChange={(e) => setQuantitySlabs(quantitySlabs.map(s => 
+                        s.id === slab.id ? {...s, fromQty: e.target.value} : s
+                      ))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-gray-500">to</span>
+                    <Input
+                      type="number"
+                      placeholder="To Qty"
+                      value={slab.toQty}
+                      onChange={(e) => setQuantitySlabs(quantitySlabs.map(s => 
+                        s.id === slab.id ? {...s, toQty: e.target.value} : s
+                      ))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-gray-500">₹</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Price"
+                      value={slab.price}
+                      onChange={(e) => setQuantitySlabs(quantitySlabs.map(s => 
+                        s.id === slab.id ? {...s, price: e.target.value} : s
+                      ))}
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => removeQuantitySlab(slab.id)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
 
+            {/* Delivery Discount Slabs */}
             <div>
-              <Label htmlFor="deliveryDiscountSlabs">Delivery Discount Slabs (JSON)</Label>
-              <Textarea
-                id="deliveryDiscountSlabs"
-                placeholder='[{"minOrderValue": 5000, "maxOrderValue": 10000, "discount": 5}, {"minOrderValue": 10001, "discount": 10}]'
-                value={productForm.deliveryDiscountSlabs}
-                onChange={(e) => setProductForm({...productForm, deliveryDiscountSlabs: e.target.value})}
-              />
+              <div className="flex items-center justify-between mb-2">
+                <Label>Delivery Discount Slabs</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addDeliveryDiscountSlab}>
+                  <Plus className="w-4 h-4 mr-1" /> Add Delivery Discount
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {deliveryDiscountSlabs.map((slab) => (
+                  <div key={slab.id} className="flex gap-2 items-center">
+                    <Input
+                      type="number"
+                      placeholder="Days"
+                      value={slab.days}
+                      onChange={(e) => setDeliveryDiscountSlabs(deliveryDiscountSlabs.map(s => 
+                        s.id === slab.id ? {...s, days: e.target.value} : s
+                      ))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-gray-500">days →</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Discount %"
+                      value={slab.discount}
+                      onChange={(e) => setDeliveryDiscountSlabs(deliveryDiscountSlabs.map(s => 
+                        s.id === slab.id ? {...s, discount: e.target.value} : s
+                      ))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-gray-500">% off</span>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => removeDeliveryDiscountSlab(slab.id)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
 
+            {/* Dynamic Charges */}
             <div>
-              <Label htmlFor="dynamicCharges">Dynamic Charges (JSON)</Label>
-              <Textarea
-                id="dynamicCharges"
-                placeholder='{"loading": 100, "unloading": 50, "express_delivery": 200}'
-                value={productForm.dynamicCharges}
-                onChange={(e) => setProductForm({...productForm, dynamicCharges: e.target.value})}
-              />
+              <div className="flex items-center justify-between mb-2">
+                <Label>Dynamic Charges</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addDynamicCharge}>
+                  <Plus className="w-4 h-4 mr-1" /> Add Charge
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {dynamicCharges.map((charge) => (
+                  <div key={charge.id} className="flex gap-2 items-center">
+                    <Input
+                      placeholder="Charge Name (e.g., Loading)"
+                      value={charge.chargeName}
+                      onChange={(e) => setDynamicCharges(dynamicCharges.map(c => 
+                        c.id === charge.id ? {...c, chargeName: e.target.value} : c
+                      ))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-gray-500">₹</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Amount"
+                      value={charge.amount}
+                      onChange={(e) => setDynamicCharges(dynamicCharges.map(c => 
+                        c.id === charge.id ? {...c, amount: e.target.value} : c
+                      ))}
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => removeDynamicCharge(charge.id)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div className="flex gap-2">
