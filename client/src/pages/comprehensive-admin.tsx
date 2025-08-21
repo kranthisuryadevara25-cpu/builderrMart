@@ -61,6 +61,8 @@ export default function ComprehensiveAdminPanel() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddVendorModal, setShowAddVendorModal] = useState(false);
+  const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
   const [viewingItem, setViewingItem] = useState<any | undefined>();
   const [editingItem, setEditingItem] = useState<any | undefined>();
   const [exportType, setExportType] = useState('orders');
@@ -152,6 +154,92 @@ export default function ComprehensiveAdminPanel() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Add Vendor Mutation
+  const addVendor = useMutation({
+    mutationFn: async (vendorData: any) => {
+      return await apiRequest("POST", "/api/users", vendorData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setShowAddVendorModal(false);
+      toast({
+        title: "Success",
+        description: "Vendor added successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to add vendor",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Add Material Mutation
+  const addMaterial = useMutation({
+    mutationFn: async (materialData: any) => {
+      return await apiRequest("POST", "/api/marketing-materials", materialData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-materials"] });
+      setShowAddMaterialModal(false);
+      toast({
+        title: "Success",
+        description: "Marketing material added successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to add marketing material",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update Item Mutation
+  const updateItem = useMutation({
+    mutationFn: async ({ id, type, data }: { id: string; type: string; data: any }) => {
+      const endpoints = {
+        category: "/api/categories",
+        product: "/api/products",
+        user: "/api/users",
+        'marketing-material': "/api/marketing-materials",
+        contractor: "/api/contractors",
+        advance: "/api/advances",
+        order: "/api/orders",
+        'pricing-rule': "/api/pricing-rules"
+      };
+      return await apiRequest("PUT", `${endpoints[type as keyof typeof endpoints]}/${id}`, data);
+    },
+    onSuccess: (_, { type }) => {
+      const queryKeys = {
+        category: ["/api/categories"],
+        product: ["/api/products"],
+        user: ["/api/users"],
+        'marketing-material': ["/api/marketing-materials"],
+        contractor: ["/api/contractors"],
+        advance: ["/api/advances"],
+        order: ["/api/orders"],
+        'pricing-rule': ["/api/pricing-rules"]
+      };
+      queryClient.invalidateQueries({ queryKey: queryKeys[type as keyof typeof queryKeys] });
+      setShowEditModal(false);
+      toast({
+        title: "Success",
+        description: `${type} updated successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update item`,
         variant: "destructive",
       });
     },
@@ -407,7 +495,7 @@ export default function ComprehensiveAdminPanel() {
             <TabsContent value="vendors" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Vendor Management</h2>
-                <Button>
+                <Button onClick={() => setShowAddVendorModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Vendor
                 </Button>
@@ -475,7 +563,7 @@ export default function ComprehensiveAdminPanel() {
             <TabsContent value="marketing" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Marketing Materials</h2>
-                <Button>
+                <Button onClick={() => setShowAddMaterialModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Material
                 </Button>
@@ -1058,6 +1146,224 @@ export default function ComprehensiveAdminPanel() {
                     ))}
                 </div>
               )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Vendor Modal */}
+          <Dialog open={showAddVendorModal} onOpenChange={setShowAddVendorModal}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Vendor</DialogTitle>
+                <DialogDescription>
+                  Create a new vendor account with login credentials.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const vendorData = {
+                  username: formData.get('username'),
+                  email: formData.get('email'),
+                  password: formData.get('password'),
+                  role: 'vendor',
+                  isActive: true
+                };
+                addVendor.mutate(vendorData);
+              }} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username *</Label>
+                  <Input name="username" id="username" placeholder="vendor_username" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input name="email" id="email" type="email" placeholder="vendor@email.com" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input name="password" id="password" type="password" placeholder="Create password" required />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    type="button"
+                    onClick={() => setShowAddVendorModal(false)}
+                    variant="outline" 
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={addVendor.isPending}>
+                    {addVendor.isPending ? "Adding..." : "Add Vendor"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Material Modal */}
+          <Dialog open={showAddMaterialModal} onOpenChange={setShowAddMaterialModal}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add Marketing Material</DialogTitle>
+                <DialogDescription>
+                  Create a new marketing material for campaigns and promotions.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const materialData = {
+                  title: formData.get('title'),
+                  content: formData.get('content'),
+                  type: formData.get('type'),
+                  status: 'active',
+                  targetAudience: formData.get('targetAudience'),
+                  campaignName: formData.get('campaignName')
+                };
+                addMaterial.mutate(materialData);
+              }} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title *</Label>
+                  <Input name="title" id="title" placeholder="Marketing campaign title" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Type *</Label>
+                  <Select name="type" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select material type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="banner">Banner</SelectItem>
+                      <SelectItem value="email">Email Template</SelectItem>
+                      <SelectItem value="social">Social Media</SelectItem>
+                      <SelectItem value="brochure">Brochure</SelectItem>
+                      <SelectItem value="advertisement">Advertisement</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="content">Content *</Label>
+                  <Textarea name="content" id="content" placeholder="Marketing material content" required className="min-h-[80px]" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="targetAudience">Target Audience</Label>
+                  <Input name="targetAudience" id="targetAudience" placeholder="e.g., contractors, builders" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="campaignName">Campaign Name</Label>
+                  <Input name="campaignName" id="campaignName" placeholder="Campaign identifier" />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    type="button"
+                    onClick={() => setShowAddMaterialModal(false)}
+                    variant="outline" 
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={addMaterial.isPending}>
+                    {addMaterial.isPending ? "Adding..." : "Add Material"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Enhanced Edit Modal */}
+          <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Edit {editingItem?.type}</DialogTitle>
+                <DialogDescription>
+                  Make changes to the {editingItem?.type} details below.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!editingItem) return;
+                
+                const formData = new FormData(e.currentTarget);
+                const data: any = {};
+                
+                // Collect form data
+                Object.entries(editingItem)
+                  .filter(([key]) => !['id', 'type', 'createdAt', 'updatedAt'].includes(key))
+                  .forEach(([key]) => {
+                    const value = formData.get(key);
+                    if (key === 'isActive') {
+                      data[key] = value === 'true';
+                    } else {
+                      data[key] = value;
+                    }
+                  });
+                
+                updateItem.mutate({ 
+                  id: editingItem.id, 
+                  type: editingItem.type, 
+                  data 
+                });
+              }} className="space-y-4 max-h-96 overflow-y-auto">
+                {editingItem && (
+                  <div className="space-y-4">
+                    {Object.entries(editingItem)
+                      .filter(([key]) => !['id', 'type', 'createdAt', 'updatedAt'].includes(key))
+                      .map(([key, value]) => (
+                        <div key={key} className="space-y-2">
+                          <Label className="text-sm font-medium capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                          </Label>
+                          {key === 'description' || key === 'notes' || key === 'content' ? (
+                            <Textarea 
+                              name={key}
+                              defaultValue={String(value || '')}
+                              className="min-h-[80px]"
+                            />
+                          ) : key === 'role' ? (
+                            <Select name={key} defaultValue={String(value || '')}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="owner_admin">Owner Admin</SelectItem>
+                                <SelectItem value="vendor_manager">Vendor Manager</SelectItem>
+                                <SelectItem value="vendor">Vendor</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : key === 'isActive' ? (
+                            <Select name={key} defaultValue={String(value || true)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="true">Active</SelectItem>
+                                <SelectItem value="false">Inactive</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input 
+                              name={key}
+                              defaultValue={String(value || '')}
+                              type={typeof value === 'number' ? 'number' : 'text'}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        type="button"
+                        onClick={() => setShowEditModal(false)}
+                        variant="outline" 
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" className="flex-1" disabled={updateItem.isPending}>
+                        {updateItem.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </form>
             </DialogContent>
           </Dialog>
         </div>
