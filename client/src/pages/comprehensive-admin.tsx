@@ -49,7 +49,9 @@ import {
   Upload,
   FileText,
   Download,
-  Calendar
+  Calendar,
+  Clock,
+  TrendingUp
 } from "lucide-react";
 
 export default function ComprehensiveAdminPanel() {
@@ -491,29 +493,106 @@ export default function ComprehensiveAdminPanel() {
               </Card>
             </TabsContent>
 
-            {/* Vendors Tab */}
+            {/* Enhanced Vendors Tab */}
             <TabsContent value="vendors" className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Vendor Management</h2>
+                <h2 className="text-2xl font-bold">Vendor Management & Analytics</h2>
                 <Button onClick={() => setShowAddVendorModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Vendor
                 </Button>
               </div>
-              
+
+              {/* Vendor Analytics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Total Vendors</p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {users?.filter(user => user.role === 'vendor').length || 0}
+                        </p>
+                      </div>
+                      <Users className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Active Vendors</p>
+                        <p className="text-2xl font-semibold text-green-700">
+                          {users?.filter(user => user.role === 'vendor' && user.isActive !== false).length || 0}
+                        </p>
+                      </div>
+                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Pending Approval</p>
+                        <p className="text-2xl font-semibold text-yellow-700">
+                          {users?.filter(user => user.role === 'vendor' && user.approvalStatus === 'pending').length || 0}
+                        </p>
+                      </div>
+                      <Clock className="h-8 w-8 text-yellow-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">This Month</p>
+                        <p className="text-2xl font-semibold text-purple-700">
+                          {users?.filter(user => 
+                            user.role === 'vendor' && 
+                            user.createdAt && 
+                            new Date(user.createdAt).getMonth() === new Date().getMonth()
+                          ).length || 0}
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-purple-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Vendor Status Filter */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Registered Vendors</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Vendor Directory</CardTitle>
+                    <div className="flex gap-2">
+                      <Select defaultValue="all">
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Vendors</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="pending">Pending Approval</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Vendor Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Registration Date</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Vendor Details</TableHead>
+                        <TableHead>Contact Info</TableHead>
+                        <TableHead>Business Info</TableHead>
+                        <TableHead>Performance</TableHead>
+                        <TableHead>Approval Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -521,34 +600,123 @@ export default function ComprehensiveAdminPanel() {
                       {users?.filter(user => user.role === 'vendor').map((vendor) => (
                         <TableRow key={vendor.id}>
                           <TableCell>
-                            <div>
+                            <div className="space-y-1">
                               <p className="font-medium">{vendor.username}</p>
-                              <p className="text-sm text-gray-500">{vendor.companyName || 'No company'}</p>
+                              <p className="text-sm text-gray-500">ID: {vendor.id.slice(0,8)}...</p>
+                              <p className="text-xs text-gray-400">
+                                Joined: {vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : 'N/A'}
+                              </p>
                             </div>
                           </TableCell>
-                          <TableCell>{vendor.email || 'No email'}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">{vendor.role}</Badge>
+                            <div className="space-y-1">
+                              <p className="text-sm">{vendor.email || 'No email'}</p>
+                              <p className="text-sm">{vendor.phone || 'No phone'}</p>
+                              <p className="text-xs text-gray-500">{vendor.city || 'Location not set'}</p>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : 'N/A'}
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium">{vendor.companyName || 'No company'}</p>
+                              <p className="text-xs text-gray-500">
+                                Products: {products?.filter(p => p.vendorId === vendor.id).length || 0}
+                              </p>
+                              <Badge variant="outline" className="text-xs">
+                                {vendor.role}
+                              </Badge>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={vendor.isActive ? "default" : "secondary"}>
-                              {vendor.isActive !== false ? 'Active' : 'Inactive'}
-                            </Badge>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1">
+                                <Star className="h-3 w-3 text-yellow-500" />
+                                <span className="text-sm">4.5</span>
+                              </div>
+                              <p className="text-xs text-gray-500">Orders: {vendor.totalOrders || 0}</p>
+                              <p className="text-xs text-gray-500">Sales: ₹{vendor.totalSpent || '0'}</p>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => handleView(vendor, 'vendor')}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleEdit(vendor, 'vendor')}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDelete(vendor.id, 'vendor')}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                            <div className="space-y-2">
+                              <Badge variant={
+                                vendor.approvalStatus === 'approved' ? "default" : 
+                                vendor.approvalStatus === 'pending' ? "secondary" : 
+                                vendor.approvalStatus === 'rejected' ? "destructive" : "outline"
+                              }>
+                                {vendor.approvalStatus || 'pending'}
+                              </Badge>
+                              <div className="flex gap-1">
+                                {vendor.approvalStatus !== 'approved' && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-6 px-2 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                                    onClick={() => {
+                                      updateItem.mutate({
+                                        id: vendor.id,
+                                        type: 'user',
+                                        data: { approvalStatus: 'approved', isActive: true }
+                                      });
+                                    }}
+                                  >
+                                    Approve
+                                  </Button>
+                                )}
+                                {vendor.approvalStatus !== 'rejected' && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-6 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                    onClick={() => {
+                                      updateItem.mutate({
+                                        id: vendor.id,
+                                        type: 'user',
+                                        data: { approvalStatus: 'rejected', isActive: false }
+                                      });
+                                    }}
+                                  >
+                                    Reject
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => handleView(vendor, 'vendor')}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(vendor, 'vendor')}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleDelete(vendor.id, 'vendor')}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => {
+                                    updateItem.mutate({
+                                      id: vendor.id,
+                                      type: 'user',
+                                      data: { isActive: !vendor.isActive }
+                                    });
+                                  }}
+                                >
+                                  {vendor.isActive !== false ? 'Suspend' : 'Activate'}
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-6 px-2 text-xs"
+                                >
+                                  Analytics
+                                </Button>
+                              </div>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -557,6 +725,60 @@ export default function ComprehensiveAdminPanel() {
                   </Table>
                 </CardContent>
               </Card>
+
+              {/* Vendor Performance Analytics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Top Performing Vendors</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {users?.filter(user => user.role === 'vendor').slice(0, 5).map((vendor, index) => (
+                        <div key={vendor.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline">#{index + 1}</Badge>
+                            <div>
+                              <p className="font-medium">{vendor.username}</p>
+                              <p className="text-sm text-gray-500">{vendor.companyName || 'No company'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">₹{vendor.totalSpent || '0'}</p>
+                            <p className="text-sm text-gray-500">{vendor.totalOrders || 0} orders</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Vendor Activity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {users?.filter(user => user.role === 'vendor').slice(0, 5).map((vendor) => (
+                        <div key={vendor.id} className="flex items-center justify-between p-3 border-l-4 border-blue-500 bg-blue-50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <div>
+                              <p className="font-medium">{vendor.username}</p>
+                              <p className="text-sm text-gray-500">
+                                Last active: {vendor.updatedAt ? new Date(vendor.updatedAt).toLocaleDateString() : 'Never'}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant={vendor.isActive !== false ? "default" : "secondary"}>
+                            {vendor.isActive !== false ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             {/* Marketing Tab */}
