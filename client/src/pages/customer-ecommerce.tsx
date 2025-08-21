@@ -79,20 +79,28 @@ interface CartItem {
   selectedQuantitySlab?: any;
 }
 
-// Form schemas
+// Multiple product item interface
+interface SelectedQuoteProduct {
+  product: Product;
+  quantity: number;
+}
+
+interface SelectedBookingProduct {
+  product: Product;
+  quantity: number;
+}
+
+// Form schemas - updated for multiple products
 const quoteFormSchema = z.object({
-  productName: z.string().optional(),
   customerName: z.string().min(1, 'Name is required'),
   customerEmail: z.string().email('Valid email required'),
   customerPhone: z.string().min(10, 'Phone number required'),
   projectType: z.enum(['residential', 'commercial', 'industrial']),
   projectLocation: z.string().min(1, 'Location is required'),
   requirements: z.string().optional(),
-  quantity: z.number().min(1, 'Quantity must be at least 1'),
 });
 
 const bookingFormSchema = z.object({
-  productName: z.string().optional(),
   customerName: z.string().min(1, 'Name is required'),
   customerEmail: z.string().email('Valid email required'),
   customerPhone: z.string().min(10, 'Phone number required'),
@@ -101,7 +109,6 @@ const bookingFormSchema = z.object({
   scheduledTime: z.string().min(1, 'Time is required'),
   location: z.string().min(1, 'Location is required'),
   requirements: z.string().optional(),
-  quantity: z.number().min(1, 'Quantity must be at least 1'),
   advancePayment: z.number().min(0, 'Advance payment required'),
 });
 
@@ -123,6 +130,12 @@ export default function CustomerEcommerce() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
+  
+  // Multiple products state for quotation and booking
+  const [selectedQuoteProducts, setSelectedQuoteProducts] = useState<SelectedQuoteProduct[]>([]);
+  const [selectedBookingProducts, setSelectedBookingProducts] = useState<SelectedBookingProduct[]>([]);
+  const [quoteProductSearch, setQuoteProductSearch] = useState('');
+  const [bookingProductSearch, setBookingProductSearch] = useState('');
   const [bookingProductSearchTerm, setBookingProductSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [sortBy, setSortBy] = useState<string>("name");
@@ -1521,41 +1534,115 @@ export default function CustomerEcommerce() {
   };
 
   // Quote Dialog Component
+  // Helper functions for multiple products
+  const addQuoteProduct = (product: Product) => {
+    const existingIndex = selectedQuoteProducts.findIndex(item => item.product.id === product.id);
+    if (existingIndex >= 0) {
+      const updated = [...selectedQuoteProducts];
+      updated[existingIndex].quantity += 1;
+      setSelectedQuoteProducts(updated);
+    } else {
+      setSelectedQuoteProducts([...selectedQuoteProducts, { product, quantity: 1 }]);
+    }
+    setQuoteProductSearch('');
+  };
+
+  const updateQuoteProductQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setSelectedQuoteProducts(selectedQuoteProducts.filter(item => item.product.id !== productId));
+    } else {
+      setSelectedQuoteProducts(selectedQuoteProducts.map(item =>
+        item.product.id === productId ? { ...item, quantity } : item
+      ));
+    }
+  };
+
+  const removeQuoteProduct = (productId: string) => {
+    setSelectedQuoteProducts(selectedQuoteProducts.filter(item => item.product.id !== productId));
+  };
+
+  const addBookingProduct = (product: Product) => {
+    const existingIndex = selectedBookingProducts.findIndex(item => item.product.id === product.id);
+    if (existingIndex >= 0) {
+      const updated = [...selectedBookingProducts];
+      updated[existingIndex].quantity += 1;
+      setSelectedBookingProducts(updated);
+    } else {
+      setSelectedBookingProducts([...selectedBookingProducts, { product, quantity: 1 }]);
+    }
+    setBookingProductSearch('');
+  };
+
+  const updateBookingProductQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setSelectedBookingProducts(selectedBookingProducts.filter(item => item.product.id !== productId));
+    } else {
+      setSelectedBookingProducts(selectedBookingProducts.map(item =>
+        item.product.id === productId ? { ...item, quantity } : item
+      ));
+    }
+  };
+
+  const removeBookingProduct = (productId: string) => {
+    setSelectedBookingProducts(selectedBookingProducts.filter(item => item.product.id !== productId));
+  };
+
   const QuoteDialog = () => {
     const form = useForm({
       resolver: zodResolver(quoteFormSchema),
       defaultValues: {
-        productName: quoteProduct?.name || '',
         customerName: user?.username || '',
         customerEmail: user?.email || '',
         customerPhone: '',
         projectType: 'residential' as const,
         projectLocation: '',
         requirements: '',
-        quantity: 1,
       },
     });
 
+    // Initialize with quoteProduct if provided
+    React.useEffect(() => {
+      if (quoteProduct && selectedQuoteProducts.length === 0) {
+        setSelectedQuoteProducts([{ product: quoteProduct, quantity: 1 }]);
+      }
+    }, [quoteProduct]);
+
+    const calculateQuoteTotal = () => {
+      const subtotal = selectedQuoteProducts.reduce((sum, item) => 
+        sum + (parseFloat(item.product.basePrice) * item.quantity), 0
+      );
+      const taxAmount = subtotal * 0.18;
+      return { subtotal, taxAmount, total: subtotal + taxAmount };
+    };
+
     const onSubmit = (values: any) => {
+      if (selectedQuoteProducts.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one product for the quote",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { subtotal, taxAmount, total } = calculateQuoteTotal();
       const quoteData = {
         ...values,
-        items: quoteProduct ? [
-          {
-            productId: quoteProduct.id,
-            productName: quoteProduct.name,
-            quantity: values.quantity,
-            unitPrice: parseFloat(quoteProduct.basePrice),
-            totalPrice: parseFloat(quoteProduct.basePrice) * values.quantity,
-          }
-        ] : [],
+        items: selectedQuoteProducts.map(item => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          quantity: item.quantity,
+          unitPrice: parseFloat(item.product.basePrice),
+          totalPrice: parseFloat(item.product.basePrice) * item.quantity,
+        })),
         requirements: {
           projectType: values.projectType,
           location: values.projectLocation,
           details: values.requirements,
         },
-        subtotal: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity).toString() : '0',
-        taxAmount: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity * 0.18).toString() : '0',
-        totalAmount: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity * 1.18).toString() : '0',
+        subtotal: subtotal.toString(),
+        taxAmount: taxAmount.toString(),
+        totalAmount: total.toString(),
         validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       };
       createQuoteMutation.mutate(quoteData);
@@ -1572,55 +1659,106 @@ export default function CustomerEcommerce() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Product Selection - Only show when no product is pre-selected */}
-              {!quoteProduct && (
-                <FormField
-                  control={form.control}
-                  name="productName"
-                  render={({ field }) => {
-                    const filteredProducts = products.filter(product => 
-                      product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
-                    ).slice(0, 10);
-                    
-                    return (
-                      <FormItem>
-                        <FormLabel>Select Product</FormLabel>
-                        <FormControl>
-                          <div className="space-y-2">
-                            <Input
-                              placeholder="Type to search products..."
-                              value={productSearchTerm}
-                              onChange={(e) => setProductSearchTerm(e.target.value)}
-                              className="w-full"
-                            />
-                            {productSearchTerm && filteredProducts.length > 0 && (
-                              <div className="max-h-40 overflow-y-auto border rounded-md bg-white shadow-sm">
-                                {filteredProducts.map((product) => (
-                                  <div
-                                    key={product.id}
-                                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition-colors"
-                                    onClick={() => {
-                                      field.onChange(product.name);
-                                      setQuoteProduct(product);
-                                      setProductSearchTerm(product.name);
-                                    }}
-                                  >
-                                    <div className="font-medium text-sm">{product.name}</div>
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      ₹{parseFloat(product.basePrice).toLocaleString()} | {product.description?.slice(0, 60)}...
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+              {/* Multiple Products Selection */}
+              <div className="space-y-4">
+                <Label>Select Products for Quote</Label>
+                
+                {/* Product Search */}
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Search products to add to quote..."
+                    value={quoteProductSearch}
+                    onChange={(e) => setQuoteProductSearch(e.target.value)}
+                  />
+                  
+                  {quoteProductSearch && (
+                    <div className="border rounded-md max-h-40 overflow-y-auto">
+                      {products?.filter(product => 
+                        product.name.toLowerCase().includes(quoteProductSearch.toLowerCase())
+                      ).slice(0, 5).map(product => (
+                        <div
+                          key={product.id}
+                          className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                          onClick={() => addQuoteProduct(product)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-sm text-gray-600">₹{parseFloat(product.basePrice).toLocaleString()}</p>
+                            </div>
+                            <Plus className="w-4 h-4 text-green-600" />
                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-              )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Products */}
+                {selectedQuoteProducts.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Selected Products ({selectedQuoteProducts.length})</Label>
+                    {selectedQuoteProducts.map(item => (
+                      <Card key={item.product.id} className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.product.name}</p>
+                            <p className="text-sm text-gray-600">
+                              ₹{parseFloat(item.product.basePrice).toLocaleString()} × {item.quantity} = 
+                              ₹{(parseFloat(item.product.basePrice) * item.quantity).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateQuoteProductQuantity(item.product.id, item.quantity - 1)}
+                            >
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-8 text-center text-sm">{item.quantity}</span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateQuoteProductQuantity(item.product.id, item.quantity + 1)}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeQuoteProduct(item.product.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                    
+                    {/* Quote Summary */}
+                    <Card className="p-3 bg-blue-50">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Subtotal:</span>
+                          <span>₹{calculateQuoteTotal().subtotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Tax (18%):</span>
+                          <span>₹{calculateQuoteTotal().taxAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between font-bold">
+                          <span>Total:</span>
+                          <span>₹{calculateQuoteTotal().total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                )}
+              </div>
 
               {/* Product Summary - Show selected product details */}
               {quoteProduct && (
@@ -1711,40 +1849,19 @@ export default function CustomerEcommerce() {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="projectLocation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="City, State" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantity Required</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          placeholder="1" 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="projectLocation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="City, State" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               
               <FormField
                 control={form.control}
@@ -1787,27 +1904,54 @@ export default function CustomerEcommerce() {
         customerName: user?.username || '',
         customerEmail: user?.email || '',
         customerPhone: '',
-        productName: bookingProduct?.name || '',
         serviceType: 'delivery' as const,
         scheduledDate: '',
         scheduledTime: '',
         location: '',
         requirements: '',
-        quantity: 1,
+        advancePayment: 0,
       },
     });
 
+    // Initialize with bookingProduct if provided
+    React.useEffect(() => {
+      if (bookingProduct && selectedBookingProducts.length === 0) {
+        setSelectedBookingProducts([{ product: bookingProduct, quantity: 1 }]);
+      }
+    }, [bookingProduct]);
+
+    const calculateBookingTotal = () => {
+      const subtotal = selectedBookingProducts.reduce((sum, item) => 
+        sum + (parseFloat(item.product.basePrice) * item.quantity), 0
+      );
+      const serviceCharge = subtotal * 0.15; // 15% service charge
+      return { subtotal, serviceCharge, total: subtotal + serviceCharge };
+    };
+
     const onSubmit = (values: any) => {
+      if (selectedBookingProducts.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one product for booking",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { total } = calculateBookingTotal();
       const bookingData = {
         ...values,
+        scheduledDate: new Date(values.scheduledDate + 'T' + values.scheduledTime),
         requirements: {
-          productId: bookingProduct?.id,
-          productName: bookingProduct?.name,
-          quantity: values.quantity,
+          products: selectedBookingProducts.map(item => ({
+            productId: item.product.id,
+            productName: item.product.name,
+            quantity: item.quantity,
+          })),
           details: values.requirements,
         },
         estimatedDuration: values.serviceType === 'delivery' ? 180 : 300,
-        cost: bookingProduct ? (parseFloat(bookingProduct.basePrice) * values.quantity * 1.15).toString() : '1000',
+        cost: total.toString(),
       };
       createBookingMutation.mutate(bookingData);
     };
@@ -1818,60 +1962,111 @@ export default function CustomerEcommerce() {
           <DialogHeader>
             <DialogTitle>Book Service</DialogTitle>
             <DialogDescription>
-              {bookingProduct ? `Book a service for ${bookingProduct.name}` : 'Schedule delivery, installation, or consultation'}
+              Schedule delivery, installation, or consultation for multiple products
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Product Selection - Only show when no product is pre-selected */}
-              {!bookingProduct && (
-                <FormField
-                  control={form.control}
-                  name="productName"
-                  render={({ field }) => {
-                    const filteredProducts = products.filter(product => 
-                      product.name.toLowerCase().includes(bookingProductSearchTerm.toLowerCase())
-                    ).slice(0, 10);
-                    
-                    return (
-                      <FormItem>
-                        <FormLabel>Select Product</FormLabel>
-                        <FormControl>
-                          <div className="space-y-2">
-                            <Input
-                              placeholder="Type to search products..."
-                              value={bookingProductSearchTerm}
-                              onChange={(e) => setBookingProductSearchTerm(e.target.value)}
-                              className="w-full"
-                            />
-                            {bookingProductSearchTerm && filteredProducts.length > 0 && (
-                              <div className="max-h-40 overflow-y-auto border rounded-md bg-white shadow-sm">
-                                {filteredProducts.map((product) => (
-                                  <div
-                                    key={product.id}
-                                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition-colors"
-                                    onClick={() => {
-                                      field.onChange(product.name);
-                                      setBookingProduct(product);
-                                      setBookingProductSearchTerm(product.name);
-                                    }}
-                                  >
-                                    <div className="font-medium text-sm">{product.name}</div>
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      ₹{parseFloat(product.basePrice).toLocaleString()} | {product.description?.slice(0, 60)}...
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+              {/* Multiple Products Selection for Booking */}
+              <div className="space-y-4">
+                <Label>Select Products for Service Booking</Label>
+                
+                {/* Product Search */}
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Search products to add to booking..."
+                    value={bookingProductSearch}
+                    onChange={(e) => setBookingProductSearch(e.target.value)}
+                  />
+                  
+                  {bookingProductSearch && (
+                    <div className="border rounded-md max-h-40 overflow-y-auto">
+                      {products?.filter(product => 
+                        product.name.toLowerCase().includes(bookingProductSearch.toLowerCase())
+                      ).slice(0, 5).map(product => (
+                        <div
+                          key={product.id}
+                          className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                          onClick={() => addBookingProduct(product)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-sm text-gray-600">₹{parseFloat(product.basePrice).toLocaleString()}</p>
+                            </div>
+                            <Plus className="w-4 h-4 text-green-600" />
                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-              )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Products for Booking */}
+                {selectedBookingProducts.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Selected Products ({selectedBookingProducts.length})</Label>
+                    {selectedBookingProducts.map(item => (
+                      <Card key={item.product.id} className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.product.name}</p>
+                            <p className="text-sm text-gray-600">
+                              ₹{parseFloat(item.product.basePrice).toLocaleString()} × {item.quantity} = 
+                              ₹{(parseFloat(item.product.basePrice) * item.quantity).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateBookingProductQuantity(item.product.id, item.quantity - 1)}
+                            >
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-8 text-center text-sm">{item.quantity}</span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateBookingProductQuantity(item.product.id, item.quantity + 1)}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeBookingProduct(item.product.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                    
+                    {/* Booking Summary */}
+                    <Card className="p-3 bg-green-50">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Products Total:</span>
+                          <span>₹{calculateBookingTotal().subtotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Service Charge (15%):</span>
+                          <span>₹{calculateBookingTotal().serviceCharge.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between font-bold">
+                          <span>Total Booking Cost:</span>
+                          <span>₹{calculateBookingTotal().total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                )}
+              </div>
 
               {/* Product Summary - Show selected product details */}
               {bookingProduct && (
@@ -2108,7 +2303,6 @@ export default function CustomerEcommerce() {
                 deliveryDiscountSlabs: null,
                 company: null,
                 gstRate: null,
-                isPopular: null,
                 isTrending: null
               };
               addToCart(product, material.adjustedQuantity || material.quantity);
