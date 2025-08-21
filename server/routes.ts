@@ -1015,6 +1015,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User Profile Routes
+  app.get("/api/user/profile", async (req, res) => {
+    try {
+      // For demo purposes, using a mock user ID. In real app, get from authentication
+      const userId = "mock-user-id";
+      const profile = await storage.getUserProfile(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "User profile not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...profileData } = profile;
+      
+      // Add calculated fields
+      const profileWithStats = {
+        ...profileData,
+        memberSince: profile.createdAt,
+        totalOrders: profile.totalOrders || 0,
+        totalSpent: parseFloat(profile.totalSpent) || 0,
+        loyaltyPoints: profile.loyaltyPoints || 0,
+      };
+      
+      res.json(profileWithStats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/user/profile", async (req, res) => {
+    try {
+      // For demo purposes, using a mock user ID. In real app, get from authentication
+      const userId = "mock-user-id";
+      const profileData = req.body;
+      
+      // Remove sensitive fields that shouldn't be updated via this endpoint
+      const { password, id, role, isActive, createdAt, updatedAt, ...updateData } = profileData;
+      
+      const updatedProfile = await storage.updateUserProfile(userId, updateData);
+      if (!updatedProfile) {
+        return res.status(404).json({ message: "User profile not found" });
+      }
+      
+      // Remove password from response
+      const { password: pwd, ...profileResponse } = updatedProfile;
+      res.json(profileResponse);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/user/orders", async (req, res) => {
+    try {
+      // For demo purposes, using a mock user ID. In real app, get from authentication
+      const userId = "mock-user-id";
+      const userOrders = await storage.getUserOrders(userId);
+      res.json(userOrders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/orders/:id/reorder", async (req, res) => {
+    try {
+      // For demo purposes, using a mock user ID. In real app, get from authentication
+      const userId = "mock-user-id";
+      const orderId = req.params.id;
+      
+      const newOrder = await storage.reorderFromOrder(orderId, userId);
+      res.json(newOrder);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

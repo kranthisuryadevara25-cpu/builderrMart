@@ -759,13 +759,13 @@ export default function CustomerEcommerce() {
             </div>
           </div>
           
-          {/* Product Info - Enhanced layout */}
-          <div className={viewMode === 'list' ? 'flex-1' : 'p-4 flex flex-col min-h-64'}>
-            <h3 className="font-semibold text-lg group-hover:text-blue-600 transition-colors mb-2 line-clamp-2">
+          {/* Product Info - Fixed layout */}
+          <div className={viewMode === 'list' ? 'flex-1' : 'p-4 flex flex-col h-full'}>
+            <h3 className="font-semibold text-base group-hover:text-blue-600 transition-colors mb-2 line-clamp-2">
               {product.name}
             </h3>
             
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-shrink-0">
+            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
               {product.description || "High-quality construction material"}
             </p>
             
@@ -970,7 +970,7 @@ export default function CustomerEcommerce() {
             View All <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {featuredProducts.slice(0, 8).map((product) => (
             <ProductCard key={product.id} product={product} featured />
           ))}

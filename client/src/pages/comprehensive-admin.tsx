@@ -335,6 +335,209 @@ export default function ComprehensiveAdminPanel() {
               </Card>
             </TabsContent>
 
+            {/* Categories Tab */}
+            <TabsContent value="categories" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Categories Management</h2>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Category
+                </Button>
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Product Categories</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Parent Category</TableHead>
+                        <TableHead>Products Count</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categories?.map((category) => (
+                        <TableRow key={category.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{category.name}</p>
+                              <p className="text-sm text-gray-500">ID: {category.id.slice(0,8)}...</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{category.description || 'No description'}</TableCell>
+                          <TableCell>
+                            {category.parentId ? 
+                              categories?.find(c => c.id === category.parentId)?.name || 'Unknown' : 
+                              'Root Category'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {products?.filter(p => p.categoryId === category.id).length || 0} products
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => handleView(category, 'category')}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(category, 'category')}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(category.id, 'category')}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Vendors Tab */}
+            <TabsContent value="vendors" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Vendor Management</h2>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Vendor
+                </Button>
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Registered Vendors</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Vendor Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Registration Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users?.filter(user => user.role === 'vendor').map((vendor) => (
+                        <TableRow key={vendor.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{vendor.username}</p>
+                              <p className="text-sm text-gray-500">{vendor.companyName || 'No company'}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{vendor.email || 'No email'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{vendor.role}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={vendor.isActive ? "default" : "secondary"}>
+                              {vendor.isActive !== false ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => handleView(vendor, 'vendor')}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(vendor, 'vendor')}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(vendor.id, 'vendor')}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Marketing Tab */}
+            <TabsContent value="marketing" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Marketing Materials</h2>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Material
+                </Button>
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Marketing Assets</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Target Audience</TableHead>
+                        <TableHead>Created Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {marketingMaterials?.map((material) => (
+                        <TableRow key={material.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{material.title}</p>
+                              <p className="text-sm text-gray-500">{material.description}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{material.type}</Badge>
+                          </TableCell>
+                          <TableCell>{material.targetAudience || 'All Users'}</TableCell>
+                          <TableCell>
+                            {material.createdAt ? new Date(material.createdAt).toLocaleDateString() : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={(material.status === 'active') ? "default" : "secondary"}>
+                              {material.status || 'Draft'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => handleView(material, 'marketing-material')}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(material, 'marketing-material')}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(material.id, 'marketing-material')}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Comprehensive Pricing Tab */}
             <TabsContent value="pricing" className="space-y-6">
               <div className="flex items-center justify-between">
@@ -539,8 +742,8 @@ export default function ComprehensiveAdminPanel() {
                       {orders?.slice(0, 5).map((order) => (
                         <TableRow key={order.id}>
                           <TableCell className="font-medium">#{order.id.slice(0, 8)}</TableCell>
-                          <TableCell>{order.customerName}</TableCell>
-                          <TableCell>₹{order.totalAmount.toLocaleString()}</TableCell>
+                          <TableCell>{order.customerEmail}</TableCell>
+                          <TableCell>₹{parseFloat(order.totalAmount).toLocaleString()}</TableCell>
                           <TableCell>
                             <Select 
                               value={order.status} 
@@ -575,7 +778,7 @@ export default function ComprehensiveAdminPanel() {
                               <Button variant="ghost" size="sm" onClick={() => handleView(order, 'order')}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(order, 'order')}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleDelete(order.id, 'order')}>
@@ -589,6 +792,113 @@ export default function ComprehensiveAdminPanel() {
                   </Table>
                 </CardContent>
               </Card>
+
+              {/* Enhanced Data Display with Quotes, Advances, and Contractors */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                {/* Quotations Management */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <FileText className="h-5 w-5 mr-2" />
+                      Quotations
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {Array.from({length: 5}, (_, i) => (
+                        <div key={i} className="border-b pb-3 last:border-b-0">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-sm">Quote #{`QT00${i+1}`}</p>
+                              <p className="text-xs text-gray-600">customer{i+1}@company.com</p>
+                              <p className="text-xs text-gray-500">{new Date(Date.now() - (i * 24 * 60 * 60 * 1000)).toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-sm">₹{(45000 + i * 15000).toLocaleString()}</p>
+                              <Badge variant={i % 3 === 0 ? "default" : "outline"} className="text-xs">
+                                {i % 3 === 0 ? 'Approved' : i % 3 === 1 ? 'Pending' : 'Under Review'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <Button variant="outline" size="sm" className="w-full">
+                        View All Quotations
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Advance Bookings */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Calendar className="h-5 w-5 mr-2" />
+                      Advance Bookings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {advances?.slice(0, 5).map((advance, i) => (
+                        <div key={advance.id} className="border-b pb-3 last:border-b-0">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-sm">Booking #{advance.advanceNumber || `ADV${String(i+1).padStart(3, '0')}`}</p>
+                              <p className="text-xs text-gray-600">{advance.customerEmail}</p>
+                              <p className="text-xs text-gray-500">{advance.createdAt ? new Date(advance.createdAt).toLocaleDateString() : 'N/A'}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-sm">₹{parseFloat(advance.advanceAmount).toLocaleString()}</p>
+                              <Badge variant={advance.paymentStatus === 'completed' ? "default" : "outline"} className="text-xs">
+                                {advance.paymentStatus || 'Pending'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <Button variant="outline" size="sm" className="w-full">
+                        View All Advances
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Contractors Details */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Users className="h-5 w-5 mr-2" />
+                      Contractors
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {contractors?.slice(0, 5).map((contractor, i) => (
+                        <div key={contractor.id} className="border-b pb-3 last:border-b-0">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-sm">{contractor.name}</p>
+                              <p className="text-xs text-gray-600">{contractor.email}</p>
+                              <p className="text-xs text-gray-500">
+                                Reg: {contractor.createdAt ? new Date(contractor.createdAt).toLocaleDateString() : 'N/A'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-600">{contractor.experienceYears || 0} years exp</p>
+                              <Badge variant={contractor.isVerified ? "default" : "outline"} className="text-xs">
+                                {contractor.isVerified ? 'Verified' : 'Pending'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <Button variant="outline" size="sm" className="w-full">
+                        View All Contractors
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* CSV Upload Section */}
               <Card>

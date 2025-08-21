@@ -113,6 +113,12 @@ export interface IStorage {
   deleteOrder(id: string): Promise<boolean>;
   getOrdersForExport(startDate?: string, endDate?: string): Promise<Order[]>;
   
+  // User Profile
+  getUserProfile(id: string): Promise<User | undefined>;
+  updateUserProfile(id: string, profileData: Partial<User>): Promise<User | undefined>;
+  getUserOrders(userId: string): Promise<Order[]>;
+  reorderFromOrder(orderId: string, userId: string): Promise<Order>;
+  
   // Pricing Rules
   getPricingRules(): Promise<PricingRule[]>;
   getPricingRule(id: string): Promise<PricingRule | undefined>;
@@ -167,6 +173,56 @@ export class DatabaseStorage implements IStorage {
 
   async getUsersForExport(): Promise<User[]> {
     return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  // User profile operations
+  async getUserProfile(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async updateUserProfile(id: string, profileData: Partial<User>): Promise<User | undefined> {
+    const result = await db.update(users).set(profileData).where(eq(users.id, id)).returning();
+    return result[0];
+  }
+
+  async getUserOrders(userId: string): Promise<Order[]> {
+    return await db.select().from(orders).where(eq(orders.createdBy, userId)).orderBy(desc(orders.createdAt));
+  }
+
+  async reorderFromOrder(orderId: string, userId: string): Promise<Order> {
+    // Get the original order
+    const originalOrder = await this.getOrder(orderId);
+    if (!originalOrder) {
+      throw new Error('Original order not found');
+    }
+
+    // Create a new order with the same items
+    const orderNumber = `ORD${Date.now().toString().slice(-8)}`;
+    const newOrderData = {
+      orderNumber,
+      customerName: originalOrder.customerName,
+      customerEmail: originalOrder.customerEmail,
+      customerPhone: originalOrder.customerPhone,
+      customerAddress: originalOrder.customerAddress,
+      items: originalOrder.items,
+      subtotal: originalOrder.subtotal,
+      transportationCharges: originalOrder.transportationCharges,
+      hamaliCharges: originalOrder.hamaliCharges,
+      otherCharges: originalOrder.otherCharges,
+      taxAmount: originalOrder.taxAmount,
+      discountAmount: originalOrder.discountAmount,
+      totalAmount: originalOrder.totalAmount,
+      paidAmount: '0',
+      balanceAmount: originalOrder.totalAmount,
+      status: 'pending',
+      deliveryAddress: originalOrder.deliveryAddress,
+      specialInstructions: 'Repeat order from order #' + originalOrder.orderNumber,
+      createdBy: userId,
+    };
+
+    const result = await db.insert(orders).values(newOrderData).returning();
+    return result[0];
   }
 
   // Category methods
