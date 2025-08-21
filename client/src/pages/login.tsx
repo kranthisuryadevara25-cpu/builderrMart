@@ -34,8 +34,12 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(loginForm.email, loginForm.password);
-      setLocation("/dashboard");
+      const loggedInUser = await login(loginForm.email, loginForm.password);
+      if (loggedInUser?.role === "user") {
+        setLocation("/shop-ecommerce");
+      } else {
+        setLocation("/dashboard");
+      }
     } catch (error) {
       // Error handled by AuthContext
     }
@@ -44,8 +48,12 @@ export default function Login() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await register(registerForm.username, registerForm.email, registerForm.password, registerForm.role);
-      setLocation("/dashboard");
+      const newUser = await register(registerForm.username, registerForm.email, registerForm.password, registerForm.role);
+      if (newUser?.role === "user") {
+        setLocation("/shop-ecommerce");
+      } else {
+        setLocation("/dashboard");
+      }
     } catch (error) {
       // Error handled by AuthContext
     }

@@ -17,6 +17,7 @@ import Shop from "@/pages/shop";
 import AdminPanel from "@/pages/admin-panel";
 import VendorPanel from "@/pages/vendor-panel";
 import CustomerApp from "@/pages/customer-app";
+import CustomerEcommerce from "@/pages/customer-ecommerce";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -44,7 +45,9 @@ function Router() {
       <Route path="/login" component={Login} />
       
       <Route path="/">
-        {user ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
+        {user ? (
+          user.role === "user" ? <Redirect to="/shop-ecommerce" /> : <Redirect to="/dashboard" />
+        ) : <Redirect to="/login" />}
       </Route>
       
       <Route path="/dashboard">
@@ -104,6 +107,12 @@ function Router() {
       <Route path="/customer">
         <ProtectedRoute>
           <CustomerApp />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/shop-ecommerce">
+        <ProtectedRoute>
+          <CustomerEcommerce />
         </ProtectedRoute>
       </Route>
       

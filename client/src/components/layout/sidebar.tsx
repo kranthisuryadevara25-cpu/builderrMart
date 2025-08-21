@@ -27,7 +27,7 @@ const navigation = [
   // Customer/User Role Navigation
   {
     name: "Shop",
-    href: "/shop", 
+    href: "/shop-ecommerce", 
     icon: Store,
     roles: ["user", "customer"],
   },

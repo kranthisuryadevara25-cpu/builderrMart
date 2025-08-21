@@ -6,8 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string, role?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
+  register: (username: string, email: string, password: string, role?: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   isAdmin: boolean;
   isVendor: boolean;
@@ -86,11 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const login = async (email: string, password: string) => {
-    await loginMutation.mutateAsync({ email, password });
+    const result = await loginMutation.mutateAsync({ email, password });
+    return result.user;
   };
 
   const register = async (username: string, email: string, password: string, role?: string) => {
-    await registerMutation.mutateAsync({ username, email, password, role });
+    const result = await registerMutation.mutateAsync({ username, email, password, role });
+    return result.user;
   };
 
   const logout = async () => {
