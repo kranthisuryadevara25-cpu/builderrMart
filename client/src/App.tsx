@@ -16,6 +16,7 @@ import Orders from "@/pages/orders";
 import Shop from "@/pages/shop";
 import AdminPanel from "@/pages/admin-panel";
 import VendorPanel from "@/pages/vendor-panel";
+import CustomerApp from "@/pages/customer-app";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -97,6 +98,12 @@ function Router() {
       <Route path="/shop">
         <ProtectedRoute>
           <Shop />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/customer">
+        <ProtectedRoute>
+          <CustomerApp />
         </ProtectedRoute>
       </Route>
       

@@ -221,12 +221,13 @@ export default function AdminPanel() {
         
         <div className="flex-1 overflow-auto p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="categories">Categories</TabsTrigger>
               <TabsTrigger value="products">Products</TabsTrigger>
-              <TabsTrigger value="vendors">Vendors</TabsTrigger>
+              <TabsTrigger value="vendors">Vendor Management</TabsTrigger>
               <TabsTrigger value="pricing">Pricing</TabsTrigger>
+              <TabsTrigger value="platform">Platform</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
@@ -442,14 +443,52 @@ export default function AdminPanel() {
               </Card>
             </TabsContent>
 
-            {/* Vendors Tab */}
+            {/* Vendor Management Tab */}
             <TabsContent value="vendors" className="space-y-6">
               <h2 className="text-2xl font-bold">Vendor Management</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Pending Applications</p>
+                        <p className="text-2xl font-semibold text-orange-600">{pendingVendors.length}</p>
+                      </div>
+                      <UserCheck className="h-8 w-8 text-orange-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Active Vendors</p>
+                        <p className="text-2xl font-semibold text-green-600">43</p>
+                      </div>
+                      <Users className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">This Month Revenue</p>
+                        <p className="text-2xl font-semibold text-blue-600">₹2.4M</p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
               
               {pendingVendors.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-orange-600">Pending Approvals</CardTitle>
+                    <CardTitle className="text-orange-600">Pending Vendor Applications</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -495,6 +534,58 @@ export default function AdminPanel() {
                   </CardContent>
                 </Card>
               )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Active Vendors</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Business Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Products</TableHead>
+                        <TableHead>Revenue</TableHead>
+                        <TableHead>Rating</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[
+                        { name: "Premium Building Supplies", status: "Active", products: 87, revenue: "₹4.2L", rating: 4.8 },
+                        { name: "Steel & Iron Works", status: "Active", products: 34, revenue: "₹2.1L", rating: 4.6 },
+                        { name: "Cement Solutions Ltd", status: "Active", products: 23, revenue: "₹3.8L", rating: 4.9 },
+                      ].map((vendor, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{vendor.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="default">{vendor.status}</Badge>
+                          </TableCell>
+                          <TableCell>{vendor.products}</TableCell>
+                          <TableCell>{vendor.revenue}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Star className="h-4 w-4 text-yellow-400 fill-current mr-1" />
+                              {vendor.rating}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Pricing Tab */}
@@ -541,6 +632,58 @@ export default function AdminPanel() {
                       <Input defaultValue="9" />
                     </div>
                     <Button>Update Tax Rates</Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Platform Tab */}
+            <TabsContent value="platform" className="space-y-6">
+              <h2 className="text-2xl font-bold">Platform Settings</h2>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>System Configuration</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Platform Name</Label>
+                      <Input defaultValue="BuildMart AI" />
+                    </div>
+                    <div>
+                      <Label>Support Email</Label>
+                      <Input defaultValue="support@buildmart.ai" />
+                    </div>
+                    <div>
+                      <Label>Max Products per Vendor</Label>
+                      <Input defaultValue="1000" />
+                    </div>
+                    <Button>Update Settings</Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Platform Analytics</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between">
+                      <span>Total Users</span>
+                      <span className="font-semibold">2,847</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Monthly Transactions</span>
+                      <span className="font-semibold">₹12.4M</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Platform Revenue</span>
+                      <span className="font-semibold">₹3.1M</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Growth Rate</span>
+                      <span className="font-semibold text-green-600">+24%</span>
+                    </div>
                   </CardContent>
                 </Card>
               </div>

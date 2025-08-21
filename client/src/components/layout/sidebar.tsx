@@ -24,12 +24,12 @@ const navigation = [
     icon: LayoutDashboard,
     roles: ["owner_admin", "vendor_manager", "vendor"],
   },
-  // User Role Navigation
+  // Customer/User Role Navigation
   {
     name: "Shop",
-    href: "/shop",
+    href: "/shop", 
     icon: Store,
-    roles: ["user"],
+    roles: ["user", "customer"],
   },
   // Admin Role Navigation
   {
@@ -46,10 +46,10 @@ const navigation = [
     badge: "1,247",
   },
   {
-    name: "Vendor Management",
+    name: "Vendor Management", 
     href: "/vendors",
     icon: Store,
-    roles: ["owner_admin", "vendor_manager"],
+    roles: ["owner_admin"],
     badge: "43",
   },
   // Vendor Role Navigation
@@ -77,7 +77,7 @@ const navigation = [
     name: "Orders",
     href: "/orders",
     icon: Receipt,
-    roles: ["owner_admin", "vendor_manager", "vendor", "user"],
+    roles: ["owner_admin", "vendor_manager", "vendor", "user", "customer"],
     badge: "12",
   },
   {
