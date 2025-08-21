@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/auth-context";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
-import { type Product, type Category, type User, type MarketingMaterial, type Contractor, type Advance, type Order, type PricingRule } from "@shared/schema";
+import { type Product, type Category, type User, type MarketingMaterial, type Contractor, type Advance, type Order, type PricingRule, type Discount, type LoyaltyProgram, type CustomerLoyalty, type RewardRedemption } from "@shared/schema";
 import { generateCSVTemplate } from "@shared/csvTemplates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +104,23 @@ export default function ComprehensiveAdminPanel() {
     queryKey: ["/api/pricing-rules"],
   });
 
+  // Rewards & Loyalty queries
+  const { data: discounts } = useQuery({
+    queryKey: ["/api/discounts"],
+  });
+
+  const { data: loyaltyPrograms } = useQuery({
+    queryKey: ["/api/loyalty-programs"],
+  });
+
+  const { data: customerLoyalty } = useQuery({
+    queryKey: ["/api/customer-loyalty"],
+  });
+
+  const { data: rewardRedemptions } = useQuery({
+    queryKey: ["/api/reward-redemptions"],
+  });
+
   // Dynamic action handlers
   const handleView = (item: any, type: string) => {
     setViewingItem({ ...item, type });
@@ -131,7 +148,11 @@ export default function ComprehensiveAdminPanel() {
         contractor: "/api/contractors",
         advance: "/api/advances",
         order: "/api/orders",
-        'pricing-rule': "/api/pricing-rules"
+        'pricing-rule': "/api/pricing-rules",
+        discount: "/api/discounts",
+        loyaltyProgram: "/api/loyalty-programs",
+        customerLoyalty: "/api/customer-loyalty",
+        rewardRedemption: "/api/reward-redemptions"
       };
       await apiRequest("DELETE", `${endpoints[type as keyof typeof endpoints]}/${id}`);
     },
@@ -144,7 +165,11 @@ export default function ComprehensiveAdminPanel() {
         contractor: ["/api/contractors"],
         advance: ["/api/advances"],
         order: ["/api/orders"],
-        'pricing-rule': ["/api/pricing-rules"]
+        'pricing-rule': ["/api/pricing-rules"],
+        discount: ["/api/discounts"],
+        loyaltyProgram: ["/api/loyalty-programs"],
+        customerLoyalty: ["/api/customer-loyalty"],
+        rewardRedemption: ["/api/reward-redemptions"]
       };
       queryClient.invalidateQueries({ queryKey: queryKeys[type as keyof typeof queryKeys] });
       toast({
@@ -216,7 +241,11 @@ export default function ComprehensiveAdminPanel() {
         contractor: "/api/contractors",
         advance: "/api/advances",
         order: "/api/orders",
-        'pricing-rule': "/api/pricing-rules"
+        'pricing-rule': "/api/pricing-rules",
+        discount: "/api/discounts",
+        loyaltyProgram: "/api/loyalty-programs",
+        customerLoyalty: "/api/customer-loyalty",
+        rewardRedemption: "/api/reward-redemptions"
       };
       return await apiRequest("PUT", `${endpoints[type as keyof typeof endpoints]}/${id}`, data);
     },
@@ -229,7 +258,11 @@ export default function ComprehensiveAdminPanel() {
         contractor: ["/api/contractors"],
         advance: ["/api/advances"],
         order: ["/api/orders"],
-        'pricing-rule': ["/api/pricing-rules"]
+        'pricing-rule': ["/api/pricing-rules"],
+        discount: ["/api/discounts"],
+        loyaltyProgram: ["/api/loyalty-programs"],
+        customerLoyalty: ["/api/customer-loyalty"],
+        rewardRedemption: ["/api/reward-redemptions"]
       };
       queryClient.invalidateQueries({ queryKey: queryKeys[type as keyof typeof queryKeys] });
       setShowEditModal(false);
@@ -258,11 +291,14 @@ export default function ComprehensiveAdminPanel() {
         
         <div className="flex-1 overflow-auto p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-11">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="products">Products</TabsTrigger>
               <TabsTrigger value="categories">Categories</TabsTrigger>
               <TabsTrigger value="vendors">Vendors</TabsTrigger>
+              <TabsTrigger value="discounts">Discounts</TabsTrigger>
+              <TabsTrigger value="loyalty">Loyalty</TabsTrigger>
+              <TabsTrigger value="rewards">Rewards</TabsTrigger>
               <TabsTrigger value="pricing">Pricing</TabsTrigger>
               <TabsTrigger value="marketing">Marketing</TabsTrigger>
               <TabsTrigger value="data">Data</TabsTrigger>
@@ -779,6 +815,525 @@ export default function ComprehensiveAdminPanel() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* Discounts Management Tab */}
+            <TabsContent value="discounts" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Discount Management</h2>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Discount
+                </Button>
+              </div>
+
+              {/* Discount Analytics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Active Discounts</p>
+                        <p className="text-2xl font-semibold text-green-700">
+                          {discounts?.filter(d => d.isActive).length || 0}
+                        </p>
+                      </div>
+                      <Tags className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Total Discounts</p>
+                        <p className="text-2xl font-semibold text-blue-700">
+                          {discounts?.length || 0}
+                        </p>
+                      </div>
+                      <Package className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Total Usage</p>
+                        <p className="text-2xl font-semibold text-purple-700">
+                          {discounts?.reduce((sum, d) => sum + (d.usageCount || 0), 0) || 0}
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-purple-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Avg. Discount</p>
+                        <p className="text-2xl font-semibold text-orange-700">
+                          {discounts?.length ? 
+                            Math.round(discounts.reduce((sum, d) => sum + parseFloat(d.discountValue || '0'), 0) / discounts.length) 
+                            : 0}%
+                        </p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-orange-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Discounts Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Discount Codes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code & Name</TableHead>
+                        <TableHead>Type & Value</TableHead>
+                        <TableHead>Usage & Limits</TableHead>
+                        <TableHead>Validity</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {discounts?.map((discount) => (
+                        <TableRow key={discount.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="font-medium">{discount.code}</p>
+                              <p className="text-sm text-gray-500">{discount.name}</p>
+                              <p className="text-xs text-gray-400">{discount.description}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Badge variant="outline">{discount.discountType}</Badge>
+                              <p className="text-sm font-medium">
+                                {discount.discountType === 'percentage' ? `${discount.discountValue}%` : `₹${discount.discountValue}`}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Min: ₹{discount.minOrderAmount || 0}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="text-sm">Used: {discount.usageCount || 0}</p>
+                              <p className="text-sm">Limit: {discount.usageLimit || 'Unlimited'}</p>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full" 
+                                  style={{ 
+                                    width: discount.usageLimit ? 
+                                      `${Math.min(100, ((discount.usageCount || 0) / discount.usageLimit) * 100)}%` : 
+                                      '0%' 
+                                  }}
+                                ></div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="text-xs">
+                                From: {discount.validFrom ? new Date(discount.validFrom).toLocaleDateString() : 'N/A'}
+                              </p>
+                              <p className="text-xs">
+                                Until: {discount.validUntil ? new Date(discount.validUntil).toLocaleDateString() : 'No expiry'}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={discount.isActive ? "default" : "secondary"}>
+                              {discount.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => handleView(discount, 'discount')}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(discount, 'discount')}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(discount.id, 'discount')}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Loyalty Programs Tab */}
+            <TabsContent value="loyalty" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Loyalty Programs Management</h2>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Program
+                </Button>
+              </div>
+
+              {/* Loyalty Analytics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Active Programs</p>
+                        <p className="text-2xl font-semibold text-green-700">
+                          {loyaltyPrograms?.filter(p => p.isActive).length || 0}
+                        </p>
+                      </div>
+                      <Star className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Total Members</p>
+                        <p className="text-2xl font-semibold text-blue-700">
+                          {customerLoyalty?.length || 0}
+                        </p>
+                      </div>
+                      <Users className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Total Points</p>
+                        <p className="text-2xl font-semibold text-purple-700">
+                          {customerLoyalty?.reduce((sum, c) => sum + (c.totalPoints || 0), 0) || 0}
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-purple-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Avg. Points</p>
+                        <p className="text-2xl font-semibold text-orange-700">
+                          {customerLoyalty?.length ? 
+                            Math.round(customerLoyalty.reduce((sum, c) => sum + (c.totalPoints || 0), 0) / customerLoyalty.length) 
+                            : 0}
+                        </p>
+                      </div>
+                      <Star className="h-8 w-8 text-orange-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Programs & Members Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Loyalty Programs */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Loyalty Programs</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Program Details</TableHead>
+                          <TableHead>Rates</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loyaltyPrograms?.map((program) => (
+                          <TableRow key={program.id}>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="font-medium">{program.name}</p>
+                                <p className="text-sm text-gray-500">{program.description}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="text-sm">₹1 = {program.pointsPerRupee} pts</p>
+                                <p className="text-sm">{program.redemptionRate} pts = ₹1</p>
+                                <p className="text-xs text-gray-500">Min: {program.minimumRedemptionPoints} pts</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={program.isActive ? "default" : "secondary"}>
+                                {program.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => handleView(program, 'loyaltyProgram')}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(program, 'loyaltyProgram')}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleDelete(program.id, 'loyaltyProgram')}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Customer Loyalty */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Customer Loyalty</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Customer</TableHead>
+                          <TableHead>Points & Tier</TableHead>
+                          <TableHead>Spending</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {customerLoyalty?.slice(0, 10).map((customer) => (
+                          <TableRow key={customer.id}>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="font-medium">{customer.customerEmail}</p>
+                                <p className="text-xs text-gray-500">ID: {customer.id.slice(0,8)}...</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="text-sm">Total: {customer.totalPoints || 0}</p>
+                                <p className="text-sm">Available: {customer.availablePoints || 0}</p>
+                                <Badge variant="outline" className="text-xs">
+                                  {customer.tier}
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm font-medium">₹{customer.totalSpent || 0}</p>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => handleView(customer, 'customerLoyalty')}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(customer, 'customerLoyalty')}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Rewards Redemptions Tab */}
+            <TabsContent value="rewards" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Reward Redemptions</h2>
+                <div className="flex gap-2">
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Redemptions</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Manual Redemption
+                  </Button>
+                </div>
+              </div>
+
+              {/* Redemption Analytics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Total Redemptions</p>
+                        <p className="text-2xl font-semibold text-blue-700">
+                          {rewardRedemptions?.length || 0}
+                        </p>
+                      </div>
+                      <Star className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Pending Approval</p>
+                        <p className="text-2xl font-semibold text-yellow-700">
+                          {rewardRedemptions?.filter(r => r.status === 'pending').length || 0}
+                        </p>
+                      </div>
+                      <Clock className="h-8 w-8 text-yellow-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Points Redeemed</p>
+                        <p className="text-2xl font-semibold text-purple-700">
+                          {rewardRedemptions?.reduce((sum, r) => sum + (r.pointsRedeemed || 0), 0) || 0}
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-purple-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Reward Value</p>
+                        <p className="text-2xl font-semibold text-green-700">
+                          ₹{rewardRedemptions?.reduce((sum, r) => sum + parseFloat(r.rewardAmount || '0'), 0) || 0}
+                        </p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Redemptions Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Reward Redemption History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Points & Reward</TableHead>
+                        <TableHead>Order Reference</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rewardRedemptions?.map((redemption) => (
+                        <TableRow key={redemption.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="font-medium">{redemption.customerEmail}</p>
+                              <p className="text-xs text-gray-500">ID: {redemption.id.slice(0,8)}...</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="text-sm">Points: {redemption.pointsRedeemed}</p>
+                              <p className="text-sm font-medium">Reward: ₹{redemption.rewardAmount}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{redemption.orderReference || 'N/A'}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">
+                              {redemption.createdAt ? new Date(redemption.createdAt).toLocaleDateString() : 'N/A'}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-2">
+                              <Badge variant={
+                                redemption.status === 'approved' ? "default" : 
+                                redemption.status === 'pending' ? "secondary" : 
+                                "destructive"
+                              }>
+                                {redemption.status}
+                              </Badge>
+                              {redemption.status === 'pending' && (
+                                <div className="flex gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-6 px-2 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                                    onClick={() => {
+                                      updateItem.mutate({
+                                        id: redemption.id,
+                                        type: 'rewardRedemption',
+                                        data: { status: 'approved' }
+                                      });
+                                    }}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-6 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                    onClick={() => {
+                                      updateItem.mutate({
+                                        id: redemption.id,
+                                        type: 'rewardRedemption',
+                                        data: { status: 'rejected' }
+                                      });
+                                    }}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => handleView(redemption, 'rewardRedemption')}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(redemption, 'rewardRedemption')}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Marketing Tab */}
