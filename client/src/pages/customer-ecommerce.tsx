@@ -122,14 +122,32 @@ export default function CustomerEcommerce() {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   
   // Cart and pricing management
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [productQuantities, setProductQuantities] = useState<{[key: string]: number}>({});
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('buildmart-cart');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+  const [productQuantities, setProductQuantities] = useState<{[key: string]: number}>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('buildmart-quantities');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
   const [selectedQuantitySlabs, setSelectedQuantitySlabs] = useState<{[key: string]: any}>({});
   const [bulkQuantity, setBulkQuantity] = useState<number>(1);
   const [deliveryDays, setDeliveryDays] = useState<number>(4);
   
   // Wishlist state
-  const [wishlistItems, setWishlistItems] = useState<string[]>([]);
+  const [wishlistItems, setWishlistItems] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('buildmart-wishlist');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
   const [compareList, setCompareList] = useState<Product[]>([]);
   
   // AI features
@@ -262,6 +280,25 @@ export default function CustomerEcommerce() {
     queryKey: ['/api/products/trending'],
   });
 
+  // Save state to localStorage
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      localStorage.setItem('buildmart-cart', JSON.stringify(cartItems));
+    }
+  }, [cartItems]);
+
+  useEffect(() => {
+    if (Object.keys(productQuantities).length > 0) {
+      localStorage.setItem('buildmart-quantities', JSON.stringify(productQuantities));
+    }
+  }, [productQuantities]);
+
+  useEffect(() => {
+    if (wishlistItems.length > 0) {
+      localStorage.setItem('buildmart-wishlist', JSON.stringify(wishlistItems));
+    }
+  }, [wishlistItems]);
+
   // Handle URL routing
   useEffect(() => {
     if (match && params?.id) {
@@ -313,21 +350,26 @@ export default function CustomerEcommerce() {
   // Add to cart - No authentication required
   const addToCart = (product: Product, quantity: number = 1, quantitySlab?: any) => {
     const existingItem = cartItems.find(item => item.product.id === product.id);
+    let updatedCart;
+    
     if (existingItem) {
-      setCartItems(prev => 
-        prev.map(item => 
-          item.product.id === product.id 
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        )
+      updatedCart = cartItems.map(item => 
+        item.product.id === product.id 
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
       );
     } else {
-      setCartItems(prev => [...prev, { product, quantity, selectedQuantitySlab: quantitySlab }]);
+      updatedCart = [...cartItems, { product, quantity, selectedQuantitySlab: quantitySlab }];
     }
+    
+    setCartItems(updatedCart);
+    // Immediately save to localStorage
+    localStorage.setItem('buildmart-cart', JSON.stringify(updatedCart));
 
     toast({
       title: "Added to Cart!",
       description: `${product.name} (${quantity}) added to your cart`,
+      duration: 3000,
     });
   };
   
@@ -346,7 +388,13 @@ export default function CustomerEcommerce() {
   const getProductQuantity = (productId: string) => productQuantities[productId] || 1;
   
   const setProductQuantity = (productId: string, quantity: number) => {
-    setProductQuantities(prev => ({ ...prev, [productId]: Math.max(1, quantity) }));
+    const newQuantity = Math.max(1, quantity);
+    setProductQuantities(prev => {
+      const updated = { ...prev, [productId]: newQuantity };
+      // Immediately save to localStorage
+      localStorage.setItem('buildmart-quantities', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const getProductPricing = (product: Product, quantity?: number) => {
@@ -838,7 +886,14 @@ export default function CustomerEcommerce() {
             <Star className="w-6 h-6 mr-2 text-yellow-500" />
             Featured Products
           </h2>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setCurrentSection('home');
+              setSearchTerm('featured');
+            }}
+          >
             View All <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
@@ -860,7 +915,14 @@ export default function CustomerEcommerce() {
             <TrendingUp className="w-6 h-6 mr-2 text-red-500" />
             Trending Now
           </h2>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setCurrentSection('home');
+              setSearchTerm('trending');
+            }}
+          >
             View All <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
@@ -1117,7 +1179,7 @@ export default function CustomerEcommerce() {
     if (!selectedProduct) return null;
     
     const basePrice = parseFloat(selectedProduct.basePrice);
-    const [quantity, setQuantity] = useState(1);
+    const quantity = getProductQuantity(selectedProduct.id);
     const bulkPricing = calculateBulkDiscount(basePrice, quantity);
     const deliveryPricing = calculateDeliveryPricing(bulkPricing.price, deliveryDays);
     
@@ -1170,15 +1232,23 @@ export default function CustomerEcommerce() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    onClick={() => setProductQuantity(selectedProduct.id, Math.max(1, quantity - 1))}
                   >
                     <Minus className="w-4 h-4" />
                   </Button>
-                  <span className="w-16 text-center font-medium">{quantity}</span>
+                  <Input
+                    value={quantity}
+                    onChange={(e) => {
+                      const qty = parseInt(e.target.value) || 1;
+                      setProductQuantity(selectedProduct.id, qty);
+                    }}
+                    className="w-16 text-center"
+                    min="1"
+                  />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setQuantity(quantity + 1)}
+                    onClick={() => setProductQuantity(selectedProduct.id, quantity + 1)}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -1188,7 +1258,14 @@ export default function CustomerEcommerce() {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <Button 
-                  onClick={() => addToCart(selectedProduct, quantity)}
+                  onClick={() => {
+                    addToCart(selectedProduct, quantity);
+                    toast({
+                      title: "Added to Cart!",
+                      description: `${selectedProduct.name} (${quantity}) added successfully`,
+                      duration: 3000,
+                    });
+                  }}
                   className="w-full text-lg py-3"
                   disabled={!selectedProduct.stockQuantity || selectedProduct.stockQuantity <= 0}
                 >
