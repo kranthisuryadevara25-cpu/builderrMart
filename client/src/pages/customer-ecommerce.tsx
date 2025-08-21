@@ -78,6 +78,7 @@ interface CartItem {
 
 // Form schemas
 const quoteFormSchema = z.object({
+  productId: z.string().optional(),
   customerName: z.string().min(1, 'Name is required'),
   customerEmail: z.string().email('Valid email required'),
   customerPhone: z.string().min(10, 'Phone number required'),
@@ -88,6 +89,7 @@ const quoteFormSchema = z.object({
 });
 
 const bookingFormSchema = z.object({
+  productId: z.string().optional(),
   customerName: z.string().min(1, 'Name is required'),
   customerEmail: z.string().email('Valid email required'),
   customerPhone: z.string().min(10, 'Phone number required'),
@@ -347,7 +349,7 @@ export default function CustomerEcommerce() {
     setLocation('/');
   };
 
-  // Add to cart - No authentication required
+  // Cart management functions
   const addToCart = (product: Product, quantity: number = 1, quantitySlab?: any) => {
     const existingItem = cartItems.find(item => item.product.id === product.id);
     let updatedCart;
@@ -363,7 +365,6 @@ export default function CustomerEcommerce() {
     }
     
     setCartItems(updatedCart);
-    // Immediately save to localStorage
     localStorage.setItem('buildmart-cart', JSON.stringify(updatedCart));
 
     toast({
@@ -371,6 +372,28 @@ export default function CustomerEcommerce() {
       description: `${product.name} (${quantity}) added to your cart`,
       duration: 3000,
     });
+  };
+
+  const removeFromCart = (productId: string) => {
+    const updatedCart = cartItems.filter(item => item.product.id !== productId);
+    setCartItems(updatedCart);
+    localStorage.setItem('buildmart-cart', JSON.stringify(updatedCart));
+    toast({
+      title: "Item Removed",
+      description: "Item removed from cart",
+      duration: 2000,
+    });
+  };
+
+  const updateCartItemQuantity = (productId: string, newQuantity: number) => {
+    const quantity = Math.max(1, newQuantity);
+    const updatedCart = cartItems.map(item => 
+      item.product.id === productId 
+        ? { ...item, quantity }
+        : item
+    );
+    setCartItems(updatedCart);
+    localStorage.setItem('buildmart-cart', JSON.stringify(updatedCart));
   };
   
   // Wishlist functions
@@ -505,17 +528,25 @@ export default function CustomerEcommerce() {
 
   // Filter products
   const getFilteredProducts = (productsToFilter: Product[] = products) => {
-    let filtered = productsToFilter;
+    let filtered = productsToFilter || [];
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      if (term === 'featured') {
+        filtered = featuredProducts || [];
+      } else if (term === 'trending') {
+        filtered = trendingProducts || [];
+      } else {
+        filtered = filtered.filter(p => 
+          p.name?.toLowerCase().includes(term) ||
+          p.description?.toLowerCase().includes(term) ||
+          categories.find(cat => cat.id === p.categoryId)?.name?.toLowerCase().includes(term)
+        );
+      }
+    }
     
     if (selectedCategoryId) {
       filtered = filtered.filter(p => p.categoryId === selectedCategoryId);
-    }
-    
-    if (searchTerm) {
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
     }
     
     filtered = filtered.filter(p => {
@@ -564,7 +595,13 @@ export default function CustomerEcommerce() {
               type="text"
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearchTerm(value);
+                if (value) {
+                  setCurrentSection('home');
+                }
+              }}
               className="pl-10 pr-4 py-2 w-full"
             />
           </div>
@@ -1365,15 +1402,7 @@ export default function CustomerEcommerce() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setCartItems(prev => 
-                          prev.map(cartItem => 
-                            cartItem.product.id === item.product.id 
-                              ? { ...cartItem, quantity: Math.max(1, cartItem.quantity - 1) }
-                              : cartItem
-                          )
-                        );
-                      }}
+                      onClick={() => updateCartItemQuantity(item.product.id, item.quantity - 1)}
                     >
                       <Minus className="w-4 h-4" />
                     </Button>
@@ -1381,15 +1410,7 @@ export default function CustomerEcommerce() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setCartItems(prev => 
-                          prev.map(cartItem => 
-                            cartItem.product.id === item.product.id 
-                              ? { ...cartItem, quantity: cartItem.quantity + 1 }
-                              : cartItem
-                          )
-                        );
-                      }}
+                      onClick={() => updateCartItemQuantity(item.product.id, item.quantity + 1)}
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
@@ -1398,11 +1419,9 @@ export default function CustomerEcommerce() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      setCartItems(prev => prev.filter(cartItem => cartItem.product.id !== item.product.id));
-                    }}
+                    onClick={() => removeFromCart(item.product.id)}
                   >
-                    Remove
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </Card>
@@ -1463,6 +1482,7 @@ export default function CustomerEcommerce() {
     const form = useForm({
       resolver: zodResolver(quoteFormSchema),
       defaultValues: {
+        productId: quoteProduct?.id || '',
         customerName: user?.username || '',
         customerEmail: user?.email || '',
         customerPhone: '',
@@ -1521,7 +1541,7 @@ export default function CustomerEcommerce() {
                         field.onChange(value);
                         const product = products.find(p => p.id === value);
                         if (product) setQuoteProduct(product);
-                      }} value={field.value}>
+                      }} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Choose a product for quote" />
@@ -1753,7 +1773,7 @@ export default function CustomerEcommerce() {
                         field.onChange(value);
                         const product = products.find(p => p.id === value);
                         if (product) setBookingProduct(product);
-                      }} value={field.value}>
+                      }} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Choose a product to book" />
