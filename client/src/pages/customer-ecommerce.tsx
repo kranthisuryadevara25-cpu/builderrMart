@@ -1008,18 +1008,22 @@ export default function CustomerEcommerce() {
     const hasSearchResults = searchTerm && searchResults.length > 0;
     const hasSearchButNoResults = searchTerm && searchResults.length === 0;
     
+    console.log('🏠 HomePage render - searchTerm:', searchTerm, 'searchResults:', searchResults.length, 'hasSearchResults:', hasSearchResults);
+    
     return (
       <>
         {/* Search Results Section */}
         {hasSearchResults && (
-          <section className="py-8 px-4">
+          <section className="py-8 px-4 bg-yellow-50 border border-yellow-200">
             <div className="max-w-7xl mx-auto">
-              <h2 className="text-2xl font-bold mb-6">
-                Search Results for "{searchTerm}" ({searchResults.length} found)
+              <h2 className="text-2xl font-bold mb-6 text-red-600">
+                🔍 Search Results for "{searchTerm}" ({searchResults.length} found)
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {searchResults.slice(0, 12).map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <div key={product.id} className="border-2 border-red-500 p-2 bg-white">
+                    <ProductCard product={product} />
+                  </div>
                 ))}
               </div>
               {searchResults.length > 12 && (
@@ -1031,6 +1035,17 @@ export default function CustomerEcommerce() {
               )}
             </div>
           </section>
+        )}
+        
+        {/* Debug Search Info */}
+        {searchTerm && (
+          <div className="bg-red-100 p-4 m-4 border border-red-300">
+            <h3 className="font-bold">🔍 DEBUG SEARCH INFO:</h3>
+            <p>Search Term: "{searchTerm}"</p>
+            <p>Search Results Count: {searchResults.length}</p>
+            <p>Has Search Results: {hasSearchResults ? 'YES' : 'NO'}</p>
+            <p>Has Search But No Results: {hasSearchButNoResults ? 'YES' : 'NO'}</p>
+          </div>
         )}
         
         {/* No Search Results */}
