@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ProductForm } from "./product-form";
-import { Eye, Edit, Trash2, Download, Plus, Layers } from "lucide-react";
+import { Eye, Edit, Trash2, Download, Plus, Layers, Search } from "lucide-react";
 
 interface ProductTableProps {
   vendorId?: string;
@@ -41,15 +42,26 @@ export function ProductTable({ vendorId }: ProductTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedVendor, setSelectedVendor] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedVendor, setSelectedVendor] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [pricingProduct, setPricingProduct] = useState<Product | undefined>();
   const [deletingProduct, setDeletingProduct] = useState<Product | undefined>();
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products", { vendorId, categoryId: selectedCategory, search: "" }],
+    queryKey: ["/api/products", vendorId, selectedCategory, searchTerm],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (vendorId) params.append('vendorId', vendorId);
+      if (selectedCategory && selectedCategory !== 'all') params.append('categoryId', selectedCategory);
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await fetch(`/api/products?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
+    },
   });
 
   const { data: categories } = useQuery<Category[]>({
@@ -117,12 +129,22 @@ export function ProductTable({ vendorId }: ProductTableProps) {
       {/* Action Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-64"
+            />
+          </div>
+          
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {categories?.map((category: Category) => (
                 <SelectItem key={category.id} value={category.id}>
                   {category.name}
@@ -137,7 +159,7 @@ export function ProductTable({ vendorId }: ProductTableProps) {
                 <SelectValue placeholder="All Vendors" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Vendors</SelectItem>
+                <SelectItem value="all">All Vendors</SelectItem>
                 {/* Add vendor options here */}
               </SelectContent>
             </Select>

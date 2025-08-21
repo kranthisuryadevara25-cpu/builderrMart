@@ -9,6 +9,10 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Products from "@/pages/products";
 import Categories from "@/pages/categories";
+import Inventory from "@/pages/inventory";
+import Analytics from "@/pages/analytics";
+import Vendors from "@/pages/vendors";
+import Orders from "@/pages/orders";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -60,6 +64,30 @@ function Router() {
       <Route path="/categories">
         <ProtectedRoute>
           <Categories />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/inventory">
+        <ProtectedRoute>
+          <Inventory />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/analytics">
+        <ProtectedRoute>
+          <Analytics />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/vendors">
+        <ProtectedRoute>
+          <Vendors />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/orders">
+        <ProtectedRoute>
+          <Orders />
         </ProtectedRoute>
       </Route>
       
