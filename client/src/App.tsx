@@ -18,6 +18,7 @@ import AdminPanel from "@/pages/admin-panel";
 import VendorPanel from "@/pages/vendor-panel";
 import CustomerApp from "@/pages/customer-app";
 import CustomerEcommerce from "@/pages/customer-ecommerce";
+import AdminDashboard from "@/pages/admin";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -119,6 +120,12 @@ function Router() {
       <Route path="/admin">
         <ProtectedRoute>
           <AdminPanel />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/admin-dashboard">
+        <ProtectedRoute>
+          <AdminDashboard />
         </ProtectedRoute>
       </Route>
       

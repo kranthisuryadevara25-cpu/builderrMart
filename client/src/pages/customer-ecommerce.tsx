@@ -10,7 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
@@ -68,6 +73,29 @@ interface CartItem {
   selectedQuantitySlab?: any;
 }
 
+// Form schemas
+const quoteFormSchema = z.object({
+  customerName: z.string().min(1, 'Name is required'),
+  customerEmail: z.string().email('Valid email required'),
+  customerPhone: z.string().min(10, 'Phone number required'),
+  projectType: z.enum(['residential', 'commercial', 'industrial']),
+  projectLocation: z.string().min(1, 'Location is required'),
+  requirements: z.string().optional(),
+  quantity: z.number().min(1, 'Quantity must be at least 1'),
+});
+
+const bookingFormSchema = z.object({
+  customerName: z.string().min(1, 'Name is required'),
+  customerEmail: z.string().email('Valid email required'),
+  customerPhone: z.string().min(10, 'Phone number required'),
+  serviceType: z.enum(['delivery', 'installation', 'consultation']),
+  scheduledDate: z.string().min(1, 'Date is required'),
+  scheduledTime: z.string().min(1, 'Time is required'),
+  location: z.string().min(1, 'Location is required'),
+  requirements: z.string().optional(),
+  quantity: z.number().min(1, 'Quantity must be at least 1'),
+});
+
 export default function CustomerEcommerce() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -106,6 +134,50 @@ export default function CustomerEcommerce() {
   const [showSocialSharing, setShowSocialSharing] = useState(false);
   const [comparisonProducts, setComparisonProducts] = useState<Product[]>([]);
   const [sharingProduct, setSharingProduct] = useState<Product | null>(null);
+  
+  // Quote and Booking features
+  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [quoteProduct, setQuoteProduct] = useState<Product | null>(null);
+  const [bookingProduct, setBookingProduct] = useState<Product | null>(null);
+
+  // Quote and booking mutations
+  const createQuoteMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', '/api/quotes', data),
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Quote request submitted successfully! We\'ll contact you soon.' });
+      setShowQuoteDialog(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const createBookingMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', '/api/bookings', data),
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Booking request submitted successfully! We\'ll confirm your appointment.' });
+      setShowBookingDialog(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Helper functions for quote and booking
+  const openQuoteDialog = (product?: Product) => {
+    if (product) {
+      setQuoteProduct(product);
+    }
+    setShowQuoteDialog(true);
+  };
+
+  const openBookingDialog = (product?: Product) => {
+    if (product) {
+      setBookingProduct(product);
+    }
+    setShowBookingDialog(true);
+  };
 
   // Data fetching - Public access (no auth required)
   const { data: categories = [] } = useQuery<Category[]>({
@@ -646,7 +718,7 @@ export default function CustomerEcommerce() {
               <Calculator className="w-12 h-12 mx-auto text-green-600 mb-4" />
               <h3 className="font-semibold mb-2">Smart Quotation</h3>
               <p className="text-sm text-gray-600 mb-4">Get instant quotes with bulk discounts and delivery options</p>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => openQuoteDialog()}>
                 Get Quote
               </Button>
             </Card>
@@ -655,7 +727,7 @@ export default function CustomerEcommerce() {
               <Calendar className="w-12 h-12 mx-auto text-blue-600 mb-4" />
               <h3 className="font-semibold mb-2">Advance Booking</h3>
               <p className="text-sm text-gray-600 mb-4">Book materials in advance with flexible payment options</p>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => openBookingDialog()}>
                 Book Now
               </Button>
             </Card>
@@ -896,7 +968,7 @@ export default function CustomerEcommerce() {
                 </Button>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={() => openQuoteDialog(selectedProduct)}>
                     <Calculator className="w-4 h-4 mr-2" />
                     Get Quote
                   </Button>
@@ -1064,6 +1136,408 @@ export default function CustomerEcommerce() {
     }
   };
 
+  // Quote Dialog Component
+  const QuoteDialog = () => {
+    const form = useForm({
+      resolver: zodResolver(quoteFormSchema),
+      defaultValues: {
+        customerName: user?.username || '',
+        customerEmail: user?.email || '',
+        customerPhone: '',
+        projectType: 'residential' as const,
+        projectLocation: '',
+        requirements: '',
+        quantity: 1,
+      },
+    });
+
+    const onSubmit = (values: any) => {
+      const quoteData = {
+        ...values,
+        items: quoteProduct ? [
+          {
+            productId: quoteProduct.id,
+            productName: quoteProduct.name,
+            quantity: values.quantity,
+            unitPrice: parseFloat(quoteProduct.basePrice),
+            totalPrice: parseFloat(quoteProduct.basePrice) * values.quantity,
+          }
+        ] : [],
+        requirements: {
+          projectType: values.projectType,
+          location: values.projectLocation,
+          details: values.requirements,
+        },
+        subtotal: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity).toString() : '0',
+        taxAmount: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity * 0.18).toString() : '0',
+        totalAmount: quoteProduct ? (parseFloat(quoteProduct.basePrice) * values.quantity * 1.18).toString() : '0',
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      createQuoteMutation.mutate(quoteData);
+    };
+
+    return (
+      <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request Quote</DialogTitle>
+            <DialogDescription>
+              {quoteProduct ? `Get a quote for ${quoteProduct.name}` : 'Get a custom quote for your construction materials'}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="customerName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Your full name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customerEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="your.email@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="customerPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+91 9876543210" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="projectType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select project type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="residential">Residential</SelectItem>
+                          <SelectItem value="commercial">Commercial</SelectItem>
+                          <SelectItem value="industrial">Industrial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="projectLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="City, State" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantity Required</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          placeholder="1" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="requirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Additional Requirements (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Please describe any specific requirements, timeline, or questions you have..." 
+                        className="min-h-[80px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setShowQuoteDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createQuoteMutation.isPending}>
+                  {createQuoteMutation.isPending ? 'Submitting...' : 'Request Quote'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  // Booking Dialog Component
+  const BookingDialog = () => {
+    const form = useForm({
+      resolver: zodResolver(bookingFormSchema),
+      defaultValues: {
+        customerName: user?.username || '',
+        customerEmail: user?.email || '',
+        customerPhone: '',
+        serviceType: 'delivery' as const,
+        scheduledDate: '',
+        scheduledTime: '',
+        location: '',
+        requirements: '',
+        quantity: 1,
+      },
+    });
+
+    const onSubmit = (values: any) => {
+      const bookingData = {
+        ...values,
+        requirements: {
+          productId: bookingProduct?.id,
+          productName: bookingProduct?.name,
+          quantity: values.quantity,
+          details: values.requirements,
+        },
+        estimatedDuration: values.serviceType === 'delivery' ? 180 : 300,
+        cost: bookingProduct ? (parseFloat(bookingProduct.basePrice) * values.quantity * 1.15).toString() : '1000',
+      };
+      createBookingMutation.mutate(bookingData);
+    };
+
+    return (
+      <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Book Service</DialogTitle>
+            <DialogDescription>
+              {bookingProduct ? `Book a service for ${bookingProduct.name}` : 'Schedule delivery, installation, or consultation'}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="customerName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Your full name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customerEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="your.email@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="customerPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+91 9876543210" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="serviceType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Service Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select service type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="delivery">Delivery</SelectItem>
+                          <SelectItem value="installation">Installation</SelectItem>
+                          <SelectItem value="consultation">Consultation</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="scheduledDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Preferred Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" min={new Date().toISOString().split('T')[0]} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="scheduledTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Preferred Time</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select time slot" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="9:00 AM - 12:00 PM">Morning (9 AM - 12 PM)</SelectItem>
+                          <SelectItem value="12:00 PM - 3:00 PM">Afternoon (12 PM - 3 PM)</SelectItem>
+                          <SelectItem value="3:00 PM - 6:00 PM">Evening (3 PM - 6 PM)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Service Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Full address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantity</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          placeholder="1" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="requirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Special Instructions (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Any special instructions or requirements for the service..." 
+                        className="min-h-[80px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setShowBookingDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createBookingMutation.isPending}>
+                  {createBookingMutation.isPending ? 'Booking...' : 'Book Service'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -1125,6 +1599,10 @@ export default function CustomerEcommerce() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Quote and Booking Dialogs */}
+      <QuoteDialog />
+      <BookingDialog />
       
       {/* Advanced Feature Modals */}
       <ProductComparison 

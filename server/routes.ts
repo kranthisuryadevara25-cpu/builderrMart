@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertUserSchema, insertCategorySchema, insertProductSchema, updateCategorySchema, updateProductSchema } from "@shared/schema";
+import { insertUserSchema, insertCategorySchema, insertProductSchema, insertDiscountSchema, insertQuoteSchema, insertBookingSchema, updateCategorySchema, updateProductSchema, updateDiscountSchema, updateQuoteSchema, updateBookingSchema } from "@shared/schema";
 import { z } from "zod";
 import { AIEstimationService } from "./aiEstimation";
 import { ObjectStorageService } from "./objectStorage";
@@ -161,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze construction image and estimate materials
-  app.post("/api/construction/analyze", requireAuth, async (req, res) => {
+  app.post("/api/construction/analyze", async (req, res) => {
     try {
       const { imageURL, additionalInfo } = req.body;
       
@@ -193,8 +193,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get material estimates without image (based on user inputs)
-  app.post("/api/construction/estimate", requireAuth, async (req, res) => {
+  // Get material estimates without image (based on user inputs) - Public access for demo
+  app.post("/api/construction/estimate", async (req, res) => {
     try {
       const { area, floors, projectType, budget } = req.body;
       
@@ -608,13 +608,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Advanced booking route
-  app.post("/api/products/advance-booking", requireAuth, async (req: any, res) => {
+  // Discount CRUD routes
+  app.get("/api/discounts", requireAuth, requireRole(['owner_admin', 'vendor_manager']), async (req, res) => {
     try {
-      const { productId, quantity, advanceAmount, deliveryDate, specifications } = req.body;
+      const discounts = await storage.getDiscounts();
+      res.json(discounts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/discounts", requireAuth, requireRole(['owner_admin', 'vendor_manager']), async (req: any, res) => {
+    try {
+      const discountData = insertDiscountSchema.parse({
+        ...req.body,
+        createdBy: req.user.id
+      });
+      const discount = await storage.createDiscount(discountData);
+      res.json(discount);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/discounts/:id", requireAuth, requireRole(['owner_admin', 'vendor_manager']), async (req, res) => {
+    try {
+      const discountData = updateDiscountSchema.parse(req.body);
+      const discount = await storage.updateDiscount(req.params.id, discountData);
+      if (!discount) {
+        return res.status(404).json({ message: "Discount not found" });
+      }
+      res.json(discount);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/discounts/:id", requireAuth, requireRole(['owner_admin', 'vendor_manager']), async (req, res) => {
+    try {
+      const success = await storage.deleteDiscount(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Discount not found" });
+      }
+      res.json({ message: "Discount deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Quote CRUD routes
+  app.get("/api/quotes", requireAuth, async (req, res) => {
+    try {
+      const quotes = await storage.getQuotes();
+      res.json(quotes);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/quotes", async (req, res) => {
+    try {
+      const quoteData = insertQuoteSchema.parse(req.body);
+      const quote = await storage.createQuote(quoteData);
+      res.json(quote);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/quotes/:id", requireAuth, async (req, res) => {
+    try {
+      const quoteData = updateQuoteSchema.parse(req.body);
+      const quote = await storage.updateQuote(req.params.id, quoteData);
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+      res.json(quote);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Booking CRUD routes  
+  app.get("/api/bookings", requireAuth, async (req, res) => {
+    try {
+      const bookings = await storage.getBookings();
+      res.json(bookings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/bookings", async (req, res) => {
+    try {
+      const bookingData = insertBookingSchema.parse(req.body);
+      const booking = await storage.createBooking(bookingData);
+      res.json(booking);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/bookings/:id", requireAuth, async (req, res) => {
+    try {
+      const bookingData = updateBookingSchema.parse(req.body);
+      const booking = await storage.updateBooking(req.params.id, bookingData);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      res.json(booking);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Advanced booking route (legacy - now uses the booking system above)
+  app.post("/api/products/advance-booking", async (req, res) => {
+    try {
+      const { productId, quantity, deliveryDate, customerName, customerEmail, customerPhone, location, requirements } = req.body;
       
-      if (!productId || !quantity || !advanceAmount || !deliveryDate) {
-        return res.status(400).json({ message: "Product ID, quantity, advance amount, and delivery date are required" });
+      if (!productId || !quantity || !deliveryDate || !customerName || !customerEmail) {
+        return res.status(400).json({ message: "Product ID, quantity, delivery date, customer name, and email are required" });
       }
 
       const product = await storage.getProduct(productId);
@@ -622,18 +736,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      const booking = {
-        id: new Date().getTime().toString(),
-        userId: req.user?.id,
-        productId,
-        productName: product.name,
-        quantity: parseInt(quantity),
-        advanceAmount: parseFloat(advanceAmount),
-        deliveryDate: new Date(deliveryDate),
-        specifications: specifications || {},
-        status: 'pending',
-        createdAt: new Date()
-      };
+      const booking = await storage.createBooking({
+        customerName,
+        customerEmail,
+        customerPhone,
+        serviceType: 'delivery',
+        scheduledDate: new Date(deliveryDate),
+        location: location || 'Not specified',
+        requirements: { productId, quantity, productName: product.name, ...requirements },
+        cost: String(parseFloat(product.basePrice) * quantity)
+      });
       
       res.json({
         success: true,
