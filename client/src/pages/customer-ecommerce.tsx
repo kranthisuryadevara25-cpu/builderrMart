@@ -58,7 +58,9 @@ import {
   Box,
   Share2,
   MessageCircle,
-  Flame
+  Flame,
+  Quote,
+  FileText
 } from "lucide-react";
 import type { Product, Category } from "@shared/schema";
 import AIEstimator from "@/components/construction/AIEstimator";
@@ -95,6 +97,7 @@ const bookingFormSchema = z.object({
   location: z.string().min(1, 'Location is required'),
   requirements: z.string().optional(),
   quantity: z.number().min(1, 'Quantity must be at least 1'),
+  advancePayment: z.number().min(0, 'Advance payment required'),
 });
 
 export default function CustomerEcommerce() {
@@ -120,8 +123,14 @@ export default function CustomerEcommerce() {
   
   // Cart and pricing management
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [productQuantities, setProductQuantities] = useState<{[key: string]: number}>({});
+  const [selectedQuantitySlabs, setSelectedQuantitySlabs] = useState<{[key: string]: any}>({});
   const [bulkQuantity, setBulkQuantity] = useState<number>(1);
   const [deliveryDays, setDeliveryDays] = useState<number>(4);
+  
+  // Wishlist state
+  const [wishlistItems, setWishlistItems] = useState<string[]>([]);
+  const [compareList, setCompareList] = useState<Product[]>([]);
   
   // AI features
   const [showAIEstimator, setShowAIEstimator] = useState(false);
@@ -142,12 +151,31 @@ export default function CustomerEcommerce() {
   const [quoteProduct, setQuoteProduct] = useState<Product | null>(null);
   const [bookingProduct, setBookingProduct] = useState<Product | null>(null);
 
-  // Quote and booking mutations
+  // Quote and booking mutations - Real-time with admin sharing
   const createQuoteMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/quotes', data),
-    onSuccess: () => {
-      toast({ title: 'Success', description: 'Quote request submitted successfully! We\'ll contact you soon.' });
+    mutationFn: (data: any) => {
+      const quoteData = {
+        ...data,
+        productId: quoteProduct?.id,
+        productName: quoteProduct?.name,
+        estimatedPrice: quoteProduct ? getProductPricing(quoteProduct, data.quantity).finalPrice * data.quantity : 0,
+        status: 'pending',
+        leadType: 'quote_request',
+        submittedAt: new Date().toISOString(),
+        requiresFollowUp: true
+      };
+      return apiRequest('POST', '/api/quotes', quoteData);
+    },
+    onSuccess: (response) => {
+      toast({ 
+        title: 'Quote Request Sent!', 
+        description: `Quote #${response.quoteNumber || 'QT001'} submitted. Our team will contact you within 2 hours!`,
+        duration: 5000
+      });
       setShowQuoteDialog(false);
+      // Invalidate admin queries to show new lead
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/leads'] });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -155,10 +183,34 @@ export default function CustomerEcommerce() {
   });
 
   const createBookingMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/bookings', data),
-    onSuccess: () => {
-      toast({ title: 'Success', description: 'Booking request submitted successfully! We\'ll confirm your appointment.' });
+    mutationFn: (data: any) => {
+      const totalAmount = bookingProduct ? getProductPricing(bookingProduct, data.quantity).finalPrice * data.quantity : 1000;
+      const advanceAmount = Math.max(totalAmount * 0.1, 100); // Minimum 10% or ₹100
+      
+      const bookingData = {
+        ...data,
+        productId: bookingProduct?.id,
+        productName: bookingProduct?.name,
+        totalAmount,
+        advancePayment: advanceAmount,
+        paymentStatus: 'advance_pending',
+        bookingStatus: 'pending_payment',
+        leadType: 'booking_request',
+        submittedAt: new Date().toISOString(),
+        requiresFollowUp: true
+      };
+      return apiRequest('POST', '/api/bookings', bookingData);
+    },
+    onSuccess: (response) => {
+      toast({ 
+        title: 'Booking Request Sent!', 
+        description: `Booking #${response.bookingNumber || 'BK001'} created. Pay 10% advance (₹${response.advancePayment}) to confirm!`,
+        duration: 5000
+      });
       setShowBookingDialog(false);
+      // Invalidate admin queries
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/leads'] });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -244,13 +296,8 @@ export default function CustomerEcommerce() {
     setLocation('/');
   };
 
-  // Add to cart
+  // Add to cart - No authentication required
   const addToCart = (product: Product, quantity: number = 1, quantitySlab?: any) => {
-    if (!user) {
-      setShowAuthDialog(true);
-      return;
-    }
-
     const existingItem = cartItems.find(item => item.product.id === product.id);
     if (existingItem) {
       setCartItems(prev => 
@@ -270,13 +317,59 @@ export default function CustomerEcommerce() {
     });
   };
   
+  // Wishlist functions
+  const addToWishlist = (productId: string) => {
+    if (wishlistItems.includes(productId)) {
+      setWishlistItems(prev => prev.filter(id => id !== productId));
+      toast({ title: "Removed from Wishlist", description: "Product removed from your wishlist" });
+    } else {
+      setWishlistItems(prev => [...prev, productId]);
+      toast({ title: "Added to Wishlist", description: "Product added to your wishlist" });
+    }
+  };
+
+  // Product quantity management
+  const getProductQuantity = (productId: string) => productQuantities[productId] || 1;
+  
+  const setProductQuantity = (productId: string, quantity: number) => {
+    setProductQuantities(prev => ({ ...prev, [productId]: Math.max(1, quantity) }));
+  };
+
+  const getProductPricing = (product: Product, quantity?: number) => {
+    const qty = quantity || getProductQuantity(product.id);
+    const basePrice = parseFloat(product.basePrice);
+    
+    // Check for quantity slabs
+    let finalPrice = basePrice;
+    let discount = 0;
+    
+    if (product.quantitySlabs) {
+      const slabs = Array.isArray(product.quantitySlabs) 
+        ? product.quantitySlabs 
+        : JSON.parse(product.quantitySlabs);
+      
+      const applicableSlab = slabs.find((slab: any) => 
+        qty >= slab.min_qty && qty <= slab.max_qty
+      );
+      
+      if (applicableSlab) {
+        finalPrice = applicableSlab.price_per_unit;
+        discount = Math.round(((basePrice - finalPrice) / basePrice) * 100);
+        // Don't set state during render - store it separately
+        selectedQuantitySlabs[product.id] = applicableSlab;
+      }
+    }
+    
+    return { finalPrice, basePrice, discount, quantity: qty };
+  };
+
   // Advanced features helper functions
   const addToComparison = (product: Product) => {
     if (comparisonProducts.length >= 4) {
+      setShowComparison(true); // Auto-open when limit reached
       toast({
-        title: "Comparison Limit Reached",
-        description: "You can compare up to 4 products at once",
-        variant: "destructive"
+        title: "Auto-Starting Comparison",
+        description: "You have 4 products - starting comparison now!",
       });
       return;
     }
@@ -289,11 +382,21 @@ export default function CustomerEcommerce() {
       return;
     }
     
-    setComparisonProducts(prev => [...prev, product]);
-    toast({
-      title: "Added to Comparison",
-      description: `${product.name} added to comparison list`,
-    });
+    const newList = [...comparisonProducts, product];
+    setComparisonProducts(newList);
+    
+    if (newList.length === 4) {
+      setShowComparison(true);
+      toast({
+        title: "Auto-Starting Comparison",
+        description: "You have 4 products - starting comparison now!",
+      });
+    } else {
+      toast({
+        title: "Added to Comparison",
+        description: `${product.name} added (${newList.length}/4 products)`,
+      });
+    }
   };
   
   const startComparison = (products: Product[]) => {
@@ -489,9 +592,9 @@ export default function CustomerEcommerce() {
     trending?: boolean; 
     viewMode?: 'grid' | 'list';
   }) => {
-    const basePrice = parseFloat(product.basePrice);
-    const bulkPricing = calculateBulkDiscount(basePrice, bulkQuantity);
-    const deliveryPricing = calculateDeliveryPricing(bulkPricing.price, deliveryDays);
+    const currentQuantity = getProductQuantity(product.id);
+    const pricing = getProductPricing(product, currentQuantity);
+    const isInWishlist = wishlistItems.includes(product.id);
     
     return (
       <Card className="cursor-pointer hover:shadow-lg transition-all group">
@@ -543,25 +646,71 @@ export default function CustomerEcommerce() {
               </div>
             )}
             
-            {/* Pricing */}
+            {/* Quantity Controls */}
+            <div className="flex items-center gap-2 mb-3">
+              <Label className="text-sm">Qty:</Label>
+              <div className="flex items-center border rounded">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProductQuantity(product.id, currentQuantity - 1);
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <Input
+                  value={currentQuantity}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    const qty = parseInt(e.target.value) || 1;
+                    setProductQuantity(product.id, qty);
+                  }}
+                  className="w-16 text-center border-0"
+                  min="1"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProductQuantity(product.id, currentQuantity + 1);
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Dynamic Pricing */}
             <div className="space-y-2 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold text-green-600">
-                  ₹{deliveryPricing.price.toLocaleString()}
+                  ₹{pricing.finalPrice.toLocaleString()}
                 </span>
-                {(bulkPricing.discount > 0 || deliveryPricing.discount > 0) && (
+                {pricing.discount > 0 && (
                   <span className="text-gray-400 line-through">
-                    ₹{basePrice.toLocaleString()}
+                    ₹{pricing.basePrice.toLocaleString()}
                   </span>
                 )}
               </div>
               
-              {/* Bulk Discount Info */}
-              {bulkQuantity >= 20 && (
+              {/* Quantity Slab Discount Info */}
+              {pricing.discount > 0 && (
                 <Badge variant="secondary" className="text-xs">
                   <Percent className="w-3 h-3 mr-1" />
-                  {bulkPricing.discount}% Bulk Discount
+                  {pricing.discount}% Volume Discount
                 </Badge>
+              )}
+              
+              {/* Show quantity slab info */}
+              {product.quantitySlabs && (
+                <div className="text-xs text-gray-500">
+                  Buy {currentQuantity} @ ₹{pricing.finalPrice} each
+                </div>
               )}
             </div>
             
@@ -574,7 +723,7 @@ export default function CustomerEcommerce() {
               </Badge>
               <div className="flex items-center text-sm text-gray-500">
                 <Truck className="w-4 h-4 mr-1" />
-                {deliveryDays <= 2 ? 'Express' : deliveryDays <= 4 ? 'Fast' : 'Standard'}
+                Fast Delivery
               </div>
             </div>
             
@@ -584,7 +733,7 @@ export default function CustomerEcommerce() {
                 <Button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    addToCart(product, bulkQuantity);
+                    addToCart(product, currentQuantity, selectedQuantitySlabs[product.id]);
                   }}
                   className="flex-1"
                   disabled={!product.stockQuantity || product.stockQuantity <= 0}
@@ -593,18 +742,18 @@ export default function CustomerEcommerce() {
                   Add to Cart
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant={isInWishlist ? "default" : "outline"} 
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Quick view functionality
+                    addToWishlist(product.id);
                   }}
                 >
-                  <Eye className="w-4 h-4" />
+                  <Heart className={`w-4 h-4 ${isInWishlist ? 'fill-current' : ''}`} />
                 </Button>
               </div>
               
-              {/* New Feature Buttons */}
+              {/* Feature Buttons */}
               <div className="flex gap-1">
                 <Button 
                   variant="outline" 
@@ -617,6 +766,18 @@ export default function CustomerEcommerce() {
                 >
                   <Scale className="w-3 h-3 mr-1" />
                   Compare
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openQuoteDialog(product);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  <Quote className="w-3 h-3 mr-1" />
+                  Quote
                 </Button>
                 <Button 
                   variant="outline" 

@@ -39,6 +39,18 @@ export default function ProductComparison({
   const [compareProducts, setCompareProducts] = useState<Product[]>(initialProducts);
   const [showProductSelector, setShowProductSelector] = useState(false);
 
+  // Auto-open comparison when we have 4 products
+  React.useEffect(() => {
+    if (compareProducts.length === 4) {
+      onOpenChange(true);
+    }
+  }, [compareProducts.length, onOpenChange]);
+
+  // Update products when initialProducts change
+  React.useEffect(() => {
+    setCompareProducts(initialProducts);
+  }, [initialProducts]);
+
   const { data: allProducts = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
   });

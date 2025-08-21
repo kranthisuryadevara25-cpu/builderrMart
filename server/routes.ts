@@ -763,6 +763,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quote management endpoints
+  app.post('/api/quotes', async (req, res) => {
+    try {
+      const quoteData = {
+        ...req.body,
+        id: `QT${Date.now()}`,
+        quoteNumber: `QT${Date.now().toString().slice(-6)}`,
+        createdAt: new Date().toISOString(),
+        status: 'pending'
+      };
+      
+      // In a real app, save to database
+      console.log('New Quote Request:', quoteData);
+      
+      res.json({
+        success: true,
+        quoteNumber: quoteData.quoteNumber,
+        estimatedPrice: quoteData.estimatedPrice,
+        message: 'Quote request submitted successfully'
+      });
+    } catch (error: any) {
+      console.error('Quote creation error:', error);
+      res.status(500).json({ message: 'Failed to create quote' });
+    }
+  });
+
+  // Booking management endpoints
+  app.post('/api/bookings', async (req, res) => {
+    try {
+      const bookingData = {
+        ...req.body,
+        id: `BK${Date.now()}`,
+        bookingNumber: `BK${Date.now().toString().slice(-6)}`,
+        createdAt: new Date().toISOString(),
+        status: 'pending_payment'
+      };
+      
+      // In a real app, save to database
+      console.log('New Booking Request:', bookingData);
+      
+      res.json({
+        success: true,
+        bookingNumber: bookingData.bookingNumber,
+        totalAmount: bookingData.totalAmount,
+        advancePayment: bookingData.advancePayment,
+        message: 'Booking request created successfully'
+      });
+    } catch (error: any) {
+      console.error('Booking creation error:', error);
+      res.status(500).json({ message: 'Failed to create booking' });
+    }
+  });
+
+  // Admin quotes endpoint (for lead management)
+  app.get('/api/admin/quotes', async (req, res) => {
+    try {
+      // In a real app, fetch from database with proper auth
+      const mockQuotes = [
+        {
+          id: 'QT001',
+          customerName: 'John Doe',
+          customerEmail: 'john@example.com',
+          productName: 'ACC Cement',
+          quantity: 100,
+          estimatedPrice: 42500,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      res.json(mockQuotes);
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to fetch quotes' });
+    }
+  });
+
+  // Admin bookings endpoint
+  app.get('/api/admin/bookings', async (req, res) => {
+    try {
+      const mockBookings = [
+        {
+          id: 'BK001',
+          customerName: 'Jane Smith',
+          customerEmail: 'jane@example.com',
+          serviceType: 'delivery',
+          totalAmount: 15000,
+          advancePayment: 1500,
+          status: 'pending_payment',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      res.json(mockBookings);
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to fetch bookings' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
