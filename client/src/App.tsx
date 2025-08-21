@@ -15,6 +15,7 @@ import Vendors from "@/pages/vendors";
 import Orders from "@/pages/orders";
 import Shop from "@/pages/shop";
 import AdminPanel from "@/pages/admin-panel";
+import ComprehensiveAdminPanel from "@/pages/comprehensive-admin";
 import VendorPanel from "@/pages/vendor-panel";
 import CustomerApp from "@/pages/customer-app";
 import CustomerEcommerce from "@/pages/customer-ecommerce";

@@ -28,9 +28,12 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: UpdateUser): Promise<User | undefined>;
+  updateUserStatus(id: string, isActive: boolean): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
+  getUsersForExport(): Promise<User[]>;
 
   // Category methods
   getCategories(): Promise<Category[]>;
@@ -38,6 +41,7 @@ export interface IStorage {
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: string, category: UpdateCategory): Promise<Category | undefined>;
   deleteCategory(id: string): Promise<boolean>;
+  bulkCreateCategories(csvData: any[]): Promise<{ count: number; data: Category[] }>;
 
   // Product methods
   getProducts(vendorId?: string, categoryId?: string, search?: string): Promise<Product[]>;
@@ -46,8 +50,11 @@ export interface IStorage {
   getProduct(id: string): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, product: UpdateProduct): Promise<Product | undefined>;
+  updateProductFeatured(id: string, isFeatured: boolean): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<boolean>;
   getProductsByVendor(vendorId: string): Promise<Product[]>;
+  getProductsForExport(): Promise<Product[]>;
+  bulkCreateProducts(csvData: any[]): Promise<{ count: number; data: Product[] }>;
 
   // Discount methods
   getDiscounts(): Promise<Discount[]>;
@@ -77,6 +84,8 @@ export interface IStorage {
   createMarketingMaterial(material: InsertMarketingMaterial): Promise<MarketingMaterial>;
   updateMarketingMaterial(id: string, material: Partial<InsertMarketingMaterial>): Promise<MarketingMaterial>;
   deleteMarketingMaterial(id: string): Promise<boolean>;
+  getMarketingMaterialsForExport(): Promise<MarketingMaterial[]>;
+  bulkCreateMarketingMaterials(csvData: any[]): Promise<{ count: number; data: MarketingMaterial[] }>;
   
   // Contractors
   getContractors(): Promise<Contractor[]>;
@@ -84,6 +93,8 @@ export interface IStorage {
   createContractor(contractor: InsertContractor): Promise<Contractor>;
   updateContractor(id: string, contractor: Partial<InsertContractor>): Promise<Contractor>;
   deleteContractor(id: string): Promise<boolean>;
+  getContractorsForExport(): Promise<Contractor[]>;
+  bulkCreateContractors(csvData: any[]): Promise<{ count: number; data: Contractor[] }>;
   
   // Advances
   getAdvances(): Promise<Advance[]>;
@@ -91,13 +102,16 @@ export interface IStorage {
   createAdvance(advance: InsertAdvance): Promise<Advance>;
   updateAdvance(id: string, advance: Partial<InsertAdvance>): Promise<Advance>;
   deleteAdvance(id: string): Promise<boolean>;
+  getAdvancesForExport(startDate?: string, endDate?: string): Promise<Advance[]>;
   
   // Orders
   getOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrder(id: string, order: Partial<InsertOrder>): Promise<Order>;
+  updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
   deleteOrder(id: string): Promise<boolean>;
+  getOrdersForExport(startDate?: string, endDate?: string): Promise<Order[]>;
   
   // Pricing Rules
   getPricingRules(): Promise<PricingRule[]>;
@@ -137,9 +151,22 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserStatus(id: string, isActive: boolean): Promise<User | undefined> {
+    const result = await db.update(users).set({ isActive }).where(eq(users.id, id)).returning();
+    return result[0];
+  }
+
   async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id));
     return result.rowCount > 0;
+  }
+
+  async getUsersForExport(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
   // Category methods
@@ -206,6 +233,25 @@ export class DatabaseStorage implements IStorage {
   async updateProduct(id: string, product: UpdateProduct): Promise<Product | undefined> {
     const result = await db.update(products).set(product).where(eq(products.id, id)).returning();
     return result[0];
+  }
+
+  async updateProductFeatured(id: string, isFeatured: boolean): Promise<Product | undefined> {
+    const result = await db.update(products).set({ isFeatured }).where(eq(products.id, id)).returning();
+    return result[0];
+  }
+
+  async getProductsForExport(): Promise<Product[]> {
+    return await db.select().from(products).orderBy(desc(products.createdAt));
+  }
+
+  async bulkCreateProducts(csvData: any[]): Promise<{ count: number; data: Product[] }> {
+    const products = await db.insert(products).values(csvData).returning();
+    return { count: products.length, data: products };
+  }
+
+  async bulkCreateCategories(csvData: any[]): Promise<{ count: number; data: Category[] }> {
+    const categories = await db.insert(categories).values(csvData).returning();
+    return { count: categories.length, data: categories };
   }
 
   async deleteProduct(id: string): Promise<boolean> {
@@ -426,9 +472,64 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
   
+  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
+    const result = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+    return result[0];
+  }
+
   async deleteOrder(id: string): Promise<boolean> {
     const result = await db.delete(orders).where(eq(orders.id, id));
     return result.rowCount > 0;
+  }
+
+  // Export methods for comprehensive admin
+  async getOrdersForExport(startDate?: string, endDate?: string): Promise<Order[]> {
+    let query = db.select().from(orders);
+    
+    if (startDate && endDate) {
+      query = query.where(
+        and(
+          gte(orders.createdAt, new Date(startDate)),
+          lte(orders.createdAt, new Date(endDate))
+        )
+      );
+    }
+    
+    return await query.orderBy(desc(orders.createdAt));
+  }
+
+  async getAdvancesForExport(startDate?: string, endDate?: string): Promise<Advance[]> {
+    let query = db.select().from(advances);
+    
+    if (startDate && endDate) {
+      query = query.where(
+        and(
+          gte(advances.createdAt, new Date(startDate)),
+          lte(advances.createdAt, new Date(endDate))
+        )
+      );
+    }
+    
+    return await query.orderBy(desc(advances.createdAt));
+  }
+
+  async getMarketingMaterialsForExport(): Promise<MarketingMaterial[]> {
+    return await db.select().from(marketingMaterials).orderBy(desc(marketingMaterials.createdAt));
+  }
+
+  async getContractorsForExport(): Promise<Contractor[]> {
+    return await db.select().from(contractors).orderBy(desc(contractors.createdAt));
+  }
+
+  // Bulk create methods for CSV upload
+  async bulkCreateMarketingMaterials(csvData: any[]): Promise<{ count: number; data: MarketingMaterial[] }> {
+    const materials = await db.insert(marketingMaterials).values(csvData).returning();
+    return { count: materials.length, data: materials };
+  }
+
+  async bulkCreateContractors(csvData: any[]): Promise<{ count: number; data: Contractor[] }> {
+    const contractorsList = await db.insert(contractors).values(csvData).returning();
+    return { count: contractorsList.length, data: contractorsList };
   }
   
   // Pricing Rules Implementation
@@ -504,5 +605,6 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 }
+
 
 export const storage = new DatabaseStorage();

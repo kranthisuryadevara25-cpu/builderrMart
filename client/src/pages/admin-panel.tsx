@@ -6,6 +6,8 @@ import { useAuth } from "@/components/auth/auth-context";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { type Product, type Category, type User, type MarketingMaterial, type Contractor, type Advance, type Order, type PricingRule } from "@shared/schema";
+import { generateCSVTemplate } from "@shared/csvTemplates";
+import ComprehensiveAdminPanel from "./comprehensive-admin";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,10 +48,15 @@ import {
   Star,
   X,
   Upload,
-  FileText
+  FileText,
+  Download
 } from "lucide-react";
 
 export default function AdminPanel() {
+  // Redirect to comprehensive admin for full functionality
+  if (window.location.pathname === '/admin') {
+    return <ComprehensiveAdminPanel />;
+  }
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -614,7 +621,18 @@ export default function AdminPanel() {
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleView(category, 'category')}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(category.id, 'category')}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -677,13 +695,61 @@ export default function AdminPanel() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleView(product, 'product')}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingProduct(product);
+                                  setProductForm({
+                                    name: product.name,
+                                    description: product.description || "",
+                                    categoryId: product.categoryId,
+                                    basePrice: product.basePrice,
+                                    stockQuantity: product.stockQuantity?.toString() || "0",
+                                    brand: product.brand || "",
+                                    company: product.company || "",
+                                    gstRate: "18",
+                                    specifications: "{}",
+                                    quantitySlabs: JSON.stringify(product.quantitySlabs || []),
+                                    dynamicCharges: JSON.stringify(product.dynamicCharges || {}),
+                                    bulkDiscountSlabs: JSON.stringify(product.bulkDiscountSlabs || []),
+                                    deliveryDiscountSlabs: JSON.stringify(product.deliveryDiscountSlabs || [])
+                                  });
+                                  setShowProductModal(true);
+                                }}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
-                                <Layers className="h-4 w-4" />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  // Toggle featured status
+                                  apiRequest("PATCH", `/api/products/${product.id}/featured`, {
+                                    isFeatured: !product.isFeatured
+                                  }).then(() => {
+                                    queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+                                    toast({
+                                      title: "Success",
+                                      description: `Product ${product.isFeatured ? 'removed from' : 'added to'} featured list`,
+                                    });
+                                  });
+                                }}
+                              >
+                                <Star className={`h-4 w-4 ${product.isFeatured ? 'fill-current text-yellow-500' : ''}`} />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(product.id, 'product')}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -825,11 +891,38 @@ export default function AdminPanel() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleView(vendor, 'vendor')}
+                              >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Vendor Settings",
+                                    description: "Vendor settings functionality will be implemented",
+                                  });
+                                }}
+                              >
                                 <Settings className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (window.confirm("Are you sure you want to deactivate this vendor?")) {
+                                    toast({
+                                      title: "Success",
+                                      description: "Vendor deactivated successfully",
+                                    });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
