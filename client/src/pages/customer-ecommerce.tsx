@@ -306,6 +306,7 @@ export default function CustomerEcommerce() {
   };
 
   const navigateHome = () => {
+    setCurrentSection('home');
     setLocation('/');
   };
 
@@ -873,48 +874,97 @@ export default function CustomerEcommerce() {
   );
 
   // Home Page Component
-  const HomePage = () => (
-    <>
-      <CategoryGrid />
-      <FeaturedSection />
-      <TrendingSection />
-      
-      {/* AI Tools Section */}
-      <section className="py-8 px-4 bg-blue-50">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-6">AI-Powered Construction Tools</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <Brain className="w-12 h-12 mx-auto text-purple-600 mb-4" />
-              <h3 className="font-semibold mb-2">Material Estimator</h3>
-              <p className="text-sm text-gray-600 mb-4">Upload construction images to get AI-powered material estimates</p>
-              <Button onClick={() => setShowAIEstimator(true)}>
-                Try Now
+  const HomePage = () => {
+    const filteredProducts = getFilteredProducts();
+    const hasSearchResults = searchTerm && filteredProducts.length > 0;
+    const hasSearchButNoResults = searchTerm && filteredProducts.length === 0;
+    
+    return (
+      <>
+        {/* Search Results Section */}
+        {hasSearchResults && (
+          <section className="py-8 px-4">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-2xl font-bold mb-6">
+                Search Results for "{searchTerm}" ({filteredProducts.length} found)
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {filteredProducts.slice(0, 12).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              {filteredProducts.length > 12 && (
+                <div className="text-center mt-6">
+                  <Button variant="outline" onClick={() => setCurrentSection('category')}>
+                    View All {filteredProducts.length} Results
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+        
+        {/* No Search Results */}
+        {hasSearchButNoResults && (
+          <section className="py-8 px-4">
+            <div className="max-w-7xl mx-auto text-center">
+              <h2 className="text-2xl font-bold mb-4">No Results Found</h2>
+              <p className="text-gray-600 mb-6">
+                We couldn't find any products matching "{searchTerm}". Try different keywords or browse our categories.
+              </p>
+              <Button onClick={() => setSearchTerm('')}>
+                Clear Search
               </Button>
-            </Card>
-            
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <Calculator className="w-12 h-12 mx-auto text-green-600 mb-4" />
-              <h3 className="font-semibold mb-2">Smart Quotation</h3>
-              <p className="text-sm text-gray-600 mb-4">Get instant quotes with bulk discounts and delivery options</p>
-              <Button variant="outline" onClick={() => openQuoteDialog()}>
-                Get Quote
-              </Button>
-            </Card>
-            
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <Calendar className="w-12 h-12 mx-auto text-blue-600 mb-4" />
-              <h3 className="font-semibold mb-2">Advance Booking</h3>
-              <p className="text-sm text-gray-600 mb-4">Book materials in advance with flexible payment options</p>
-              <Button variant="outline" onClick={() => openBookingDialog()}>
-                Book Now
-              </Button>
-            </Card>
+            </div>
+          </section>
+        )}
+        
+        {/* Default Homepage Content */}
+        {!searchTerm && (
+          <>
+            <CategoryGrid />
+            <FeaturedSection />
+            <TrendingSection />
+          </>
+        )}
+        
+        {/* AI Tools Section */}
+        <section className="py-8 px-4 bg-blue-50">
+          <div className="max-w-7xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-6">AI-Powered Construction Tools</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Brain className="w-12 h-12 mx-auto text-purple-600 mb-4" />
+                <h3 className="font-semibold mb-2">Material Estimator</h3>
+                <p className="text-sm text-gray-600 mb-4">Upload construction images to get AI-powered material estimates</p>
+                <Button onClick={() => setShowAIEstimator(true)}>
+                  Try Now
+                </Button>
+              </Card>
+              
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Calculator className="w-12 h-12 mx-auto text-green-600 mb-4" />
+                <h3 className="font-semibold mb-2">Smart Quotation</h3>
+                <p className="text-sm text-gray-600 mb-4">Get instant quotes with bulk discounts and delivery options</p>
+                <Button variant="outline" onClick={() => openQuoteDialog()}>
+                  Get Quote
+                </Button>
+              </Card>
+              
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Calendar className="w-12 h-12 mx-auto text-blue-600 mb-4" />
+                <h3 className="font-semibold mb-2">Advance Booking</h3>
+                <p className="text-sm text-gray-600 mb-4">Book materials in advance with flexible payment options</p>
+                <Button variant="outline" onClick={() => openBookingDialog()}>
+                  Book Now
+                </Button>
+              </Card>
+            </div>
           </div>
-        </div>
-      </section>
-    </>
-  );
+        </section>
+      </>
+    );
+  };
 
   // Category Page Component
   const CategoryPage = () => {
@@ -1293,7 +1343,22 @@ export default function CustomerEcommerce() {
                 }, 0).toLocaleString()}
               </span>
             </div>
-            <Button className="w-full">
+            <Button 
+              className="w-full"
+              onClick={() => {
+                // Navigate to checkout page with cart data
+                // For now, show success message and clear cart
+                toast({
+                  title: "Order Placed Successfully!",
+                  description: `Order total: ₹${cartItems.reduce((total, item) => {
+                    const pricing = getProductPricing(item.product, item.quantity);
+                    return total + pricing.totalPrice;
+                  }, 0).toLocaleString()}. You will receive confirmation shortly.`,
+                  duration: 5000
+                });
+                setCartItems([]);
+              }}
+            >
               Proceed to Checkout
             </Button>
           </Card>
@@ -1367,6 +1432,60 @@ export default function CustomerEcommerce() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Product Selection - Only show when no product is pre-selected */}
+              {!quoteProduct && (
+                <FormField
+                  control={form.control}
+                  name="productId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Product</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        const product = products.find(p => p.id === value);
+                        if (product) setQuoteProduct(product);
+                      }} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a product for quote" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - ₹{product.basePrice}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Product Summary - Show selected product details */}
+              {quoteProduct && (
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-semibold text-blue-900">{quoteProduct.name}</h4>
+                      <p className="text-sm text-blue-700 mt-1">{quoteProduct.description}</p>
+                      <p className="text-sm font-medium text-blue-800 mt-2">Base Price: ₹{quoteProduct.basePrice}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setQuoteProduct(null)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -1545,6 +1664,61 @@ export default function CustomerEcommerce() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Product Selection - Only show when no product is pre-selected */}
+              {!bookingProduct && (
+                <FormField
+                  control={form.control}
+                  name="productId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Product</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        const product = products.find(p => p.id === value);
+                        if (product) setBookingProduct(product);
+                      }} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a product to book" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - ₹{product.basePrice}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Product Summary - Show selected product details */}
+              {bookingProduct && (
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-semibold text-green-900">{bookingProduct.name}</h4>
+                      <p className="text-sm text-green-700 mt-1">{bookingProduct.description}</p>
+                      <p className="text-sm font-medium text-green-800 mt-2">Base Price: ₹{bookingProduct.basePrice}</p>
+                      <p className="text-xs text-green-600 mt-1">10% advance payment required</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setBookingProduct(null)}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

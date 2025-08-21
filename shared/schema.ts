@@ -33,6 +33,11 @@ export const products = pgTable("products", {
   basePrice: numeric("base_price").notNull(),
   quantitySlabs: jsonb("quantity_slabs"), // [{"min_qty": 1, "max_qty": 10, "price_per_unit": 10}]
   dynamicCharges: jsonb("dynamic_charges"), // {"hamali": {"rate": 2, "unit": "bag", "description": "Loading fee"}}
+  bulkDiscountSlabs: jsonb("bulk_discount_slabs"), // [{"min_qty": 100, "discount_percent": 5}]
+  deliveryDiscountSlabs: jsonb("delivery_discount_slabs"), // [{"location": "local", "discount_percent": 2}]
+  brand: text("brand"),
+  company: text("company"),
+  gstRate: numeric("gst_rate").default(sql`18`), // GST percentage
   imageUrl: text("image_url"),
   vendorId: uuid("vendor_id").notNull().references(() => users.id),
   stockQuantity: integer("stock_quantity").default(0),
@@ -158,6 +163,41 @@ export const updateDiscountSchema = insertDiscountSchema.partial();
 export const updateQuoteSchema = insertQuoteSchema.partial();
 export const updateBookingSchema = insertBookingSchema.partial();
 
+// Loyalty/Rewards tables
+export const loyaltyPrograms = pgTable("loyalty_programs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  pointsPerRupee: numeric("points_per_rupee").default(sql`1`), // How many points per rupee spent
+  redemptionRate: numeric("redemption_rate").default(sql`1`), // How many rupees per point
+  minimumRedemptionPoints: integer("minimum_redemption_points").default(100),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+export const customerLoyalty = pgTable("customer_loyalty", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerEmail: text("customer_email").notNull(),
+  programId: uuid("program_id").references(() => loyaltyPrograms.id),
+  totalPoints: integer("total_points").default(0),
+  availablePoints: integer("available_points").default(0),
+  totalSpent: numeric("total_spent").default(sql`0`),
+  tier: text("tier").default("bronze"), // bronze, silver, gold, platinum
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+export const rewardRedemptions = pgTable("reward_redemptions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerEmail: text("customer_email").notNull(),
+  pointsRedeemed: integer("points_redeemed").notNull(),
+  rewardAmount: numeric("reward_amount").notNull(),
+  orderReference: text("order_reference"),
+  status: text("status").default("pending"), // pending, approved, rejected
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -182,3 +222,24 @@ export type UpdateQuote = z.infer<typeof updateQuoteSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type UpdateBooking = z.infer<typeof updateBookingSchema>;
+
+export type LoyaltyProgram = typeof loyaltyPrograms.$inferSelect;
+export type CustomerLoyalty = typeof customerLoyalty.$inferSelect;
+export type RewardRedemption = typeof rewardRedemptions.$inferSelect;
+
+export const insertLoyaltyProgramSchema = createInsertSchema(loyaltyPrograms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerLoyaltySchema = createInsertSchema(customerLoyalty).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRewardRedemptionSchema = createInsertSchema(rewardRedemptions).omit({
+  id: true,
+  createdAt: true,
+});

@@ -73,9 +73,14 @@ export default function AdminPanel() {
     categoryId: "",
     basePrice: "",
     stockQuantity: "",
+    brand: "",
+    company: "",
+    gstRate: "18",
     specifications: "{}",
     quantitySlabs: "[]",
-    dynamicCharges: "{}"
+    dynamicCharges: "{}",
+    bulkDiscountSlabs: "[]",
+    deliveryDiscountSlabs: "[]"
   });
 
   const { data: categories } = useQuery<Category[]>({
@@ -139,7 +144,9 @@ export default function AdminPanel() {
       setShowProductModal(false);
       setProductForm({
         name: "", description: "", categoryId: "", basePrice: "",
-        stockQuantity: "", specifications: "{}", quantitySlabs: "[]", dynamicCharges: "{}"
+        stockQuantity: "", brand: "", company: "", gstRate: "18",
+        specifications: "{}", quantitySlabs: "[]", dynamicCharges: "{}",
+        bulkDiscountSlabs: "[]", deliveryDiscountSlabs: "[]"
       });
       toast({ title: "Product created successfully" });
     }
@@ -166,20 +173,25 @@ export default function AdminPanel() {
       const specifications = JSON.parse(productForm.specifications || "{}");
       const quantitySlabs = JSON.parse(productForm.quantitySlabs || "[]");
       const dynamicCharges = JSON.parse(productForm.dynamicCharges || "{}");
+      const bulkDiscountSlabs = JSON.parse(productForm.bulkDiscountSlabs || "[]");
+      const deliveryDiscountSlabs = JSON.parse(productForm.deliveryDiscountSlabs || "[]");
       
       createProductMutation.mutate({
         ...productForm,
         basePrice: parseFloat(productForm.basePrice),
         stockQuantity: parseInt(productForm.stockQuantity),
+        gstRate: parseFloat(productForm.gstRate),
         specifications,
         quantitySlabs,
         dynamicCharges,
+        bulkDiscountSlabs,
+        deliveryDiscountSlabs,
         vendorId: user?.id // Admin creates for system
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Invalid JSON in specifications, quantity slabs, or dynamic charges",
+        description: "Invalid JSON in specifications, quantity slabs, dynamic charges, or discount slabs",
         variant: "destructive"
       });
     }
@@ -194,7 +206,7 @@ export default function AdminPanel() {
 
   const rejectVendor = (vendorId: string) => {
     toast({
-      title: "Vendor Rejected", 
+      title: "Vendor Rejected",
       description: "Vendor application has been rejected.",
       variant: "destructive"
     });
@@ -821,6 +833,38 @@ export default function AdminPanel() {
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="brand">Brand</Label>
+                <Input
+                  id="brand"
+                  value={productForm.brand}
+                  onChange={(e) => setProductForm({...productForm, brand: e.target.value})}
+                  placeholder="e.g., UltraTech"
+                />
+              </div>
+              <div>
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  value={productForm.company}
+                  onChange={(e) => setProductForm({...productForm, company: e.target.value})}
+                  placeholder="e.g., UltraTech Cement Ltd"
+                />
+              </div>
+              <div>
+                <Label htmlFor="gstRate">GST Rate (%)</Label>
+                <Input
+                  id="gstRate"
+                  type="number"
+                  step="0.01"
+                  value={productForm.gstRate}
+                  onChange={(e) => setProductForm({...productForm, gstRate: e.target.value})}
+                  required
+                />
+              </div>
+            </div>
             
             <div>
               <Label htmlFor="specifications">Specifications (JSON)</Label>
@@ -839,6 +883,36 @@ export default function AdminPanel() {
                 placeholder='[{"minQty": 1, "maxQty": 10, "price": 500}, {"minQty": 11, "maxQty": 50, "price": 480}]'
                 value={productForm.quantitySlabs}
                 onChange={(e) => setProductForm({...productForm, quantitySlabs: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bulkDiscountSlabs">Bulk Discount Slabs (JSON)</Label>
+              <Textarea
+                id="bulkDiscountSlabs"
+                placeholder='[{"minQty": 20, "maxQty": 50, "discount": 5}, {"minQty": 51, "maxQty": 100, "discount": 10}]'
+                value={productForm.bulkDiscountSlabs}
+                onChange={(e) => setProductForm({...productForm, bulkDiscountSlabs: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="deliveryDiscountSlabs">Delivery Discount Slabs (JSON)</Label>
+              <Textarea
+                id="deliveryDiscountSlabs"
+                placeholder='[{"minOrderValue": 5000, "maxOrderValue": 10000, "discount": 5}, {"minOrderValue": 10001, "discount": 10}]'
+                value={productForm.deliveryDiscountSlabs}
+                onChange={(e) => setProductForm({...productForm, deliveryDiscountSlabs: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="dynamicCharges">Dynamic Charges (JSON)</Label>
+              <Textarea
+                id="dynamicCharges"
+                placeholder='{"loading": 100, "unloading": 50, "express_delivery": 200}'
+                value={productForm.dynamicCharges}
+                onChange={(e) => setProductForm({...productForm, dynamicCharges: e.target.value})}
               />
             </div>
             
