@@ -86,6 +86,11 @@ Provide response in JSON format with the following structure:
   "confidence": number
 }`;
 
+      // Check if ANTHROPIC_API_KEY is available
+      if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error('ANTHROPIC_API_KEY not configured. Please set up your Anthropic API key.');
+      }
+
       const response = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
         model: DEFAULT_MODEL_STR,

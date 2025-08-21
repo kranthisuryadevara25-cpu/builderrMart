@@ -151,7 +151,9 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
       setIsAnalyzing(false);
       toast({
         title: "Analysis failed",
-        description: error.message || "Failed to analyze construction image",
+        description: error.message?.includes('ANTHROPIC_API_KEY') 
+          ? "AI analysis requires API configuration. Please contact support."
+          : error.message || "Failed to analyze construction image",
         variant: "destructive",
       });
     },
@@ -183,7 +185,9 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     onError: (error: any) => {
       toast({
         title: "Estimation failed",
-        description: error.message || "Failed to generate material estimate",
+        description: error.message?.includes('ANTHROPIC_API_KEY') 
+          ? "AI analysis requires API configuration. Please contact support."
+          : error.message || "Failed to generate material estimate",
         variant: "destructive",
       });
     },

@@ -396,7 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 10;
       
       const recommendations = await aiRecommendationService.getProductRecommendations({
-        userId: req.user?.id,
+        userId: (req as any).user?.id,
         categoryId,
         currentProductId,
         userBehavior,
@@ -493,8 +493,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const searchTerm = (query as string).toLowerCase();
         products = products.filter(p => 
           p.name.toLowerCase().includes(searchTerm) || 
-          p.description.toLowerCase().includes(searchTerm) ||
-          (p.specifications && JSON.stringify(p.specifications).toLowerCase().includes(searchTerm))
+          (p.description && p.description.toLowerCase().includes(searchTerm)) ||
+          (p.specs && JSON.stringify(p.specs).toLowerCase().includes(searchTerm))
         );
       }
 
@@ -517,7 +517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (brand) {
         products = products.filter(p => {
-          const specs = p.specifications as any;
+          const specs = p.specs as any;
           return specs?.brand?.toLowerCase() === (brand as string).toLowerCase();
         });
       }

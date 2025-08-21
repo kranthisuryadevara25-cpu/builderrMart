@@ -80,8 +80,8 @@ export default function CustomerEcommerce() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Navigation and view states
-  const [currentSection, setCurrentSection] = useState<'home' | 'products' | 'categories' | 'cart' | 'profile'>('home');
+  // Navigation and view states - Start with products page for logged-in users
+  const [currentSection, setCurrentSection] = useState<'home' | 'products' | 'categories' | 'cart' | 'profile'>('products');
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
