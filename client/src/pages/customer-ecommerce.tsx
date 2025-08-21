@@ -60,7 +60,10 @@ import {
   MessageCircle,
   Flame,
   Quote,
-  FileText
+  FileText,
+  Trash2,
+  ChevronUp,
+  CreditCard
 } from "lucide-react";
 import type { Product, Category } from "@shared/schema";
 import AIEstimator from "@/components/construction/AIEstimator";
@@ -117,6 +120,8 @@ export default function CustomerEcommerce() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [bookingProductSearchTerm, setBookingProductSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [sortBy, setSortBy] = useState<string>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -159,6 +164,7 @@ export default function CustomerEcommerce() {
   // Advanced features
   const [showComparison, setShowComparison] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const aiMessagesRef = React.useRef<HTMLDivElement>(null);
   const [showLoyaltyProgram, setShowLoyaltyProgram] = useState(false);
   const [showARViewer, setShowARViewer] = useState(false);
   const [showSocialSharing, setShowSocialSharing] = useState(false);
@@ -1442,19 +1448,40 @@ export default function CustomerEcommerce() {
             <Button 
               className="w-full"
               onClick={() => {
-                // Navigate to checkout page with cart data
-                // For now, show success message and clear cart
+                // Create a proper checkout flow
+                const orderTotal = cartItems.reduce((total, item) => {
+                  const pricing = getProductPricing(item.product, item.quantity);
+                  return total + pricing.totalPrice;
+                }, 0);
+                
+                const orderDetails = {
+                  items: cartItems.map(item => ({
+                    productId: item.product.id,
+                    productName: item.product.name,
+                    quantity: item.quantity,
+                    price: parseFloat(item.product.basePrice),
+                    total: parseFloat(item.product.basePrice) * item.quantity
+                  })),
+                  totalAmount: orderTotal,
+                  customerEmail: user?.email || 'guest@buildmart.com',
+                  orderDate: new Date().toISOString()
+                };
+                
                 toast({
                   title: "Order Placed Successfully!",
-                  description: `Order total: ₹${cartItems.reduce((total, item) => {
-                    const pricing = getProductPricing(item.product, item.quantity);
-                    return total + pricing.totalPrice;
-                  }, 0).toLocaleString()}. You will receive confirmation shortly.`,
+                  description: `Order #BM${Date.now().toString().slice(-6)} - Total: ₹${orderTotal.toLocaleString()}. You will receive confirmation shortly.`,
                   duration: 5000
                 });
+                
+                // Clear cart after successful order
                 setCartItems([]);
+                localStorage.removeItem('buildmart-cart');
+                
+                // Navigate back to home
+                setCurrentSection('home');
               }}
             >
+              <CreditCard className="w-4 h-4 mr-2" />
               Proceed to Checkout
             </Button>
           </Card>
@@ -1534,30 +1561,58 @@ export default function CustomerEcommerce() {
                 <FormField
                   control={form.control}
                   name="productId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Product</FormLabel>
-                      <Select onValueChange={(value) => {
-                        field.onChange(value);
-                        const product = products.find(p => p.id === value);
-                        if (product) setQuoteProduct(product);
-                      }} value={field.value || ""}>
+                  render={({ field }) => {
+                    const filteredProducts = products.filter(product => 
+                      product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
+                    ).slice(0, 10);
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Select Product</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose a product for quote" />
-                          </SelectTrigger>
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Type to search products..."
+                              value={productSearchTerm}
+                              onChange={(e) => {
+                                setProductSearchTerm(e.target.value);
+                                // If user types and there's exactly one match, auto-select it
+                                const matches = products.filter(p => 
+                                  p.name.toLowerCase().includes(e.target.value.toLowerCase())
+                                );
+                                if (matches.length === 1) {
+                                  field.onChange(matches[0].id);
+                                  setQuoteProduct(matches[0]);
+                                }
+                              }}
+                              className="w-full"
+                            />
+                            {productSearchTerm && filteredProducts.length > 0 && (
+                              <div className="max-h-40 overflow-y-auto border rounded-md bg-white shadow-sm">
+                                {filteredProducts.map((product) => (
+                                  <div
+                                    key={product.id}
+                                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition-colors"
+                                    onClick={() => {
+                                      field.onChange(product.id);
+                                      setQuoteProduct(product);
+                                      setProductSearchTerm(product.name);
+                                    }}
+                                  >
+                                    <div className="font-medium text-sm">{product.name}</div>
+                                    <div className="text-xs text-gray-600 mt-1">
+                                      ₹{parseFloat(product.basePrice).toLocaleString()} | {product.description?.slice(0, 60)}...
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </FormControl>
-                        <SelectContent>
-                          {products.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} - ₹{product.basePrice}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
               )}
 
@@ -1766,30 +1821,58 @@ export default function CustomerEcommerce() {
                 <FormField
                   control={form.control}
                   name="productId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Product</FormLabel>
-                      <Select onValueChange={(value) => {
-                        field.onChange(value);
-                        const product = products.find(p => p.id === value);
-                        if (product) setBookingProduct(product);
-                      }} value={field.value || ""}>
+                  render={({ field }) => {
+                    const filteredProducts = products.filter(product => 
+                      product.name.toLowerCase().includes(bookingProductSearchTerm.toLowerCase())
+                    ).slice(0, 10);
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Select Product</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose a product to book" />
-                          </SelectTrigger>
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Type to search products..."
+                              value={bookingProductSearchTerm}
+                              onChange={(e) => {
+                                setBookingProductSearchTerm(e.target.value);
+                                // If user types and there's exactly one match, auto-select it
+                                const matches = products.filter(p => 
+                                  p.name.toLowerCase().includes(e.target.value.toLowerCase())
+                                );
+                                if (matches.length === 1) {
+                                  field.onChange(matches[0].id);
+                                  setBookingProduct(matches[0]);
+                                }
+                              }}
+                              className="w-full"
+                            />
+                            {bookingProductSearchTerm && filteredProducts.length > 0 && (
+                              <div className="max-h-40 overflow-y-auto border rounded-md bg-white shadow-sm">
+                                {filteredProducts.map((product) => (
+                                  <div
+                                    key={product.id}
+                                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition-colors"
+                                    onClick={() => {
+                                      field.onChange(product.id);
+                                      setBookingProduct(product);
+                                      setBookingProductSearchTerm(product.name);
+                                    }}
+                                  >
+                                    <div className="font-medium text-sm">{product.name}</div>
+                                    <div className="text-xs text-gray-600 mt-1">
+                                      ₹{parseFloat(product.basePrice).toLocaleString()} | {product.description?.slice(0, 60)}...
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </FormControl>
-                        <SelectContent>
-                          {products.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} - ₹{product.basePrice}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
               )}
 
