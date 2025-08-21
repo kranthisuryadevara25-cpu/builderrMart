@@ -258,9 +258,8 @@ export default function CustomerEcommerce() {
     },
   });
 
-  // New Search Handler
+  // Search Handler
   const handleSearchChange = (value: string) => {
-    console.log('🔍 Search input:', value); // Debug log
     setSearchTerm(value);
     setIsSearching(true);
     
@@ -268,21 +267,17 @@ export default function CustomerEcommerce() {
       setSearchResults([]);
       setIsSearching(false);
       setCurrentSection('home');
-      console.log('🔍 Cleared search results');
       return;
     }
 
     // Perform search
     const term = value.toLowerCase();
-    console.log('🔍 Searching for:', term, 'in', products.length, 'products');
-    
     const results = products.filter(product => 
       product.name?.toLowerCase().includes(term) ||
       product.description?.toLowerCase().includes(term) ||
       categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase().includes(term)
     );
     
-    console.log('🔍 Found', results.length, 'results:', results.map(p => p.name));
     setSearchResults(results);
     setIsSearching(false);
     setCurrentSection('home'); // Show search results
@@ -619,10 +614,7 @@ export default function CustomerEcommerce() {
               type="text"
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
-              onChange={(e) => {
-                console.log('🔍 Input onChange triggered:', e.target.value);
-                handleSearchChange(e.target.value);
-              }}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 pr-4 py-2 w-full"
             />
             {searchTerm && (
@@ -1008,22 +1000,18 @@ export default function CustomerEcommerce() {
     const hasSearchResults = searchTerm && searchResults.length > 0;
     const hasSearchButNoResults = searchTerm && searchResults.length === 0;
     
-    console.log('🏠 HomePage render - searchTerm:', searchTerm, 'searchResults:', searchResults.length, 'hasSearchResults:', hasSearchResults);
-    
     return (
       <>
         {/* Search Results Section */}
         {hasSearchResults && (
-          <section className="py-8 px-4 bg-yellow-50 border border-yellow-200">
+          <section className="py-8 px-4">
             <div className="max-w-7xl mx-auto">
-              <h2 className="text-2xl font-bold mb-6 text-red-600">
-                🔍 Search Results for "{searchTerm}" ({searchResults.length} found)
+              <h2 className="text-2xl font-bold mb-6">
+                Search Results for "{searchTerm}" ({searchResults.length} found)
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {searchResults.slice(0, 12).map((product) => (
-                  <div key={product.id} className="border-2 border-red-500 p-2 bg-white">
-                    <ProductCard product={product} />
-                  </div>
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
               {searchResults.length > 12 && (
@@ -1035,17 +1023,6 @@ export default function CustomerEcommerce() {
               )}
             </div>
           </section>
-        )}
-        
-        {/* Debug Search Info */}
-        {searchTerm && (
-          <div className="bg-red-100 p-4 m-4 border border-red-300">
-            <h3 className="font-bold">🔍 DEBUG SEARCH INFO:</h3>
-            <p>Search Term: "{searchTerm}"</p>
-            <p>Search Results Count: {searchResults.length}</p>
-            <p>Has Search Results: {hasSearchResults ? 'YES' : 'NO'}</p>
-            <p>Has Search But No Results: {hasSearchButNoResults ? 'YES' : 'NO'}</p>
-          </div>
         )}
         
         {/* No Search Results */}
@@ -2125,7 +2102,14 @@ export default function CustomerEcommerce() {
                 updatedAt: new Date(),
                 quantitySlabs: null,
                 dynamicCharges: null,
-                imageUrl: null
+                imageUrl: null,
+                brand: null,
+                bulkDiscountSlabs: null,
+                deliveryDiscountSlabs: null,
+                company: null,
+                gstRate: null,
+                isPopular: null,
+                isTrending: null
               };
               addToCart(product, material.adjustedQuantity || material.quantity);
             });
