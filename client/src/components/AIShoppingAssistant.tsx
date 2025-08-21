@@ -459,30 +459,30 @@ What type of construction project are you working on?`;
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
+                className="h-8 w-8 p-0 bg-white shadow-md hover:bg-gray-50"
                 onClick={() => {
-                  const scrollArea = document.getElementById('ai-chat-scroll');
+                  const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
                   if (scrollArea) {
                     scrollArea.scrollTop = 0;
                   }
                 }}
                 title="Scroll to top"
               >
-                ↑
+                ▲
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
+                className="h-8 w-8 p-0 bg-white shadow-md hover:bg-gray-50"
                 onClick={() => {
-                  const scrollArea = document.getElementById('ai-chat-scroll');
+                  const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
                   if (scrollArea) {
                     scrollArea.scrollTop = scrollArea.scrollHeight;
                   }
                 }}
                 title="Scroll to bottom"
               >
-                ↓
+                ▼
               </Button>
             </div>
           )}

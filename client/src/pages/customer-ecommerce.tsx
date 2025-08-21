@@ -602,12 +602,15 @@ export default function CustomerEcommerce() {
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
               onChange={(e) => {
-                e.preventDefault();
                 const value = e.target.value;
                 setSearchTerm(value);
                 if (value.trim()) {
                   setCurrentSection('home');
                 }
+              }}
+              onInput={(e) => {
+                const value = (e.target as HTMLInputElement).value;
+                setSearchTerm(value);
               }}
               className="pl-10 pr-4 py-2 w-full"
             />
@@ -1578,14 +1581,10 @@ export default function CustomerEcommerce() {
                               onChange={(e) => {
                                 const value = e.target.value;
                                 setProductSearchTerm(value);
-                                // Auto-select if exact match
-                                const exactMatch = products.find(p => 
-                                  p.name.toLowerCase() === value.toLowerCase()
-                                );
-                                if (exactMatch) {
-                                  field.onChange(exactMatch.name);
-                                  setQuoteProduct(exactMatch);
-                                }
+                              }}
+                              onInput={(e) => {
+                                const value = (e.target as HTMLInputElement).value;
+                                setProductSearchTerm(value);
                               }}
                               className="w-full"
                             />
@@ -1839,14 +1838,10 @@ export default function CustomerEcommerce() {
                               onChange={(e) => {
                                 const value = e.target.value;
                                 setBookingProductSearchTerm(value);
-                                // Auto-select if exact match
-                                const exactMatch = products.find(p => 
-                                  p.name.toLowerCase() === value.toLowerCase()
-                                );
-                                if (exactMatch) {
-                                  field.onChange(exactMatch.name);
-                                  setBookingProduct(exactMatch);
-                                }
+                              }}
+                              onInput={(e) => {
+                                const value = (e.target as HTMLInputElement).value;
+                                setBookingProductSearchTerm(value);
                               }}
                               className="w-full"
                             />
