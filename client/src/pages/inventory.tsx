@@ -27,7 +27,7 @@ export default function Inventory() {
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
@@ -35,7 +35,7 @@ export default function Inventory() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (user?.role === "vendor") params.append('vendorId', user.id);
-      if (selectedCategory) params.append('categoryId', selectedCategory);
+      if (selectedCategory && selectedCategory !== 'all') params.append('categoryId', selectedCategory);
       if (searchTerm) params.append('search', searchTerm);
       
       const response = await fetch(`/api/products?${params.toString()}`);
@@ -62,16 +62,16 @@ export default function Inventory() {
   };
 
   const filteredProducts = products?.filter((product: Product) => {
-    if (stockFilter === "low") return product.stockQuantity < 50;
-    if (stockFilter === "out") return product.stockQuantity === 0;
-    if (stockFilter === "in") return product.stockQuantity >= 50;
+    if (stockFilter === "low") return (product.stockQuantity || 0) < 50;
+    if (stockFilter === "out") return (product.stockQuantity || 0) === 0;
+    if (stockFilter === "in") return (product.stockQuantity || 0) >= 50;
     return true;
   }) || [];
 
   const totalItems = filteredProducts.length;
-  const lowStockItems = filteredProducts.filter(p => p.stockQuantity < 50 && p.stockQuantity > 0).length;
-  const outOfStockItems = filteredProducts.filter(p => p.stockQuantity === 0).length;
-  const totalValue = filteredProducts.reduce((sum, product) => sum + (parseFloat(product.basePrice) * product.stockQuantity), 0);
+  const lowStockItems = filteredProducts.filter(p => (p.stockQuantity || 0) < 50 && (p.stockQuantity || 0) > 0).length;
+  const outOfStockItems = filteredProducts.filter(p => (p.stockQuantity || 0) === 0).length;
+  const totalValue = filteredProducts.reduce((sum, product) => sum + (parseFloat(product.basePrice) * (product.stockQuantity || 0)), 0);
 
   return (
     <div className="min-h-screen flex">
@@ -159,7 +159,7 @@ export default function Inventory() {
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Categories</SelectItem>
+                      <SelectItem value="all">All Categories</SelectItem>
                       {categories?.map((category: Category) => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}

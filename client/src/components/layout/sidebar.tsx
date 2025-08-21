@@ -24,6 +24,20 @@ const navigation = [
     icon: LayoutDashboard,
     roles: ["owner_admin", "vendor_manager", "vendor"],
   },
+  // User Role Navigation
+  {
+    name: "Shop",
+    href: "/shop",
+    icon: Store,
+    roles: ["user"],
+  },
+  // Admin Role Navigation
+  {
+    name: "Admin Panel",
+    href: "/admin-panel",
+    icon: HardHat,
+    roles: ["owner_admin"],
+  },
   {
     name: "All Products",
     href: "/products",
@@ -38,6 +52,13 @@ const navigation = [
     roles: ["owner_admin", "vendor_manager"],
     badge: "43",
   },
+  // Vendor Role Navigation
+  {
+    name: "Vendor Panel",
+    href: "/vendor-panel",
+    icon: Store,
+    roles: ["vendor"],
+  },
   {
     name: "My Products",
     href: "/my-products",
@@ -45,6 +66,7 @@ const navigation = [
     roles: ["vendor"],
     badge: "87",
   },
+  // Common Navigation
   {
     name: "Categories",
     href: "/categories",
@@ -55,7 +77,7 @@ const navigation = [
     name: "Orders",
     href: "/orders",
     icon: Receipt,
-    roles: ["owner_admin", "vendor_manager", "vendor"],
+    roles: ["owner_admin", "vendor_manager", "vendor", "user"],
     badge: "12",
   },
   {

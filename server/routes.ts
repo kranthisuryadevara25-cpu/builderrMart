@@ -113,6 +113,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ user: userWithoutPassword });
   });
 
+  // Stripe payment route for checkout calculations
+  app.post("/api/create-payment-intent", async (req, res) => {
+    try {
+      const { amount } = req.body;
+      
+      // Mock payment intent creation (replace with actual Stripe integration)
+      const paymentIntent = {
+        client_secret: "pi_test_" + Math.random().toString(36).substr(2, 9),
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: "inr"
+      };
+      
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      res.status(500).json({ 
+        message: "Error creating payment intent: " + error.message 
+      });
+    }
+  });
+
   // Category routes
   app.get("/api/categories", requireAuth, async (req, res) => {
     try {
