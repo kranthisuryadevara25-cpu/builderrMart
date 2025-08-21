@@ -154,11 +154,18 @@ export default function CustomerEcommerce() {
   // Quote and booking mutations - Real-time with admin sharing
   const createQuoteMutation = useMutation({
     mutationFn: (data: any) => {
+      if (!quoteProduct) {
+        throw new Error('No product selected for quote');
+      }
+      const pricing = getProductPricing(quoteProduct, data.quantity);
       const quoteData = {
         ...data,
-        productId: quoteProduct?.id,
-        productName: quoteProduct?.name,
-        estimatedPrice: quoteProduct ? getProductPricing(quoteProduct, data.quantity).finalPrice * data.quantity : 0,
+        productId: quoteProduct.id,
+        productName: quoteProduct.name,
+        productBasePrice: pricing.basePrice,
+        productFinalPrice: pricing.finalPrice,
+        estimatedPrice: pricing.totalPrice,
+        discount: pricing.discount,
         status: 'pending',
         leadType: 'quote_request',
         submittedAt: new Date().toISOString(),
@@ -166,7 +173,7 @@ export default function CustomerEcommerce() {
       };
       return apiRequest('POST', '/api/quotes', quoteData);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       toast({ 
         title: 'Quote Request Sent!', 
         description: `Quote #${response.quoteNumber || 'QT001'} submitted. Our team will contact you within 2 hours!`,
@@ -184,13 +191,19 @@ export default function CustomerEcommerce() {
 
   const createBookingMutation = useMutation({
     mutationFn: (data: any) => {
-      const totalAmount = bookingProduct ? getProductPricing(bookingProduct, data.quantity).finalPrice * data.quantity : 1000;
+      if (!bookingProduct) {
+        throw new Error('No product selected for booking');
+      }
+      const pricing = getProductPricing(bookingProduct, data.quantity);
+      const totalAmount = pricing.totalPrice;
       const advanceAmount = Math.max(totalAmount * 0.1, 100); // Minimum 10% or ₹100
       
       const bookingData = {
         ...data,
-        productId: bookingProduct?.id,
-        productName: bookingProduct?.name,
+        productId: bookingProduct.id,
+        productName: bookingProduct.name,
+        productBasePrice: pricing.basePrice,
+        productFinalPrice: pricing.finalPrice,
         totalAmount,
         advancePayment: advanceAmount,
         paymentStatus: 'advance_pending',
@@ -201,7 +214,7 @@ export default function CustomerEcommerce() {
       };
       return apiRequest('POST', '/api/bookings', bookingData);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       toast({ 
         title: 'Booking Request Sent!', 
         description: `Booking #${response.bookingNumber || 'BK001'} created. Pay 10% advance (₹${response.advancePayment}) to confirm!`,
@@ -342,25 +355,24 @@ export default function CustomerEcommerce() {
     // Check for quantity slabs
     let finalPrice = basePrice;
     let discount = 0;
+    let applicableSlab = null;
     
     if (product.quantitySlabs) {
       const slabs = Array.isArray(product.quantitySlabs) 
         ? product.quantitySlabs 
         : JSON.parse(product.quantitySlabs);
       
-      const applicableSlab = slabs.find((slab: any) => 
+      applicableSlab = slabs.find((slab: any) => 
         qty >= slab.min_qty && qty <= slab.max_qty
       );
       
       if (applicableSlab) {
         finalPrice = applicableSlab.price_per_unit;
         discount = Math.round(((basePrice - finalPrice) / basePrice) * 100);
-        // Don't set state during render - store it separately
-        selectedQuantitySlabs[product.id] = applicableSlab;
       }
     }
     
-    return { finalPrice, basePrice, discount, quantity: qty };
+    return { finalPrice, basePrice, discount, quantity: qty, applicableSlab, totalPrice: finalPrice * qty };
   };
 
   // Advanced features helper functions
@@ -706,10 +718,13 @@ export default function CustomerEcommerce() {
                 </Badge>
               )}
               
-              {/* Show quantity slab info */}
+              {/* Show quantity slab info and total */}
               {product.quantitySlabs && (
-                <div className="text-xs text-gray-500">
-                  Buy {currentQuantity} @ ₹{pricing.finalPrice} each
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>Buy {currentQuantity} @ ₹{pricing.finalPrice} each</div>
+                  <div className="font-semibold text-green-600">
+                    Total: ₹{pricing.totalPrice.toLocaleString()}
+                  </div>
                 </div>
               )}
             </div>
@@ -771,6 +786,7 @@ export default function CustomerEcommerce() {
                   variant="outline" 
                   size="sm"
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     openQuoteDialog(product);
                   }}
@@ -783,8 +799,9 @@ export default function CustomerEcommerce() {
                   variant="outline" 
                   size="sm"
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
-                    viewInAR(product);
+                    openBookingDialog(product);
                   }}
                   className="flex-1 text-xs"
                 >
@@ -1270,9 +1287,10 @@ export default function CustomerEcommerce() {
             <div className="flex justify-between items-center mb-4">
               <span className="text-xl font-semibold">Total:</span>
               <span className="text-2xl font-bold text-green-600">
-                ₹{cartItems.reduce((total, item) => 
-                  total + (parseFloat(item.product.basePrice) * item.quantity), 0
-                ).toLocaleString()}
+                ₹{cartItems.reduce((total, item) => {
+                  const pricing = getProductPricing(item.product, item.quantity);
+                  return total + pricing.totalPrice;
+                }, 0).toLocaleString()}
               </span>
             </div>
             <Button className="w-full">
