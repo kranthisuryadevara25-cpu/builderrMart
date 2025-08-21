@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRoute, Link } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/components/auth/auth-context";
-import { type Product, type Category } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,1196 +13,1206 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { Slider } from "@/components/ui/slider";
 import { 
-  ShoppingCart, 
   Search, 
-  Filter,
-  Star,
-  Plus,
-  Minus,
-  Package,
-  User,
+  ShoppingCart, 
   Heart,
-  LogOut,
+  User,
+  Filter,
+  SortAsc,
   Grid3X3,
   List,
-  FileText,
-  Truck,
-  Award,
+  Star,
   TrendingUp,
-  Building2,
-  Tag,
-  SortAsc,
-  Eye,
-  Quote,
-  Brain,
   Sparkles,
   Calculator,
-  ShoppingBag,
-  Layers,
-  Home,
-  ArrowRight,
-  ChevronDown,
-  ChevronRight,
-  X,
-  MapPin,
+  Truck,
   Clock,
-  DollarSign,
+  Package,
+  IndianRupee,
+  Eye,
+  Plus,
+  Minus,
+  Building2,
+  Brain,
   Zap,
-  CheckCircle,
-  AlertCircle
+  Calendar,
+  ShoppingBag,
+  ChevronRight,
+  ArrowRight
 } from "lucide-react";
-
+import type { Product, Category } from "@shared/schema";
 import AIEstimator from "@/components/construction/AIEstimator";
 
 interface CartItem {
-  productId: string;
-  name: string;
-  price: number;
+  product: Product;
   quantity: number;
-  company?: string;
-  brand?: string;
+  selectedQuantitySlab?: any;
 }
 
-interface QuoteItem {
+interface QuotationItem {
   productId: string;
-  name: string;
   quantity: number;
-  company: string;
-  brand: string;
-  specifications?: string;
+  deliveryDays: number;
+  urgency: 'standard' | 'urgent';
+}
+
+interface AdvanceBooking {
+  productId: string;
+  quantity: number;
+  advanceAmount: number;
+  deliveryDate: Date;
+  specifications: any;
 }
 
 export default function CustomerEcommerce() {
-  const { user, logout } = useAuth();
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
-  // Navigation and view states - Start with products page for logged-in users
-  const [currentSection, setCurrentSection] = useState<'home' | 'products' | 'categories' | 'cart' | 'profile'>('products');
+  // URL routing for product details
+  const [match, params] = useRoute("/product/:id");
+  const [categoryMatch, categoryParams] = useRoute("/category/:categoryId");
+  
+  // State management
+  const [currentSection, setCurrentSection] = useState<'home' | 'product-detail' | 'cart' | 'quotation' | 'booking'>('home');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [priceRange, setPriceRange] = useState([0, 100000]);
+  const [sortBy, setSortBy] = useState<string>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   
-  // Enhanced filter states
-  const [filters, setFilters] = useState({
-    priceRange: "all",
-    company: "all", 
-    brand: "all",
-    rating: "all",
-    availability: "all"
-  });
+  // Cart and quotation management
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [quotationItems, setQuotationItems] = useState<QuotationItem[]>([]);
+  const [advanceBookings, setAdvanceBookings] = useState<AdvanceBooking[]>([]);
+  const [bulkQuantity, setBulkQuantity] = useState<number>(1);
+  const [deliveryDays, setDeliveryDays] = useState<number>(4);
   
-  // Sort state
-  const [sortBy, setSortBy] = useState("relevance");
-  
-  // Cart and quote states
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [quote, setQuote] = useState<QuoteItem[]>([]);
-  const [showCart, setShowCart] = useState(false);
-  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  // AI and advanced features
   const [showAIEstimator, setShowAIEstimator] = useState(false);
-  const [showPricingCalculator, setShowPricingCalculator] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
-  // Pricing calculator state
-  const [pricingForm, setPricingForm] = useState({
-    quantity: 1,
-    location: 'local',
-    urgency: 'standard',
-    userType: 'retail'
-  });
-  const [calculatedPricing, setCalculatedPricing] = useState<any>(null);
-  
-  // Quote form
-  const [quoteForm, setQuoteForm] = useState({
-    quantity: "",
-    company: "",
-    brand: "",
-    specifications: "",
-    deliveryDate: ""
+  const [aiRecommendations, setAiRecommendations] = useState<Product[]>([]);
+  const [realtimeQuotation, setRealtimeQuotation] = useState<any>(null);
+
+  // Data fetching
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/categories/hierarchy'],
   });
 
-  // Enhanced API calls
-  const { data: categories } = useQuery<any[]>({
-    queryKey: ["/api/categories/hierarchy"],
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
   });
 
-  const { data: featuredProducts, isLoading: featuredLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products/featured"],
+  const { data: featuredProducts = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products/featured'],
   });
 
-  const { data: trendingProducts, isLoading: trendingLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products/trending"],
+  const { data: trendingProducts = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products/trending'],
   });
 
-  // Enhanced search with advanced filtering
-  const { data: searchResults, isLoading: searchLoading } = useQuery({
-    queryKey: ["/api/products/search", {
-      q: searchTerm,
-      category: filters.company !== 'all' ? selectedCategory : undefined,
-      minPrice: filters.priceRange === "1000-5000" ? 1000 : filters.priceRange === "5000-10000" ? 5000 : filters.priceRange === "above-10000" ? 10000 : undefined,
-      maxPrice: filters.priceRange === "under-1000" ? 1000 : filters.priceRange === "1000-5000" ? 5000 : filters.priceRange === "5000-10000" ? 10000 : undefined,
-      inStock: filters.availability === "in-stock" ? true : undefined,
-      brand: filters.brand !== 'all' ? filters.brand : undefined,
-      sortBy: sortBy === "price-low" || sortBy === "price-high" ? "price" : sortBy === "name" ? "name" : "created",
-      sortOrder: sortBy === "price-high" ? "desc" : "asc",
-      limit: 50
-    }],
-    enabled: searchTerm.length > 0 || Object.values(filters).some(f => f !== 'all') || selectedCategory !== 'all'
-  });
-
-  const { data: products } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
-  });
-
-  // Get AI recommendations
-  const recommendationsMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/products/recommendations", data);
-      return response.json();
+  // Advanced search with AI
+  const { data: searchResults, refetch: searchRefetch } = useQuery({
+    queryKey: ['/api/products/search', searchTerm, selectedCategory, priceRange, sortBy],
+    enabled: searchTerm.length > 0,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        q: searchTerm,
+        category: selectedCategory === 'all' ? '' : selectedCategory,
+        minPrice: priceRange[0].toString(),
+        maxPrice: priceRange[1].toString(),
+        sortBy,
+        sortOrder: 'asc'
+      });
+      
+      const response = await apiRequest('GET', `/api/products/search?${params}`);
+      return response;
     }
   });
 
-  // Calculate pricing
+  // Real-time pricing calculator
   const pricingMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/pricing/calculate", data);
-      return response.json();
+    mutationFn: async ({ productId, quantity, deliveryDays, urgency }: any) => {
+      const response = await apiRequest('POST', '/api/pricing/calculate', {
+        productId,
+        quantity,
+        deliveryDate: new Date(Date.now() + deliveryDays * 24 * 60 * 60 * 1000).toISOString(),
+        userType: user?.role || 'guest',
+        urgency
+      });
+      return response;
     },
     onSuccess: (data) => {
-      setCalculatedPricing(data);
-      toast({
-        title: "Pricing Calculated",
-        description: "Real-time pricing has been calculated successfully."
-      });
+      setRealtimeQuotation(data);
     }
   });
 
   // Generate quotation
   const quotationMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/quotations/generate", data);
-      return response.json();
+    mutationFn: async (items: QuotationItem[]) => {
+      if (!user) {
+        setShowAuthDialog(true);
+        return;
+      }
+      
+      const quotationData = {
+        items: items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          deliveryDays: item.deliveryDays,
+          urgency: item.urgency
+        })),
+        customerName: user.username,
+        customerEmail: user.email,
+        location: 'India',
+        userType: user.role,
+        urgency: 'standard'
+      };
+
+      const response = await apiRequest('POST', '/api/quotations/generate', quotationData);
+      return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
-        title: "Quotation Generated",
-        description: `Quotation ${data.id} has been generated successfully.`
+        title: "Quotation Generated!",
+        description: `Total: ₹${data?.grandTotal?.toLocaleString() || 0}`,
       });
+      setCurrentSection('quotation');
     }
   });
 
-  const addToCart = (product: Product) => {
-    const existingItem = cart.find(item => item.productId === product.id);
-    if (existingItem) {
-      setCart(cart.map(item => 
-        item.productId === product.id 
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
-    } else {
-      setCart([...cart, {
-        productId: product.id,
-        name: product.name,
-        price: parseFloat(product.basePrice),
-        quantity: 1
-      }]);
+  // Handle URL routing
+  useEffect(() => {
+    if (match && params?.id) {
+      const product = products.find(p => p.id === params.id);
+      if (product) {
+        setSelectedProduct(product);
+        setCurrentSection('product-detail');
+        // Get AI recommendations for this product
+        getProductRecommendations(product);
+      }
     }
+    if (categoryMatch && categoryParams?.categoryId) {
+      setSelectedCategory(categoryParams.categoryId);
+      setCurrentSection('home');
+    }
+  }, [match, params, categoryMatch, categoryParams, products]);
+
+  // Get AI recommendations for a product
+  const getProductRecommendations = async (product: Product) => {
+    try {
+      const response = await apiRequest('POST', '/api/products/recommendations', {
+        currentProductId: product.id,
+        categoryId: product.categoryId,
+        contextualData: {
+          productType: product.name
+        }
+      });
+      const products = Array.isArray(response) ? response : [];
+      setAiRecommendations(products.slice(0, 6));
+    } catch (error) {
+      console.error('Failed to get recommendations:', error);
+    }
+  };
+
+  // Add to cart
+  const addToCart = (product: Product, quantity: number = 1, quantitySlab?: any) => {
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+
+    const existingItem = cartItems.find(item => item.product.id === product.id);
+    if (existingItem) {
+      setCartItems(prev => 
+        prev.map(item => 
+          item.product.id === product.id 
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        )
+      );
+    } else {
+      setCartItems(prev => [...prev, { product, quantity, selectedQuantitySlab: quantitySlab }]);
+    }
+
     toast({
-      title: "Added to Cart",
-      description: `${product.name} has been added to your cart.`
+      title: "Added to Cart!",
+      description: `${product.name} (${quantity}) added to your cart`,
     });
   };
 
-  const addToQuote = (product: Product) => {
-    setSelectedProduct(product);
-    setShowQuoteModal(true);
+  // Calculate bulk discount
+  const calculateBulkDiscount = (basePrice: number, quantity: number): { price: number; discount: number } => {
+    let discount = 0;
+    if (quantity >= 100) discount = 0.15; // 15% discount for 100+
+    else if (quantity >= 50) discount = 0.10; // 10% discount for 50+
+    else if (quantity >= 20) discount = 0.05; // 5% discount for 20+
+    
+    const discountedPrice = basePrice * (1 - discount);
+    return { price: discountedPrice, discount: discount * 100 };
   };
 
-  const handleQuoteSubmit = () => {
-    if (selectedProduct && quoteForm.quantity && quoteForm.company && quoteForm.brand) {
-      const newQuoteItem: QuoteItem = {
-        productId: selectedProduct.id,
-        name: selectedProduct.name,
-        quantity: parseInt(quoteForm.quantity),
-        company: quoteForm.company,
-        brand: quoteForm.brand,
-        specifications: quoteForm.specifications
-      };
-      setQuote([...quote, newQuoteItem]);
-      setQuoteForm({ quantity: "", company: "", brand: "", specifications: "", deliveryDate: "" });
-      setShowQuoteModal(false);
-      setSelectedProduct(null);
-      
-      toast({
-        title: "Added to Quote",
-        description: `${selectedProduct.name} has been added to your quote.`
-      });
+  // Calculate delivery-based pricing
+  const calculateDeliveryPricing = (basePrice: number, days: number): { price: number; discount: number } => {
+    let multiplier = 1;
+    let discount = 0;
+    
+    if (days <= 2) {
+      multiplier = 1.20; // 20% extra for express delivery
+    } else if (days <= 4) {
+      multiplier = 1.10; // 10% extra for fast delivery
+    } else if (days >= 7) {
+      multiplier = 0.95; // 5% discount for standard delivery
+      discount = 5;
     }
+    
+    return { price: basePrice * multiplier, discount };
   };
 
-  const calculatePricing = () => {
-    if (selectedProduct) {
-      pricingMutation.mutate({
-        productId: selectedProduct.id,
-        quantity: pricingForm.quantity,
-        location: pricingForm.location,
-        urgency: pricingForm.urgency,
-        userType: pricingForm.userType
-      });
-    }
-  };
-
-  const generateQuotation = () => {
-    if (quote.length > 0) {
-      quotationMutation.mutate({
-        items: quote.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          company: item.company,
-          brand: item.brand,
-          specifications: item.specifications
-        })),
-        customerName: user?.username,
-        customerEmail: user?.email,
-        location: 'city',
-        userType: 'retail'
-      });
-    }
-  };
-
+  // Filtered and sorted products
   const getDisplayProducts = () => {
-    if (searchTerm.length > 0 || Object.values(filters).some(f => f !== 'all') || selectedCategory !== 'all') {
-      return searchResults?.products || [];
+    let filtered = products;
+    
+    if (searchTerm && searchResults) {
+      const resultsData = searchResults as any;
+      if (resultsData?.products) {
+        filtered = resultsData.products;
+      }
+    } else {
+      if (selectedCategory !== 'all') {
+        filtered = products.filter(p => p.categoryId === selectedCategory);
+      }
+      
+      if (priceRange) {
+        filtered = filtered.filter(p => {
+          const price = parseFloat(p.basePrice);
+          return price >= priceRange[0] && price <= priceRange[1];
+        });
+      }
     }
-    return products || [];
+    
+    // Sort products
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price':
+          return parseFloat(a.basePrice) - parseFloat(b.basePrice);
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'newest':
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
   };
 
-  const renderLandingPage = () => (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-8 md:p-12">
-        <div className="max-w-4xl">
-          <h1 className="text-3xl md:text-5xl font-bold mb-4">
-            Welcome to BuildMart AI
-          </h1>
-          <p className="text-xl md:text-2xl mb-6 text-blue-100">
-            Your AI-powered construction materials marketplace
-          </p>
-          <p className="text-lg mb-8 text-blue-100">
-            Discover premium construction materials with intelligent recommendations, 
-            real-time pricing, and advanced material estimation powered by AI.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button 
-              size="lg" 
-              className="bg-white text-blue-600 hover:bg-blue-50"
-              onClick={() => setCurrentSection('products')}
-            >
-              <ShoppingBag className="mr-2 h-5 w-5" />
-              Start Shopping
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="border-white text-white hover:bg-white hover:text-blue-600"
-              onClick={() => setShowAIEstimator(true)}
-            >
-              <Brain className="mr-2 h-5 w-5" />
-              AI Material Estimation
-            </Button>
-          </div>
+  // Hero Section Component
+  const HeroSection = () => (
+    <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-16 px-6">
+      <div className="max-w-7xl mx-auto text-center">
+        <h1 className="text-4xl md:text-6xl font-bold mb-6">BuildMart AI</h1>
+        <p className="text-xl md:text-2xl mb-8">Smart Construction Materials Trading with AI-Powered Solutions</p>
+        
+        {/* Search Bar */}
+        <div className="max-w-2xl mx-auto relative mb-8">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <Input
+            type="text"
+            placeholder="Search for cement, steel, bricks, plumbing materials..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-3 text-lg bg-white text-gray-900 rounded-lg"
+          />
+        </div>
+        
+        {/* AI Features */}
+        <div className="flex flex-wrap justify-center gap-4 mb-8">
+          <Button
+            onClick={() => setShowAIEstimator(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3"
+          >
+            <Brain className="w-5 h-5 mr-2" />
+            AI Material Estimator
+          </Button>
+          <Button
+            variant="outline"
+            className="border-white text-white hover:bg-white hover:text-blue-600 px-6 py-3"
+          >
+            <Calculator className="w-5 h-5 mr-2" />
+            Smart Quotation
+          </Button>
+          <Button
+            variant="outline"
+            className="border-white text-white hover:bg-white hover:text-blue-600 px-6 py-3"
+          >
+            <Calendar className="w-5 h-5 mr-2" />
+            Advance Booking
+          </Button>
         </div>
       </div>
+    </section>
+  );
 
-      {/* Categories Grid */}
-      <div>
-        <h2 className="text-2xl font-bold mb-6 flex items-center">
-          <Layers className="mr-2 h-6 w-6" />
-          Shop by Categories
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {categories?.slice(0, 10).map((category) => (
+  // Categories Section
+  const CategoriesSection = () => (
+    <section className="py-12 px-6 bg-gray-50">
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-3xl font-bold text-center mb-8">Shop by Category</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {categories.slice(0, 12).map((category) => (
             <Card 
               key={category.id} 
               className="cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => {
                 setSelectedCategory(category.id);
-                setCurrentSection('products');
+                setCurrentSection('home');
               }}
             >
               <CardContent className="p-4 text-center">
-                <Package className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                <h3 className="font-medium text-sm">{category.name}</h3>
-                <p className="text-xs text-gray-500 mt-1">{category.children?.length || 0} subcategories</p>
+                <div className="text-3xl mb-2">🏗️</div>
+                <h3 className="font-semibold text-sm">{category.name}</h3>
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
-
-      {/* Featured Products */}
-      <div>
-        <h2 className="text-2xl font-bold mb-6 flex items-center">
-          <Award className="mr-2 h-6 w-6 text-yellow-600" />
-          Featured Products
-        </h2>
-        {featuredLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <div className="h-48 bg-gray-200 rounded-t-lg"></div>
-                <CardContent className="p-4">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {featuredProducts?.map((product) => (
-              <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                <div className="relative">
-                  <div className="h-48 bg-gradient-to-br from-blue-50 to-blue-100 rounded-t-lg flex items-center justify-center">
-                    <Package className="h-16 w-16 text-blue-400" />
-                  </div>
-                  <Badge className="absolute top-2 left-2 bg-yellow-500">Featured</Badge>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">{product.name}</h3>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-2xl font-bold text-blue-600">₹{product.basePrice}</span>
-                    <div className="flex items-center">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm text-gray-600 ml-1">4.8</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button className="flex-1" onClick={() => addToCart(product)}>
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      Add to Cart
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={() => addToQuote(product)}>
-                      <Quote className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Trending Products */}
-      <div>
-        <h2 className="text-2xl font-bold mb-6 flex items-center">
-          <TrendingUp className="mr-2 h-6 w-6 text-green-600" />
-          Trending Products
-        </h2>
-        {trendingLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <div className="h-32 bg-gray-200 rounded-t-lg"></div>
-                <CardContent className="p-4">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trendingProducts?.map((product) => (
-              <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                <div className="flex">
-                  <div className="w-32 h-32 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-                    <Package className="h-8 w-8 text-green-400" />
-                  </div>
-                  <CardContent className="flex-1 p-4">
-                    <Badge className="mb-2 bg-green-500">Trending</Badge>
-                    <h3 className="font-semibold mb-2 line-clamp-1">{product.name}</h3>
-                    <p className="text-xl font-bold text-green-600">₹{product.basePrice}</p>
-                    <div className="flex gap-2 mt-3">
-                      <Button size="sm" onClick={() => addToCart(product)}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => addToQuote(product)}>
-                        <Quote className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    </section>
   );
 
-  const renderProductsSection = () => (
-    <div className="space-y-6">
-      {/* Search and Filter Bar */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search construction materials..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+  // Featured Products Section
+  const FeaturedSection = () => (
+    <section className="py-12 px-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold flex items-center">
+            <Star className="w-8 h-8 mr-3 text-yellow-500" />
+            Featured Products
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featuredProducts.slice(0, 8).map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // Trending Products Section
+  const TrendingSection = () => (
+    <section className="py-12 px-6 bg-gray-50">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold flex items-center">
+            <TrendingUp className="w-8 h-8 mr-3 text-green-500" />
+            Trending Now
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {trendingProducts.slice(0, 6).map((product) => (
+            <ProductCard key={product.id} product={product} featured />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // All Products Section with Filters
+  const ProductsSection = () => (
+    <section className="py-12 px-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Filters Sidebar */}
+          <div className="lg:w-1/4">
+            <Card className="sticky top-4">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Filter className="w-5 h-5 mr-2" />
+                  Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Category Filter */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Category</Label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Price Range Filter */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">
+                    Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
+                  </Label>
+                  <Slider
+                    value={priceRange}
+                    onValueChange={setPriceRange}
+                    max={100000}
+                    min={0}
+                    step={1000}
+                    className="w-full"
+                  />
+                </div>
+                
+                {/* Sort Options */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Sort By</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="price">Price</SelectItem>
+                      <SelectItem value="newest">Newest</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Bulk Quantity for Discounts */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">
+                    Bulk Quantity: {bulkQuantity}
+                  </Label>
+                  <Slider
+                    value={[bulkQuantity]}
+                    onValueChange={(value) => setBulkQuantity(value[0])}
+                    max={200}
+                    min={1}
+                    step={1}
+                    className="w-full"
+                  />
+                  {bulkQuantity >= 20 && (
+                    <Badge variant="secondary" className="mt-2">
+                      {bulkQuantity >= 100 ? '15%' : bulkQuantity >= 50 ? '10%' : '5%'} Bulk Discount
+                    </Badge>
+                  )}
+                </div>
+                
+                {/* Delivery Options */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Delivery</Label>
+                  <div className="space-y-2">
+                    {[2, 4, 7].map(days => {
+                      const pricing = calculateDeliveryPricing(1000, days);
+                      return (
+                        <div key={days} className="flex items-center justify-between p-2 border rounded">
+                          <Checkbox 
+                            id={`delivery-${days}`}
+                            checked={deliveryDays === days}
+                            onCheckedChange={() => setDeliveryDays(days)}
+                          />
+                          <Label htmlFor={`delivery-${days}`} className="flex-1 ml-2">
+                            {days <= 2 ? 'Express' : days <= 4 ? 'Fast' : 'Standard'} ({days} days)
+                          </Label>
+                          {pricing.discount > 0 && (
+                            <Badge variant="secondary">{pricing.discount}% OFF</Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Products Grid */}
+          <div className="lg:w-3/4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">
+                {selectedCategory === 'all' ? 'All Products' : 
+                 categories.find(c => c.id === selectedCategory)?.name + ' Products'}
+              </h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className={viewMode === 'grid' 
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
+              : 'space-y-4'
+            }>
+              {getDisplayProducts().map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  viewMode={viewMode}
+                  bulkQuantity={bulkQuantity}
+                  deliveryDays={deliveryDays}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  // Product Card Component
+  const ProductCard = ({ 
+    product, 
+    featured = false, 
+    viewMode = 'grid', 
+    bulkQuantity = 1,
+    deliveryDays = 4 
+  }: { 
+    product: Product; 
+    featured?: boolean; 
+    viewMode?: 'grid' | 'list';
+    bulkQuantity?: number;
+    deliveryDays?: number;
+  }) => {
+    const basePrice = parseFloat(product.basePrice);
+    const bulkPricing = calculateBulkDiscount(basePrice, bulkQuantity);
+    const deliveryPricing = calculateDeliveryPricing(bulkPricing.price, deliveryDays);
+    
+    const CardComponent = viewMode === 'list' ? 
+      ({ children, ...props }: any) => <Card {...props} className="flex p-4">{children as React.ReactNode}</Card> :
+      Card;
+
+    return (
+      <CardComponent className="cursor-pointer hover:shadow-lg transition-all group">
+        <div 
+          className={viewMode === 'list' ? 'flex w-full gap-4' : 'relative'}
+          onClick={() => {
+            setSelectedProduct(product);
+            setCurrentSection('product-detail');
+            getProductRecommendations(product);
+          }}
+        >
+          {/* Product Image */}
+          <div className={viewMode === 'list' ? 'w-32 h-32' : 'h-48'}>
+            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
+              <Package className="w-12 h-12 text-gray-500" />
+            </div>
+          </div>
+          
+          {/* Product Info */}
+          <div className={viewMode === 'list' ? 'flex-1' : 'p-4'}>
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="font-semibold text-lg group-hover:text-blue-600 transition-colors">
+                {product.name}
+              </h3>
+              {featured && (
+                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                  <Star className="w-3 h-3 mr-1" />
+                  Featured
+                </Badge>
+              )}
+            </div>
+            
+            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+              {product.description || "High-quality construction material"}
+            </p>
+            
+            {/* Pricing Information */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-green-600">
+                  ₹{deliveryPricing.price.toLocaleString()}
+                </span>
+                {(bulkPricing.discount > 0 || deliveryPricing.discount > 0) && (
+                  <span className="text-gray-400 line-through">
+                    ₹{basePrice.toLocaleString()}
+                  </span>
+                )}
+              </div>
+              
+              {/* Discount Badges */}
+              <div className="flex flex-wrap gap-1">
+                {bulkPricing.discount > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {bulkPricing.discount}% Bulk Discount
+                  </Badge>
+                )}
+                {deliveryPricing.discount > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {deliveryPricing.discount}% Standard Delivery
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            {/* Stock Status */}
+            <div className="flex items-center justify-between mb-4">
+              <Badge variant={product.stockQuantity && product.stockQuantity > 0 ? "secondary" : "destructive"}>
+                {product.stockQuantity && product.stockQuantity > 0 
+                  ? `${product.stockQuantity} in stock` 
+                  : 'Out of stock'}
+              </Badge>
+              <div className="flex items-center text-sm text-gray-500">
+                <Truck className="w-4 h-4 mr-1" />
+                {deliveryDays <= 2 ? 'Express' : deliveryDays <= 4 ? 'Fast' : 'Standard'} Delivery
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addToCart(product, bulkQuantity);
+                }}
+                className="flex-1"
+                disabled={!product.stockQuantity || product.stockQuantity <= 0}
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Add to Cart
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  pricingMutation.mutate({
+                    productId: product.id,
+                    quantity: bulkQuantity,
+                    deliveryDays,
+                    urgency: deliveryDays <= 2 ? 'urgent' : 'standard'
+                  });
+                }}
+              >
+                <Calculator className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedProduct(product);
+                  setCurrentSection('product-detail');
+                }}
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardComponent>
+    );
+  };
+
+  // Product Detail Page Component
+  const ProductDetailPage = () => {
+    if (!selectedProduct) return null;
+    
+    const basePrice = parseFloat(selectedProduct.basePrice);
+    const [quantity, setQuantity] = useState(1);
+    const bulkPricing = calculateBulkDiscount(basePrice, quantity);
+    const deliveryPricing = calculateDeliveryPricing(bulkPricing.price, deliveryDays);
+    
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Breadcrumb */}
+        <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
+          <button 
+            onClick={() => setCurrentSection('home')}
+            className="hover:text-blue-600"
+          >
+            Home
+          </button>
+          <ChevronRight className="w-4 h-4" />
+          <span>{categories.find(c => c.id === selectedProduct.categoryId)?.name}</span>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">{selectedProduct.name}</span>
+        </nav>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Product Images */}
+          <div>
+            <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center mb-4">
+              <Package className="w-24 h-24 text-gray-500" />
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({length: 4}).map((_, i) => (
+                <div key={i} className="aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
+                  <Package className="w-6 h-6 text-gray-400" />
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Product Information */}
+          <div>
+            <h1 className="text-3xl font-bold mb-4">{selectedProduct.name}</h1>
+            <p className="text-gray-600 mb-6">{selectedProduct.description}</p>
+            
+            {/* Pricing */}
+            <div className="bg-gray-50 p-6 rounded-lg mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl font-bold text-green-600">
+                  ₹{(deliveryPricing.price * quantity).toLocaleString()}
+                </span>
+                {(bulkPricing.discount > 0 || deliveryPricing.discount > 0) && (
+                  <span className="text-gray-400 line-through text-xl">
+                    ₹{(basePrice * quantity).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              
+              {/* Quantity Selector */}
+              <div className="flex items-center gap-4 mb-4">
+                <Label>Quantity:</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <span className="w-16 text-center font-medium">{quantity}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantity(quantity + 1)}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Bulk Discounts Display */}
+              <div className="space-y-2 mb-4">
+                <h4 className="font-semibold">Bulk Pricing:</h4>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="p-2 bg-white rounded border text-center">
+                    <div className="font-medium">20-49 units</div>
+                    <div className="text-green-600">5% OFF</div>
+                  </div>
+                  <div className="p-2 bg-white rounded border text-center">
+                    <div className="font-medium">50-99 units</div>
+                    <div className="text-green-600">10% OFF</div>
+                  </div>
+                  <div className="p-2 bg-white rounded border text-center">
+                    <div className="font-medium">100+ units</div>
+                    <div className="text-green-600">15% OFF</div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Delivery Options */}
+              <div className="space-y-2 mb-6">
+                <h4 className="font-semibold">Delivery Options:</h4>
+                <div className="space-y-1">
+                  {[
+                    { days: 2, name: 'Express Delivery', extra: '20% extra' },
+                    { days: 4, name: 'Fast Delivery', extra: '10% extra' },
+                    { days: 7, name: 'Standard Delivery', extra: '5% discount' }
+                  ].map(option => (
+                    <div key={option.days} className="flex items-center justify-between p-2 border rounded">
+                      <Checkbox 
+                        checked={deliveryDays === option.days}
+                        onCheckedChange={() => setDeliveryDays(option.days)}
+                      />
+                      <span className="flex-1 ml-2">{option.name} ({option.days} days)</span>
+                      <Badge variant="secondary" className="text-xs">{option.extra}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => addToCart(selectedProduct, quantity)}
+                  className="w-full text-lg py-3"
+                  disabled={!selectedProduct.stockQuantity || selectedProduct.stockQuantity <= 0}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Add {quantity} to Cart
+                </Button>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      pricingMutation.mutate({
+                        productId: selectedProduct.id,
+                        quantity,
+                        deliveryDays,
+                        urgency: deliveryDays <= 2 ? 'urgent' : 'standard'
+                      });
+                    }}
+                  >
+                    <Calculator className="w-4 h-4 mr-2" />
+                    Get Quotation
+                  </Button>
+                  <Button variant="outline">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Book Advance
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Product Specifications */}
+            {selectedProduct.specs && (
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold mb-3">Specifications</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(selectedProduct.specs as any).map(([key, value]) => (
+                    <div key={key} className="flex justify-between p-2 bg-gray-50 rounded">
+                      <span className="capitalize font-medium">{key}:</span>
+                      <span>{String(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowFilters(!showFilters)}
-            className="whitespace-nowrap"
-          >
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="relevance">Relevance</SelectItem>
-              <SelectItem value="price-low">Price: Low to High</SelectItem>
-              <SelectItem value="price-high">Price: High to Low</SelectItem>
-              <SelectItem value="name">Name A-Z</SelectItem>
-              <SelectItem value="created">Newest First</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <div className="flex border rounded">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-            >
-              <Grid3X3 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4" />
-            </Button>
+        {/* AI Recommendations */}
+        {aiRecommendations.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
+              <Sparkles className="w-6 h-6 mr-2 text-purple-600" />
+              AI Recommended Products
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {aiRecommendations.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+    );
+  };
 
-      {/* Advanced Filters Panel */}
-      {showFilters && (
-        <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <Label className="text-sm font-medium">Category</Label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories?.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">Price Range</Label>
-              <Select value={filters.priceRange} onValueChange={(value) => setFilters({...filters, priceRange: value})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Prices</SelectItem>
-                  <SelectItem value="under-1000">Under ₹1,000</SelectItem>
-                  <SelectItem value="1000-5000">₹1,000 - ₹5,000</SelectItem>
-                  <SelectItem value="5000-10000">₹5,000 - ₹10,000</SelectItem>
-                  <SelectItem value="above-10000">Above ₹10,000</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">Brand</Label>
-              <Select value={filters.brand} onValueChange={(value) => setFilters({...filters, brand: value})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Brands</SelectItem>
-                  <SelectItem value="UltraTech">UltraTech</SelectItem>
-                  <SelectItem value="TATA">TATA</SelectItem>
-                  <SelectItem value="ACC">ACC</SelectItem>
-                  <SelectItem value="JSW">JSW</SelectItem>
-                  <SelectItem value="Ambuja">Ambuja</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">Rating</Label>
-              <Select value={filters.rating} onValueChange={(value) => setFilters({...filters, rating: value})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Ratings</SelectItem>
-                  <SelectItem value="4+">4+ Stars</SelectItem>
-                  <SelectItem value="3+">3+ Stars</SelectItem>
-                  <SelectItem value="2+">2+ Stars</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">Availability</Label>
-              <Select value={filters.availability} onValueChange={(value) => setFilters({...filters, availability: value})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Items</SelectItem>
-                  <SelectItem value="in-stock">In Stock Only</SelectItem>
-                  <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Products Grid/List */}
-      {searchLoading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading products...</p>
-        </div>
-      ) : (
-        <div className={
-          viewMode === 'grid' 
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-            : "space-y-4"
-        }>
-          {getDisplayProducts().map((product: Product) => (
-            <Card key={product.id} className={`hover:shadow-lg transition-shadow ${viewMode === 'list' ? 'flex' : ''}`}>
-              <div className={viewMode === 'list' ? 'w-48 flex-shrink-0' : ''}>
-                <div className={`bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center ${
-                  viewMode === 'list' ? 'h-full rounded-l-lg' : 'h-48 rounded-t-lg'
-                }`}>
-                  <Package className="h-16 w-16 text-blue-400" />
-                </div>
-              </div>
-              <CardContent className={`p-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg line-clamp-2">{product.name}</h3>
-                  <div className="flex items-center ml-2">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm text-gray-600 ml-1">4.8</span>
-                  </div>
-                </div>
-                
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
-                
-                {/* Specifications */}
-                {product.specifications && (
-                  <div className="mb-3">
-                    <div className="flex flex-wrap gap-1">
-                      {Object.entries(product.specifications as any).slice(0, 3).map(([key, value]) => (
-                        <Badge key={key} variant="secondary" className="text-xs">
-                          {key}: {value as string}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div className="flex justify-between items-center mb-3">
-                  <div>
-                    <span className="text-2xl font-bold text-blue-600">₹{product.basePrice}</span>
-                    <div className="text-xs text-gray-500">
-                      Stock: {product.stockQuantity || 0} units
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setShowPricingCalculator(true);
-                      }}
-                    >
-                      <Calculator className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => addToQuote(product)}
-                    >
-                      <Quote className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                <Button 
-                  className="w-full" 
-                  onClick={() => addToCart(product)}
-                  disabled={(product.stockQuantity || 0) === 0}
-                >
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  {(product.stockQuantity || 0) > 0 ? 'Add to Cart' : 'Out of Stock'}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {getDisplayProducts().length === 0 && !searchLoading && (
-        <div className="text-center py-12">
-          <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-          <p className="text-gray-600">Try adjusting your search or filters</p>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderCartSection = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Shopping Cart</h2>
+  // Cart Component
+  const CartSection = () => (
+    <div className="max-w-4xl mx-auto px-6 py-8">
+      <h1 className="text-3xl font-bold mb-8 flex items-center">
+        <ShoppingCart className="w-8 h-8 mr-3" />
+        Shopping Cart ({cartItems.length})
+      </h1>
       
-      {cart.length === 0 ? (
+      {cartItems.length === 0 ? (
         <div className="text-center py-12">
-          <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
-          <p className="text-gray-600 mb-4">Add some construction materials to get started</p>
-          <Button onClick={() => setCurrentSection('products')}>
+          <ShoppingCart className="w-24 h-24 mx-auto text-gray-300 mb-4" />
+          <p className="text-xl text-gray-600 mb-4">Your cart is empty</p>
+          <Button onClick={() => setCurrentSection('home')}>
             Continue Shopping
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {cart.map((item) => (
-            <Card key={item.productId}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
-                      <Package className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{item.name}</h3>
-                      <p className="text-sm text-gray-600">₹{item.price} per unit</p>
+        <div className="space-y-6">
+          {cartItems.map((item) => {
+            const basePrice = parseFloat(item.product.basePrice);
+            const totalPrice = basePrice * item.quantity;
+            
+            return (
+              <Card key={item.product.id} className="p-6">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <Package className="w-8 h-8 text-gray-500" />
+                  </div>
+                  
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold mb-2">{item.product.name}</h3>
+                    <p className="text-gray-600 mb-2">{item.product.description}</p>
+                    <div className="flex items-center gap-4">
+                      <span className="text-lg font-bold text-green-600">
+                        ₹{totalPrice.toLocaleString()}
+                      </span>
+                      <span className="text-gray-500">Qty: {item.quantity}</span>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="outline" 
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => {
-                        if (item.quantity > 1) {
-                          setCart(cart.map(cartItem => 
-                            cartItem.productId === item.productId 
-                              ? { ...cartItem, quantity: cartItem.quantity - 1 }
+                        setCartItems(prev => 
+                          prev.map(cartItem => 
+                            cartItem.product.id === item.product.id 
+                              ? { ...cartItem, quantity: Math.max(1, cartItem.quantity - 1) }
                               : cartItem
-                          ));
-                        }
+                          )
+                        );
                       }}
                     >
-                      <Minus className="h-4 w-4" />
+                      <Minus className="w-4 h-4" />
                     </Button>
                     <span className="w-8 text-center">{item.quantity}</span>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => {
-                        setCart(cart.map(cartItem => 
-                          cartItem.productId === item.productId 
-                            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-                            : cartItem
-                        ));
+                        setCartItems(prev => 
+                          prev.map(cartItem => 
+                            cartItem.product.id === item.product.id 
+                              ? { ...cartItem, quantity: cartItem.quantity + 1 }
+                              : cartItem
+                          )
+                        );
                       }}
                     >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <div className="w-20 text-right font-semibold">
-                      ₹{(item.price * item.quantity).toFixed(2)}
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
-                        setCart(cart.filter(cartItem => cartItem.productId !== item.productId));
-                      }}
-                    >
-                      <X className="h-4 w-4" />
+                      <Plus className="w-4 h-4" />
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center text-lg font-semibold">
-                <span>Total: ₹{cart.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2)}</span>
-                <div className="space-x-2">
-                  <Button variant="outline" onClick={() => generateQuotation()}>
-                    Generate Quote
-                  </Button>
-                  <Button>
-                    Proceed to Checkout
+                  
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setCartItems(prev => prev.filter(cartItem => cartItem.product.id !== item.product.id));
+                    }}
+                  >
+                    Remove
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-      
-      {/* Quote Items */}
-      {quote.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Quote Items</h3>
-          <div className="space-y-2">
-            {quote.map((item, index) => (
-              <Card key={index}>
-                <CardContent className="p-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="font-medium">{item.name}</span>
-                      <div className="text-sm text-gray-600">
-                        Qty: {item.quantity} | Company: {item.company} | Brand: {item.brand}
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
-                        setQuote(quote.filter((_, i) => i !== index));
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
               </Card>
-            ))}
-          </div>
-          <Button className="mt-4" onClick={() => generateQuotation()}>
-            Generate Quotation
-          </Button>
+            );
+          })}
+          
+          {/* Cart Summary */}
+          <Card className="p-6 bg-gray-50">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-xl font-semibold">Total:</span>
+              <span className="text-2xl font-bold text-green-600">
+                ₹{cartItems.reduce((total, item) => 
+                  total + (parseFloat(item.product.basePrice) * item.quantity), 0
+                ).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex gap-4">
+              <Button 
+                className="flex-1"
+                onClick={() => {
+                  const items = cartItems.map(item => ({
+                    productId: item.product.id,
+                    quantity: item.quantity,
+                    deliveryDays: 4,
+                    urgency: 'standard' as const
+                  }));
+                  quotationMutation.mutate(items);
+                }}
+              >
+                Generate Quotation
+              </Button>
+              <Button variant="outline" className="flex-1">
+                Proceed to Checkout
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </div>
   );
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Building2 className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">BuildMart AI</span>
-            </div>
-            
-            <nav className="hidden md:flex space-x-1">
-              {[
-                { id: 'home', label: 'Home', icon: Home },
-                { id: 'products', label: 'Products', icon: Package },
-                { id: 'categories', label: 'Categories', icon: Layers },
-                { id: 'cart', label: 'Cart', icon: ShoppingCart }
-              ].map((item) => (
-                <Button
-                  key={item.id}
-                  variant={currentSection === item.id ? 'default' : 'ghost'}
-                  onClick={() => setCurrentSection(item.id as any)}
-                  className="flex items-center space-x-2"
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                  {item.id === 'cart' && cart.length > 0 && (
-                    <Badge className="ml-1">{cart.length}</Badge>
-                  )}
-                </Button>
-              ))}
-            </nav>
-
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowAIEstimator(true)}
+  // Main Navigation Header
+  const Header = () => (
+    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <button 
+              onClick={() => setCurrentSection('home')}
+              className="text-2xl font-bold text-blue-600"
+            >
+              BuildMart AI
+            </button>
+            <nav className="hidden md:flex items-center gap-6">
+              <button 
+                onClick={() => setCurrentSection('home')}
+                className={`font-medium ${currentSection === 'home' ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
               >
-                <Brain className="mr-2 h-4 w-4" />
-                AI Estimation
-              </Button>
-              
-              <div className="flex items-center space-x-2">
-                <User className="h-4 w-4" />
-                <span className="text-sm">{user?.username}</span>
-              </div>
-              
-              <Button variant="ghost" onClick={() => logout()}>
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+                Home
+              </button>
+            </nav>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentSection === 'home' && renderLandingPage()}
-        {currentSection === 'products' && renderProductsSection()}
-        {currentSection === 'cart' && renderCartSection()}
-        {currentSection === 'categories' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">All Categories</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categories?.map((category) => (
-                <Card key={category.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <Package className="h-8 w-8 text-blue-600" />
-                      <Badge>{category.children?.length || 0} subcategories</Badge>
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">{category.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4">{category.description}</p>
-                    <Button 
-                      className="w-full"
-                      onClick={() => {
-                        setSelectedCategory(category.id);
-                        setCurrentSection('products');
-                      }}
-                    >
-                      View Products
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                    {category.children && category.children.length > 0 && (
-                      <div className="mt-4 space-y-1">
-                        <p className="text-xs font-medium text-gray-500">Subcategories:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {category.children.slice(0, 3).map((child: any) => (
-                            <Badge key={child.id} variant="secondary" className="text-xs">
-                              {child.name}
-                            </Badge>
-                          ))}
-                          {category.children.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{category.children.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* AI Estimator Dialog */}
-      <Dialog open={showAIEstimator} onOpenChange={setShowAIEstimator}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Brain className="mr-2 h-5 w-5" />
-              AI Construction Material Estimator
-            </DialogTitle>
-            <DialogDescription>
-              Upload construction images to get AI-powered material estimates
-            </DialogDescription>
-          </DialogHeader>
-          <AIEstimator />
-        </DialogContent>
-      </Dialog>
-
-      {/* Quote Modal */}
-      <Dialog open={showQuoteModal} onOpenChange={setShowQuoteModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add to Quote</DialogTitle>
-            <DialogDescription>
-              Specify requirements for {selectedProduct?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Quantity *</Label>
-              <Input
-                type="number"
-                value={quoteForm.quantity}
-                onChange={(e) => setQuoteForm({...quoteForm, quantity: e.target.value})}
-                placeholder="Enter quantity"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Company *</Label>
-                <Select value={quoteForm.company} onValueChange={(value) => setQuoteForm({...quoteForm, company: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UltraTech">UltraTech</SelectItem>
-                    <SelectItem value="TATA">TATA</SelectItem>
-                    <SelectItem value="ACC">ACC</SelectItem>
-                    <SelectItem value="JSW">JSW</SelectItem>
-                    <SelectItem value="Ambuja">Ambuja</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label>Brand *</Label>
-                <Select value={quoteForm.brand} onValueChange={(value) => setQuoteForm({...quoteForm, brand: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select brand" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Premium">Premium</SelectItem>
-                    <SelectItem value="Standard">Standard</SelectItem>
-                    <SelectItem value="Economy">Economy</SelectItem>
-                    <SelectItem value="Industrial">Industrial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div>
-              <Label>Specifications</Label>
-              <Textarea
-                value={quoteForm.specifications}
-                onChange={(e) => setQuoteForm({...quoteForm, specifications: e.target.value})}
-                placeholder="Enter specific requirements..."
-              />
-            </div>
-            
-            <div>
-              <Label>Preferred Delivery Date</Label>
-              <Input
-                type="date"
-                value={quoteForm.deliveryDate}
-                onChange={(e) => setQuoteForm({...quoteForm, deliveryDate: e.target.value})}
-              />
-            </div>
-            
-            <div className="flex gap-2 pt-4">
-              <Button className="flex-1" onClick={handleQuoteSubmit}>
-                Add to Quote
-              </Button>
-              <Button variant="outline" onClick={() => setShowQuoteModal(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Pricing Calculator Modal */}
-      <Dialog open={showPricingCalculator} onOpenChange={setShowPricingCalculator}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Calculator className="mr-2 h-5 w-5" />
-              Real-time Pricing Calculator
-            </DialogTitle>
-            <DialogDescription>
-              Calculate dynamic pricing for {selectedProduct?.name}
-            </DialogDescription>
-          </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Quantity</Label>
-                <Input
-                  type="number"
-                  value={pricingForm.quantity}
-                  onChange={(e) => setPricingForm({...pricingForm, quantity: parseInt(e.target.value) || 1})}
-                  min="1"
-                />
-              </div>
-              
-              <div>
-                <Label>Location</Label>
-                <Select value={pricingForm.location} onValueChange={(value) => setPricingForm({...pricingForm, location: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="local">Local</SelectItem>
-                    <SelectItem value="city">City</SelectItem>
-                    <SelectItem value="suburban">Suburban</SelectItem>
-                    <SelectItem value="rural">Rural</SelectItem>
-                    <SelectItem value="remote">Remote</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Urgency</Label>
-                <Select value={pricingForm.urgency} onValueChange={(value) => setPricingForm({...pricingForm, urgency: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="standard">Standard (7 days)</SelectItem>
-                    <SelectItem value="urgent">Urgent (3 days)</SelectItem>
-                    <SelectItem value="express">Express (1 day)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label>User Type</Label>
-                <Select value={pricingForm.userType} onValueChange={(value) => setPricingForm({...pricingForm, userType: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="retail">Retail</SelectItem>
-                    <SelectItem value="wholesale">Wholesale</SelectItem>
-                    <SelectItem value="contractor">Contractor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
+          <div className="flex items-center gap-4">
             <Button 
-              className="w-full" 
-              onClick={calculatePricing}
-              disabled={pricingMutation.isPending}
+              variant="outline" 
+              className="relative"
+              onClick={() => setCurrentSection('cart')}
             >
-              {pricingMutation.isPending ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Calculating...
-                </>
-              ) : (
-                <>
-                  <Calculator className="mr-2 h-4 w-4" />
-                  Calculate Price
-                </>
-              )}
-            </Button>
-            
-            {calculatedPricing && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Pricing Breakdown</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Base Price:</span>
-                      <span>₹{calculatedPricing.basePrice}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Quantity Discount:</span>
-                      <span className="text-green-600">-₹{calculatedPricing.quantityDiscount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Location Surcharge:</span>
-                      <span>₹{calculatedPricing.locationSurcharge}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Urgency Charge:</span>
-                      <span>₹{calculatedPricing.urgencyCharge}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Delivery Charge:</span>
-                      <span>₹{calculatedPricing.deliveryCharge}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Loading Charge:</span>
-                      <span>₹{calculatedPricing.loadingCharge}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tax Amount:</span>
-                      <span>₹{calculatedPricing.taxAmount}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between font-semibold text-lg">
-                      <span>Total Amount:</span>
-                      <span className="text-blue-600">₹{calculatedPricing.totalAmount}</span>
-                    </div>
-                    {calculatedPricing.savings > 0 && (
-                      <div className="flex justify-between text-green-600 font-medium">
-                        <span>You Save:</span>
-                        <span>₹{calculatedPricing.savings}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mobile Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t">
-        <div className="flex justify-around py-2">
-          {[
-            { id: 'home', label: 'Home', icon: Home },
-            { id: 'products', label: 'Products', icon: Package },
-            { id: 'categories', label: 'Categories', icon: Layers },
-            { id: 'cart', label: 'Cart', icon: ShoppingCart }
-          ].map((item) => (
-            <Button
-              key={item.id}
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentSection(item.id as any)}
-              className={`flex flex-col items-center space-y-1 ${
-                currentSection === item.id ? 'text-blue-600' : 'text-gray-600'
-              }`}
-            >
-              <item.icon className="h-4 w-4" />
-              <span className="text-xs">{item.label}</span>
-              {item.id === 'cart' && cart.length > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs">
-                  {cart.length}
+              <ShoppingCart className="w-5 h-5" />
+              {cartItems.length > 0 && (
+                <Badge className="absolute -top-2 -right-2 px-2 py-1 min-w-[1.25rem] h-5">
+                  {cartItems.length}
                 </Badge>
               )}
             </Button>
-          ))}
+            
+            {user ? (
+              <Button variant="outline">
+                <User className="w-5 h-5 mr-2" />
+                {user.username}
+              </Button>
+            ) : (
+              <Button onClick={() => setShowAuthDialog(true)}>
+                Sign In
+              </Button>
+            )}
+          </div>
         </div>
       </div>
+    </header>
+  );
+
+  // Render appropriate section
+  const renderCurrentSection = () => {
+    switch (currentSection) {
+      case 'product-detail':
+        return <ProductDetailPage />;
+      case 'cart':
+        return <CartSection />;
+      default:
+        return (
+          <>
+            <HeroSection />
+            <CategoriesSection />
+            <FeaturedSection />
+            <TrendingSection />
+            <ProductsSection />
+          </>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white">
+      <Header />
+      {renderCurrentSection()}
+      
+      {/* AI Estimator Dialog */}
+      <Dialog open={showAIEstimator} onOpenChange={setShowAIEstimator}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Brain className="w-6 h-6 mr-2 text-purple-600" />
+              AI Material Estimator
+            </DialogTitle>
+            <DialogDescription>
+              Upload a construction image or enter project details to get AI-powered material estimates
+            </DialogDescription>
+          </DialogHeader>
+          <AIEstimator onAddToCart={(materials) => {
+            materials.forEach(material => {
+              // Convert material estimate to product-like structure for cart
+              const product: Product = {
+                id: `ai-${material.material.toLowerCase().replace(/\s+/g, '-')}`,
+                name: material.material,
+                description: material.description,
+                basePrice: material.estimatedPrice.toString(),
+                categoryId: material.category,
+                specs: { unit: material.unit },
+                vendorId: 'ai-estimator',
+                stockQuantity: 1000,
+                isActive: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                quantitySlabs: null,
+                dynamicCharges: null,
+                imageUrl: null
+              };
+              addToCart(product, material.adjustedQuantity || material.quantity);
+            });
+            setShowAIEstimator(false);
+          }} />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Real-time Quotation Display */}
+      {realtimeQuotation && (
+        <div className="fixed bottom-4 right-4 w-96 z-50">
+          <Card className="p-4 shadow-lg border-2 border-blue-200">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold flex items-center">
+                <Calculator className="w-4 h-4 mr-2 text-blue-600" />
+                Live Quotation
+              </h4>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setRealtimeQuotation(null)}
+              >
+                ×
+              </Button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Base Price:</span>
+                <span>₹{realtimeQuotation.basePrice.toLocaleString()}</span>
+              </div>
+              {realtimeQuotation.quantityDiscount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Bulk Discount:</span>
+                  <span>-₹{realtimeQuotation.quantityDiscount.toLocaleString()}</span>
+                </div>
+              )}
+              {realtimeQuotation.deliveryCharges > 0 && (
+                <div className="flex justify-between">
+                  <span>Delivery Charges:</span>
+                  <span>₹{realtimeQuotation.deliveryCharges.toLocaleString()}</span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between font-semibold text-lg">
+                <span>Total:</span>
+                <span className="text-green-600">₹{realtimeQuotation.finalPrice.toLocaleString()}</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+      
+      {/* Authentication Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign In Required</DialogTitle>
+            <DialogDescription>
+              Please sign in to add items to cart, generate quotations, or use advanced features.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-4">
+            <Button asChild className="flex-1">
+              <Link href="/login">Sign In</Link>
+            </Button>
+            <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
+              Continue Browsing
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

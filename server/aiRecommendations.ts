@@ -316,12 +316,18 @@ Respond with only a JSON array of recommendations:
       
       // Simple featured product logic: mix of categories, good stock
       return products
-        .filter(p => p && typeof p.stockQuantity === 'number' && p.stockQuantity > 50)
+        .filter(p => p && p.stockQuantity !== null && (p.stockQuantity || 0) > 50)
         .sort((a, b) => (b.stockQuantity || 0) - (a.stockQuantity || 0))
         .slice(0, limit);
     } catch (error) {
       console.error('Error getting featured products:', error);
-      return [];
+      // Return fallback products instead of empty array
+      try {
+        const allProducts = await storage.getProducts();
+        return allProducts.slice(0, limit);
+      } catch (fallbackError) {
+        return [];
+      }
     }
   }
 
@@ -335,7 +341,7 @@ Respond with only a JSON array of recommendations:
       
       // Simple trending logic: newer products with good stock
       return products
-        .filter(p => p && typeof p.stockQuantity === 'number' && p.stockQuantity > 100)
+        .filter(p => p && p.stockQuantity !== null && (p.stockQuantity || 0) > 100)
         .sort((a, b) => {
           const aDate = a && a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const bDate = b && b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -344,7 +350,13 @@ Respond with only a JSON array of recommendations:
         .slice(0, limit);
     } catch (error) {
       console.error('Error getting trending products:', error);
-      return [];
+      // Return fallback products
+      try {
+        const allProducts = await storage.getProducts();
+        return allProducts.slice(0, limit);
+      } catch (fallbackError) {
+        return [];
+      }
     }
   }
 }

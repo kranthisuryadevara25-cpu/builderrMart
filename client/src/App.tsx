@@ -44,11 +44,10 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       
-      <Route path="/">
-        {user ? (
-          user.role === "user" ? <Redirect to="/shop-ecommerce" /> : <Redirect to="/dashboard" />
-        ) : <Redirect to="/login" />}
-      </Route>
+      {/* Public e-commerce site - no login required */}
+      <Route path="/" component={CustomerEcommerce} />
+      <Route path="/product/:id" component={CustomerEcommerce} />
+      <Route path="/category/:categoryId" component={CustomerEcommerce} />
       
       <Route path="/dashboard">
         <ProtectedRoute>
@@ -110,10 +109,11 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/shop-ecommerce">
-        <ProtectedRoute>
-          <CustomerEcommerce />
-        </ProtectedRoute>
+      {/* Admin routes - protected */}
+      <Route path="/admin-dashboard">
+        {user ? (
+          user.role === "user" ? <Redirect to="/" /> : <Redirect to="/dashboard" />
+        ) : <Redirect to="/login" />}
       </Route>
       
       <Route path="/admin">
