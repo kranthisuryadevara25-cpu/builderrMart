@@ -120,6 +120,8 @@ export default function CustomerEcommerce() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [bookingProductSearchTerm, setBookingProductSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState([0, 50000]);
@@ -255,6 +257,31 @@ export default function CustomerEcommerce() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
+
+  // New Search Handler
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setIsSearching(true);
+    
+    if (!value.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      setCurrentSection('home');
+      return;
+    }
+
+    // Perform search
+    const term = value.toLowerCase();
+    const results = products.filter(product => 
+      product.name?.toLowerCase().includes(term) ||
+      product.description?.toLowerCase().includes(term) ||
+      categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase().includes(term)
+    );
+    
+    setSearchResults(results);
+    setIsSearching(false);
+    setCurrentSection('home'); // Show search results
+  };
 
   // Helper functions for quote and booking
   const openQuoteDialog = (product?: Product) => {
@@ -533,23 +560,9 @@ export default function CustomerEcommerce() {
   };
 
   // Filter products
-  const getFilteredProducts = (productsToFilter: Product[] = products) => {
-    let filtered = productsToFilter || [];
-    
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      if (term === 'featured') {
-        filtered = featuredProducts || [];
-      } else if (term === 'trending') {
-        filtered = trendingProducts || [];
-      } else {
-        filtered = filtered.filter(p => 
-          p.name?.toLowerCase().includes(term) ||
-          p.description?.toLowerCase().includes(term) ||
-          categories.find(cat => cat.id === p.categoryId)?.name?.toLowerCase().includes(term)
-        );
-      }
-    }
+  // Simplified product filtering for category/price filters
+  const getCategoryFilteredProducts = () => {
+    let filtered = products;
     
     if (selectedCategoryId) {
       filtered = filtered.filter(p => p.categoryId === selectedCategoryId);
@@ -594,26 +607,26 @@ export default function CustomerEcommerce() {
             </button>
           </div>
           
-          {/* Search Bar */}
+          {/* New Search Bar */}
           <div className="flex-1 max-w-2xl mx-8 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <Input
               type="text"
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSearchTerm(value);
-                if (value.trim()) {
-                  setCurrentSection('home');
-                }
-              }}
-              onInput={(e) => {
-                const value = (e.target as HTMLInputElement).value;
-                setSearchTerm(value);
-              }}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 pr-4 py-2 w-full"
             />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleSearchChange('')}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -984,9 +997,8 @@ export default function CustomerEcommerce() {
 
   // Home Page Component
   const HomePage = () => {
-    const filteredProducts = getFilteredProducts();
-    const hasSearchResults = searchTerm && filteredProducts.length > 0;
-    const hasSearchButNoResults = searchTerm && filteredProducts.length === 0;
+    const hasSearchResults = searchTerm && searchResults.length > 0;
+    const hasSearchButNoResults = searchTerm && searchResults.length === 0;
     
     return (
       <>
@@ -995,17 +1007,17 @@ export default function CustomerEcommerce() {
           <section className="py-8 px-4">
             <div className="max-w-7xl mx-auto">
               <h2 className="text-2xl font-bold mb-6">
-                Search Results for "{searchTerm}" ({filteredProducts.length} found)
+                Search Results for "{searchTerm}" ({searchResults.length} found)
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {filteredProducts.slice(0, 12).map((product) => (
+                {searchResults.slice(0, 12).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
-              {filteredProducts.length > 12 && (
+              {searchResults.length > 12 && (
                 <div className="text-center mt-6">
-                  <Button variant="outline" onClick={() => setCurrentSection('category')}>
-                    View All {filteredProducts.length} Results
+                  <Button variant="outline" onClick={() => {}}>
+                    View All {searchResults.length} Results
                   </Button>
                 </div>
               )}
@@ -1021,7 +1033,7 @@ export default function CustomerEcommerce() {
               <p className="text-gray-600 mb-6">
                 We couldn't find any products matching "{searchTerm}". Try different keywords or browse our categories.
               </p>
-              <Button onClick={() => setSearchTerm('')}>
+              <Button onClick={() => handleSearchChange('')}>
                 Clear Search
               </Button>
             </div>
@@ -1078,7 +1090,7 @@ export default function CustomerEcommerce() {
   // Category Page Component
   const CategoryPage = () => {
     const category = categories.find(c => c.id === selectedCategoryId);
-    const filteredProducts = getFilteredProducts();
+    const filteredProducts = getCategoryFilteredProducts();
 
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -1578,14 +1590,7 @@ export default function CustomerEcommerce() {
                             <Input
                               placeholder="Type to search products..."
                               value={productSearchTerm}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                setProductSearchTerm(value);
-                              }}
-                              onInput={(e) => {
-                                const value = (e.target as HTMLInputElement).value;
-                                setProductSearchTerm(value);
-                              }}
+                              onChange={(e) => setProductSearchTerm(e.target.value)}
                               className="w-full"
                             />
                             {productSearchTerm && filteredProducts.length > 0 && (
@@ -1836,14 +1841,7 @@ export default function CustomerEcommerce() {
                             <Input
                               placeholder="Type to search products..."
                               value={bookingProductSearchTerm}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                setBookingProductSearchTerm(value);
-                              }}
-                              onInput={(e) => {
-                                const value = (e.target as HTMLInputElement).value;
-                                setBookingProductSearchTerm(value);
-                              }}
+                              onChange={(e) => setBookingProductSearchTerm(e.target.value)}
                               className="w-full"
                             />
                             {bookingProductSearchTerm && filteredProducts.length > 0 && (
