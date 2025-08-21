@@ -61,7 +61,8 @@ import {
   Flame,
   Quote,
   FileText,
-  Trash2
+  Trash2,
+  CreditCard
 } from "lucide-react";
 import type { Product, Category } from "@shared/schema";
 import AIEstimator from "@/components/construction/AIEstimator";
@@ -395,43 +396,55 @@ export default function CustomerEcommerce() {
     return { finalPrice, basePrice, discount, quantity: qty, applicableSlab, totalPrice: finalPrice * qty };
   };
 
-  // Filter products
-  const getFilteredProducts = (productsToFilter: Product[] = products) => {
-    let filtered = productsToFilter || [];
+  // Filter products - FIXED SEARCH FUNCTIONALITY
+  const getFilteredProducts = () => {
+    let filtered = [...(products || [])];
     
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    // Search filtering
+    if (searchTerm && searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase().trim();
+      
+      // Special search terms
       if (term === 'featured') {
-        filtered = featuredProducts || [];
+        return featuredProducts || [];
       } else if (term === 'trending') {
-        filtered = trendingProducts || [];
-      } else {
-        filtered = filtered.filter(p => 
-          p.name?.toLowerCase().includes(term) ||
-          p.description?.toLowerCase().includes(term) ||
-          categories.find(cat => cat.id === p.categoryId)?.name?.toLowerCase().includes(term)
-        );
-      }
+        return trendingProducts || [];
+      } 
+      
+      // Regular search through products
+      filtered = filtered.filter(product => {
+        if (!product) return false;
+        
+        const productName = (product.name || '').toLowerCase();
+        const productDesc = (product.description || '').toLowerCase();
+        const categoryName = categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase() || '';
+        
+        return productName.includes(term) || 
+               productDesc.includes(term) || 
+               categoryName.includes(term);
+      });
     }
     
+    // Category filtering
     if (selectedCategoryId) {
       filtered = filtered.filter(p => p.categoryId === selectedCategoryId);
     }
     
+    // Price range filtering
     filtered = filtered.filter(p => {
-      const price = parseFloat(p.basePrice);
+      const price = parseFloat(p.basePrice || '0');
       return price >= priceRange[0] && price <= priceRange[1];
     });
     
-    // Sort products
+    // Sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'price_low':
-          return parseFloat(a.basePrice) - parseFloat(b.basePrice);
+          return parseFloat(a.basePrice || '0') - parseFloat(b.basePrice || '0');
         case 'price_high':
-          return parseFloat(b.basePrice) - parseFloat(a.basePrice);
+          return parseFloat(b.basePrice || '0') - parseFloat(a.basePrice || '0');
         case 'name':
-          return a.name.localeCompare(b.name);
+          return (a.name || '').localeCompare(b.name || '');
         case 'newest':
           return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
         default:
@@ -463,8 +476,8 @@ export default function CustomerEcommerce() {
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
               onChange={(e) => {
-                const value = e.target.value;
-                setSearchTerm(value);
+                setSearchTerm(e.target.value);
+                setCurrentSection('home');
               }}
               className="pl-12 pr-6 py-3 w-full text-lg font-medium bg-white/95 backdrop-blur-sm border-2 border-white/20 rounded-xl shadow-lg focus:ring-4 focus:ring-blue-300/50 focus:border-yellow-400 transition-all duration-300 text-sharp"
             />
@@ -512,7 +525,9 @@ export default function CustomerEcommerce() {
 
   // Home Page Component  
   const HomePage = () => {
-    const displayProducts = useMemo(() => getFilteredProducts(), [products, searchTerm, selectedCategoryId, priceRange, sortBy, featuredProducts, trendingProducts, categories]);
+    const displayProducts = useMemo(() => {
+      return getFilteredProducts();
+    }, [products, searchTerm, selectedCategoryId, priceRange, sortBy, featuredProducts, trendingProducts, categories]);
 
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -618,7 +633,7 @@ export default function CustomerEcommerce() {
         )}
 
         {/* Search Results */}
-        {searchTerm && (
+        {searchTerm && searchTerm.trim() !== '' && (
           <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900 text-sharp">
