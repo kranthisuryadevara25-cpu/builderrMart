@@ -32,8 +32,12 @@ import {
   Tag,
   SortAsc,
   Eye,
-  Quote
+  Quote,
+  Brain,
+  Sparkles
 } from "lucide-react";
+
+import AIEstimator from "@/components/construction/AIEstimator";
 
 interface CartItem {
   productId: string;
@@ -80,6 +84,7 @@ export default function CustomerEcommerce() {
   const [quote, setQuote] = useState<QuoteItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [showAIEstimator, setShowAIEstimator] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   // Quote form
@@ -188,6 +193,33 @@ export default function CustomerEcommerce() {
     }
   };
 
+  const handleAIEstimationAdd = (materials: any[]) => {
+    materials.forEach(material => {
+      const cartItem: CartItem = {
+        productId: `ai-${Date.now()}-${Math.random()}`,
+        name: material.material,
+        price: material.estimatedPrice,
+        quantity: material.adjustedQuantity || material.quantity,
+        company: "AI Estimated",
+        brand: "Premium"
+      };
+      
+      setCart(prevCart => {
+        const existingItem = prevCart.find(item => item.name === cartItem.name);
+        if (existingItem) {
+          return prevCart.map(item =>
+            item.name === cartItem.name
+              ? { ...item, quantity: item.quantity + cartItem.quantity }
+              : item
+          );
+        }
+        return [...prevCart, cartItem];
+      });
+    });
+    
+    setShowAIEstimator(false);
+  };
+
   const getCartTotal = () => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
@@ -232,6 +264,16 @@ export default function CustomerEcommerce() {
               <Button variant="outline" size="sm">
                 <Quote className="h-4 w-4 mr-2" />
                 Quotes ({quote.length})
+              </Button>
+              
+              <Button
+                onClick={() => setShowAIEstimator(true)}
+                size="sm"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <Brain className="h-4 w-4 mr-2" />
+                <Sparkles className="h-3 w-3 mr-1" />
+                AI Estimator
               </Button>
               
               <Button
@@ -808,6 +850,23 @@ export default function CustomerEcommerce() {
           </div>
         </div>
       )}
+
+      {/* AI Estimator Modal */}
+      <Dialog open={showAIEstimator} onOpenChange={setShowAIEstimator}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-blue-600" />
+              AI Construction Material Estimator
+              <Sparkles className="h-4 w-4 text-yellow-500" />
+            </DialogTitle>
+            <DialogDescription>
+              Upload construction images or enter project details to get AI-powered material estimates
+            </DialogDescription>
+          </DialogHeader>
+          <AIEstimator onAddToCart={handleAIEstimationAdd} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

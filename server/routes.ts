@@ -5,6 +5,8 @@ import session from "express-session";
 import { storage } from "./storage";
 import { insertUserSchema, insertCategorySchema, insertProductSchema, updateCategorySchema, updateProductSchema } from "@shared/schema";
 import { z } from "zod";
+import { AIEstimationService } from "./aiEstimation";
+import { ObjectStorageService } from "./objectStorage";
 
 declare module "express-session" {
   interface SessionData {
@@ -129,6 +131,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ 
         message: "Error creating payment intent: " + error.message 
+      });
+    }
+  });
+
+  // AI Construction Estimation Routes
+  const aiEstimationService = new AIEstimationService();
+  const objectStorageService = new ObjectStorageService();
+
+  // Get upload URL for construction images
+  app.post("/api/construction/upload-url", requireAuth, async (req, res) => {
+    try {
+      const uploadURL = await objectStorageService.getImageUploadURL();
+      res.json({ uploadURL });
+    } catch (error: any) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ message: "Failed to get upload URL" });
+    }
+  });
+
+  // Analyze construction image and estimate materials
+  app.post("/api/construction/analyze", requireAuth, async (req, res) => {
+    try {
+      const { imageURL, additionalInfo } = req.body;
+      
+      if (!imageURL) {
+        return res.status(400).json({ message: "Image URL is required" });
+      }
+
+      // Get the normalized image path
+      const imagePath = objectStorageService.normalizeImagePath(imageURL);
+      
+      // Download the image file
+      const imageFile = await objectStorageService.getImageFile(imagePath);
+      
+      // Convert image to base64 for AI analysis
+      const imageBase64 = await objectStorageService.downloadImageAsBase64(imageFile);
+      
+      // Analyze the image with AI
+      const analysis = await aiEstimationService.getEnhancedEstimation(
+        imageBase64,
+        additionalInfo
+      );
+      
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Error analyzing construction image:", error);
+      res.status(500).json({ 
+        message: "Failed to analyze construction image: " + error.message 
+      });
+    }
+  });
+
+  // Get material estimates without image (based on user inputs)
+  app.post("/api/construction/estimate", requireAuth, async (req, res) => {
+    try {
+      const { area, floors, projectType, budget } = req.body;
+      
+      if (!area) {
+        return res.status(400).json({ message: "Area is required for estimation" });
+      }
+
+      // Create a mock analysis based on user inputs
+      const analysis = await aiEstimationService.getEnhancedEstimation(
+        "", // No image
+        { area, floors, projectType, budget }
+      );
+      
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Error creating material estimate:", error);
+      res.status(500).json({ 
+        message: "Failed to create material estimate: " + error.message 
       });
     }
   });
