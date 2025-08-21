@@ -39,8 +39,21 @@ export async function initializeDummyData() {
 
     const createdUsers = [];
     for (const userData of users) {
-      const user = await storage.createUser(userData);
-      createdUsers.push(user);
+      try {
+        const user = await storage.createUser(userData);
+        createdUsers.push(user);
+      } catch (error: any) {
+        // If user already exists, fetch existing user
+        if (error.code === '23505') {
+          console.log(`User ${userData.username} already exists, fetching existing user...`);
+          const existingUser = await storage.getUserByUsername(userData.username);
+          if (existingUser) {
+            createdUsers.push(existingUser);
+          }
+        } else {
+          throw error;
+        }
+      }
     }
 
     // Create comprehensive categories
