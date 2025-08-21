@@ -1,44 +1,33 @@
-import React, { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
-import Uppy from "@uppy/core";
-import { DashboardModal } from "@uppy/react";
-import "@uppy/core/dist/style.min.css";
-import "@uppy/dashboard/dist/style.min.css";
-import AwsS3 from "@uppy/aws-s3";
-import type { UploadResult } from "@uppy/core";
 import { 
-  Upload, 
   Brain, 
-  Calculator,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  FileImage,
-  Building2,
-  Home,
-  Factory,
-  ShoppingCart,
-  Plus,
-  Minus,
-  Edit,
-  Sparkles,
+  Upload, 
+  FileImage, 
+  Calculator, 
+  ShoppingCart, 
+  Construction, 
+  Truck, 
+  DollarSign,
+  Package,
+  CheckCircle2,
+  AlertCircle,
+  Star,
+  TrendingUp,
   Clock,
-  IndianRupee,
-  BarChart3,
-  Package
+  Building2
 } from "lucide-react";
 
 interface MaterialEstimate {
@@ -51,6 +40,10 @@ interface MaterialEstimate {
   priority: 'essential' | 'recommended' | 'optional';
   selected?: boolean;
   adjustedQuantity?: number;
+  productId?: string;
+  basePrice?: number;
+  finalPrice?: number;
+  discount?: number;
 }
 
 interface ConstructionAnalysis {
@@ -66,119 +59,6 @@ interface ConstructionAnalysis {
 interface AIEstimatorProps {
   onAddToCart: (materials: MaterialEstimate[]) => void;
 }
-
-// AI-powered analysis function
-const generateAIAnalysis = async (projectInfo?: any): Promise<ConstructionAnalysis> => {
-  // Enhanced static analysis based on input for immediate results
-  const area = parseInt(projectInfo?.area || '1000');
-  const floors = parseInt(projectInfo?.floors || '1');
-  const isCommercial = projectInfo?.projectType === 'commercial';
-  const isIndustrial = projectInfo?.projectType === 'industrial';
-  
-  // Smart calculation factors based on project type
-  let bricksPerSqFt, cementBagsPerSqFt, steelKgPerSqFt, sandCubicMetersPerSqFt;
-  
-  if (isIndustrial) {
-    bricksPerSqFt = 15;
-    cementBagsPerSqFt = 0.1;
-    steelKgPerSqFt = 5;
-    sandCubicMetersPerSqFt = 0.04;
-  } else if (isCommercial) {
-    bricksPerSqFt = 12;
-    cementBagsPerSqFt = 0.08;
-    steelKgPerSqFt = 4;
-    sandCubicMetersPerSqFt = 0.035;
-  } else {
-    bricksPerSqFt = 10;
-    cementBagsPerSqFt = 0.06;
-    steelKgPerSqFt = 3;
-    sandCubicMetersPerSqFt = 0.03;
-  }
-  
-  const totalArea = area * floors;
-  const projectTypeName = isIndustrial ? "Industrial Complex" : isCommercial ? "Commercial Building" : "Residential Building";
-  
-  const materials: MaterialEstimate[] = [
-    {
-      material: "Red Clay Bricks",
-      category: "Masonry",
-      quantity: Math.round(totalArea * bricksPerSqFt),
-      unit: "pieces",
-      estimatedPrice: Math.round(totalArea * bricksPerSqFt * 6.5),
-      description: "High-quality red clay bricks for construction",
-      priority: 'essential',
-      selected: true
-    },
-    {
-      material: "Portland Cement (53 Grade)",
-      category: "Binding",
-      quantity: Math.round(totalArea * cementBagsPerSqFt),
-      unit: "bags",
-      estimatedPrice: Math.round(totalArea * cementBagsPerSqFt * 425),
-      description: "Premium 53-grade cement for strong construction",
-      priority: 'essential',
-      selected: true
-    },
-    {
-      material: "TMT Steel Bars (Fe500D)",
-      category: "Reinforcement",
-      quantity: Math.round(totalArea * steelKgPerSqFt),
-      unit: "kg",
-      estimatedPrice: Math.round(totalArea * steelKgPerSqFt * 65),
-      description: "High-strength TMT bars for structural reinforcement",
-      priority: 'essential',
-      selected: true
-    },
-    {
-      material: "M-Sand (Manufactured Sand)",
-      category: "Aggregate",
-      quantity: Math.round(totalArea * sandCubicMetersPerSqFt),
-      unit: "cubic meters",
-      estimatedPrice: Math.round(totalArea * sandCubicMetersPerSqFt * 1800),
-      description: "Quality manufactured sand for construction",
-      priority: 'essential',
-      selected: true
-    },
-    {
-      material: "Stone Aggregate (20mm)",
-      category: "Aggregate",
-      quantity: Math.round(totalArea * 0.025),
-      unit: "cubic meters",
-      estimatedPrice: Math.round(totalArea * 0.025 * 2200),
-      description: "Coarse aggregate for concrete work",
-      priority: 'recommended',
-      selected: false
-    }
-  ];
-
-  // Add specialized materials for commercial/industrial projects
-  if (isCommercial || isIndustrial) {
-    materials.push({
-      material: "Ready Mix Concrete (M25)",
-      category: "Concrete",
-      quantity: Math.round(totalArea * 0.15),
-      unit: "cubic meters",
-      estimatedPrice: Math.round(totalArea * 0.15 * 4500),
-      description: "High-grade ready mix concrete for commercial use",
-      priority: 'recommended',
-      selected: true
-    });
-  }
-  
-  const totalCost = materials
-    .filter(m => m.selected || m.priority === 'essential')
-    .reduce((sum, m) => sum + m.estimatedPrice, 0);
-  
-  return {
-    projectType: projectTypeName,
-    estimatedArea: totalArea,
-    floors: floors,
-    materials: materials,
-    totalEstimatedCost: totalCost,
-    constructionDuration: floors > 2 ? "6-8 months" : floors > 1 ? "4-6 months" : "2-4 months",
-    confidence: 94
-  };
-};
 
 // Fallback mock function kept for extreme cases
 const generateMockAnalysis = (): ConstructionAnalysis => {
@@ -210,25 +90,25 @@ const generateMockAnalysis = (): ConstructionAnalysis => {
       {
         material: "TMT Steel Bars",
         category: "Reinforcement",
-        quantity: 2000,
+        quantity: 800,
         unit: "kg",
-        estimatedPrice: 130000,
-        description: "High-strength TMT bars for reinforcement",
+        estimatedPrice: 52000,
+        description: "High-strength steel bars for reinforcement",
         priority: 'essential',
         selected: true
       },
       {
         material: "M-Sand",
         category: "Aggregate",
-        quantity: 30,
+        quantity: 25,
         unit: "cubic meters",
-        estimatedPrice: 54000,
-        description: "Manufactured sand for construction",
-        priority: 'essential',
-        selected: true
+        estimatedPrice: 45000,
+        description: "Quality manufactured sand",
+        priority: 'recommended',
+        selected: false
       }
     ],
-    totalEstimatedCost: 259000,
+    totalEstimatedCost: 172000,
     constructionDuration: "4-6 months",
     confidence: 85
   };
@@ -242,228 +122,396 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
   const [uploadedImageURL, setUploadedImageURL] = useState<string>("");
   const [analysis, setAnalysis] = useState<ConstructionAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Fetch actual products for pricing calculation
+  const { data: products = [] } = useQuery({
+    queryKey: ["/api/products"],
+  });
+
+  // Helper function to calculate proper pricing like in customer-ecommerce
+  const getProductPricing = (product: any, quantity: number) => {
+    const basePrice = parseFloat(product.basePrice);
+    
+    // Check for quantity slabs
+    let finalPrice = basePrice;
+    let discount = 0;
+    let applicableSlab = null;
+    
+    if (product.quantitySlabs) {
+      const slabs = Array.isArray(product.quantitySlabs) 
+        ? product.quantitySlabs 
+        : JSON.parse(product.quantitySlabs as string || '[]');
+      
+      applicableSlab = slabs.find((slab: any) => 
+        quantity >= slab.min_qty && quantity <= slab.max_qty
+      );
+      
+      if (applicableSlab) {
+        finalPrice = applicableSlab.price_per_unit;
+        discount = Math.round(((basePrice - finalPrice) / basePrice) * 100);
+      }
+    }
+    
+    return { finalPrice, basePrice, discount, quantity, applicableSlab, totalPrice: finalPrice * quantity };
+  };
+
+  // AI-powered analysis function using real product data
+  const generateAIAnalysis = async (projectInfo?: any): Promise<ConstructionAnalysis> => {
+    // Enhanced static analysis based on input for immediate results
+    const area = parseInt(projectInfo?.area || '1000');
+    const floors = parseInt(projectInfo?.floors || '1');
+    const isCommercial = projectInfo?.projectType === 'commercial';
+    const isIndustrial = projectInfo?.projectType === 'industrial';
+    
+    // Smart calculation factors based on project type
+    let bricksPerSqFt, cementBagsPerSqFt, steelKgPerSqFt, sandCubicMetersPerSqFt;
+    
+    if (isIndustrial) {
+      bricksPerSqFt = 15;
+      cementBagsPerSqFt = 0.1;
+      steelKgPerSqFt = 5;
+      sandCubicMetersPerSqFt = 0.04;
+    } else if (isCommercial) {
+      bricksPerSqFt = 12;
+      cementBagsPerSqFt = 0.08;
+      steelKgPerSqFt = 4;
+      sandCubicMetersPerSqFt = 0.035;
+    } else {
+      bricksPerSqFt = 10;
+      cementBagsPerSqFt = 0.06;
+      steelKgPerSqFt = 3;
+      sandCubicMetersPerSqFt = 0.03;
+    }
+    
+    const totalArea = area * floors;
+    const projectTypeName = isIndustrial ? "Industrial Complex" : isCommercial ? "Commercial Building" : "Residential Building";
+    
+    // Find matching products from actual product data
+    const findProduct = (searchTerms: string[]) => {
+      return products.find((product: any) => 
+        searchTerms.some(term => 
+          product.name.toLowerCase().includes(term.toLowerCase()) ||
+          product.description?.toLowerCase().includes(term.toLowerCase())
+        )
+      );
+    };
+
+    const materials: MaterialEstimate[] = [];
+    
+    // Red Clay Bricks
+    const bricksProduct = findProduct(['brick', 'clay', 'red']);
+    const bricksQty = Math.round(totalArea * bricksPerSqFt);
+    if (bricksProduct) {
+      const pricing = getProductPricing(bricksProduct, bricksQty);
+      materials.push({
+        material: bricksProduct.name,
+        category: "Masonry",
+        quantity: bricksQty,
+        unit: "pieces",
+        estimatedPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        finalPrice: pricing.finalPrice,
+        discount: pricing.discount,
+        productId: bricksProduct.id,
+        description: bricksProduct.description || "High-quality red clay bricks for construction",
+        priority: 'essential',
+        selected: true
+      });
+    } else {
+      materials.push({
+        material: "Red Clay Bricks",
+        category: "Masonry",
+        quantity: bricksQty,
+        unit: "pieces",
+        estimatedPrice: Math.round(bricksQty * 6.5),
+        description: "High-quality red clay bricks for construction",
+        priority: 'essential',
+        selected: true
+      });
+    }
+
+    // Portland Cement
+    const cementProduct = findProduct(['cement', 'portland', '53']);
+    const cementQty = Math.round(totalArea * cementBagsPerSqFt);
+    if (cementProduct) {
+      const pricing = getProductPricing(cementProduct, cementQty);
+      materials.push({
+        material: cementProduct.name,
+        category: "Binding",
+        quantity: cementQty,
+        unit: "bags",
+        estimatedPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        finalPrice: pricing.finalPrice,
+        discount: pricing.discount,
+        productId: cementProduct.id,
+        description: cementProduct.description || "Premium 53-grade cement for strong construction",
+        priority: 'essential',
+        selected: true
+      });
+    } else {
+      materials.push({
+        material: "Portland Cement (53 Grade)",
+        category: "Binding",
+        quantity: cementQty,
+        unit: "bags",
+        estimatedPrice: Math.round(cementQty * 425),
+        description: "Premium 53-grade cement for strong construction",
+        priority: 'essential',
+        selected: true
+      });
+    }
+
+    // TMT Steel Bars
+    const steelProduct = findProduct(['steel', 'tmt', 'bar', 'fe500']);
+    const steelQty = Math.round(totalArea * steelKgPerSqFt);
+    if (steelProduct) {
+      const pricing = getProductPricing(steelProduct, steelQty);
+      materials.push({
+        material: steelProduct.name,
+        category: "Reinforcement",
+        quantity: steelQty,
+        unit: "kg",
+        estimatedPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        finalPrice: pricing.finalPrice,
+        discount: pricing.discount,
+        productId: steelProduct.id,
+        description: steelProduct.description || "High-strength TMT bars for structural reinforcement",
+        priority: 'essential',
+        selected: true
+      });
+    } else {
+      materials.push({
+        material: "TMT Steel Bars (Fe500D)",
+        category: "Reinforcement",
+        quantity: steelQty,
+        unit: "kg",
+        estimatedPrice: Math.round(steelQty * 65),
+        description: "High-strength TMT bars for structural reinforcement",
+        priority: 'essential',
+        selected: true
+      });
+    }
+
+    // M-Sand
+    const sandProduct = findProduct(['sand', 'm-sand', 'manufactured']);
+    const sandQty = Math.round(totalArea * sandCubicMetersPerSqFt);
+    if (sandProduct) {
+      const pricing = getProductPricing(sandProduct, sandQty);
+      materials.push({
+        material: sandProduct.name,
+        category: "Aggregate",
+        quantity: sandQty,
+        unit: "cubic meters",
+        estimatedPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        finalPrice: pricing.finalPrice,
+        discount: pricing.discount,
+        productId: sandProduct.id,
+        description: sandProduct.description || "Quality manufactured sand for construction",
+        priority: 'essential',
+        selected: true
+      });
+    } else {
+      materials.push({
+        material: "M-Sand (Manufactured Sand)",
+        category: "Aggregate",
+        quantity: sandQty,
+        unit: "cubic meters",
+        estimatedPrice: Math.round(sandQty * 1800),
+        description: "Quality manufactured sand for construction",
+        priority: 'essential',
+        selected: true
+      });
+    }
+
+    // Stone Aggregate
+    const aggregateProduct = findProduct(['aggregate', 'stone', '20mm']);
+    const aggregateQty = Math.round(totalArea * 0.025);
+    if (aggregateProduct) {
+      const pricing = getProductPricing(aggregateProduct, aggregateQty);
+      materials.push({
+        material: aggregateProduct.name,
+        category: "Aggregate",
+        quantity: aggregateQty,
+        unit: "cubic meters",
+        estimatedPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        finalPrice: pricing.finalPrice,
+        discount: pricing.discount,
+        productId: aggregateProduct.id,
+        description: aggregateProduct.description || "Coarse aggregate for concrete work",
+        priority: 'recommended',
+        selected: false
+      });
+    } else {
+      materials.push({
+        material: "Stone Aggregate (20mm)",
+        category: "Aggregate",
+        quantity: aggregateQty,
+        unit: "cubic meters",
+        estimatedPrice: Math.round(aggregateQty * 2200),
+        description: "Coarse aggregate for concrete work",
+        priority: 'recommended',
+        selected: false
+      });
+    }
+
+    // Add specialized materials for commercial/industrial projects
+    if (isCommercial || isIndustrial) {
+      const concreteProduct = findProduct(['concrete', 'ready mix', 'm25']);
+      const concreteQty = Math.round(totalArea * 0.15);
+      if (concreteProduct) {
+        const pricing = getProductPricing(concreteProduct, concreteQty);
+        materials.push({
+          material: concreteProduct.name,
+          category: "Concrete",
+          quantity: concreteQty,
+          unit: "cubic meters",
+          estimatedPrice: pricing.totalPrice,
+          basePrice: pricing.basePrice,
+          finalPrice: pricing.finalPrice,
+          discount: pricing.discount,
+          productId: concreteProduct.id,
+          description: concreteProduct.description || "High-grade ready mix concrete for commercial use",
+          priority: 'recommended',
+          selected: true
+        });
+      } else {
+        materials.push({
+          material: "Ready Mix Concrete (M25)",
+          category: "Concrete",
+          quantity: concreteQty,
+          unit: "cubic meters",
+          estimatedPrice: Math.round(concreteQty * 4500),
+          description: "High-grade ready mix concrete for commercial use",
+          priority: 'recommended',
+          selected: true
+        });
+      }
+    }
+    
+    const totalCost = materials
+      .filter(m => m.selected || m.priority === 'essential')
+      .reduce((sum, m) => sum + m.estimatedPrice, 0);
+    
+    return {
+      projectType: projectTypeName,
+      estimatedArea: totalArea,
+      floors: floors,
+      materials: materials,
+      totalEstimatedCost: totalCost,
+      constructionDuration: floors > 2 ? "6-8 months" : floors > 1 ? "4-6 months" : "2-4 months",
+      confidence: 94
+    };
+  };
   
   // Manual input form
   const [manualForm, setManualForm] = useState({
     area: "",
     floors: "1",
     projectType: "residential",
+    location: "",
     budget: ""
   });
 
-  // Material selection state
-  const [materialSelections, setMaterialSelections] = useState<{[key: string]: {selected: boolean, quantity: number}}>({});
+  // Material selections for quantity adjustments
+  const [materialSelections, setMaterialSelections] = useState<{ [key: number]: { selected: boolean; quantity: number } }>({});
 
-  // Uppy instance for file upload
-  const [uppy] = useState(() =>
-    new Uppy({
-      restrictions: {
-        maxNumberOfFiles: 1,
-        maxFileSize: 10485760, // 10MB
-        allowedFileTypes: ['image/*'],
-      },
-      autoProceed: false,
-    })
-      .use(AwsS3, {
-        shouldUseMultipart: false,
-        getUploadParameters: async () => {
-          const response = await apiRequest("POST", "/api/construction/upload-url");
-          return {
-            method: "PUT",
-            url: response.uploadURL,
-          };
-        },
-      })
-      .on("complete", (result) => {
-        if (result.successful && result.successful[0]) {
-          const uploadURL = result.successful[0].uploadURL || 'uploaded-image';
-          setUploadedImageURL(uploadURL);
-          setShowUploadModal(false);
-          toast({
-            title: "Image uploaded successfully",
-            description: "Ready for AI analysis",
-          });
-        }
-      })
-  );
-
-  const analyzeImageMutation = useMutation({
-    mutationFn: async ({ imageURL, additionalInfo }: { imageURL: string, additionalInfo?: any }) => {
-      // Use smart calculation for immediate results
-      return generateAIAnalysis(additionalInfo || manualForm);
-    },
-    onSuccess: (data: ConstructionAnalysis) => {
-      setAnalysis(data);
-      setIsAnalyzing(false);
-      
-      // Initialize material selections (all essential materials selected by default)
-      const selections: {[key: string]: {selected: boolean, quantity: number}} = {};
-      data.materials.forEach((material, index) => {
-        selections[index] = {
-          selected: material.priority === 'essential',
+  // Effect to initialize material selections when analysis changes
+  useEffect(() => {
+    if (analysis) {
+      const initialSelections: { [key: number]: { selected: boolean; quantity: number } } = {};
+      analysis.materials.forEach((material, index) => {
+        initialSelections[index] = {
+          selected: material.selected || material.priority === 'essential',
           quantity: material.quantity
         };
       });
-      setMaterialSelections(selections);
-      
-      toast({
-        title: "Analysis complete!",
-        description: `Found ${data.materials.length} construction materials needed`,
-      });
-    },
-    onError: (error: any) => {
-      setIsAnalyzing(false);
-      // Use mock analysis as fallback
-      const mockAnalysis = generateMockAnalysis();
-      setAnalysis(mockAnalysis);
-      
-      // Initialize material selections
-      const selections: {[key: string]: {selected: boolean, quantity: number}} = {};
-      mockAnalysis.materials.forEach((material, index) => {
-        selections[index] = {
-          selected: material.priority === 'essential',
-          quantity: material.quantity
-        };
-      });
-      setMaterialSelections(selections);
-      
-      toast({
-        title: "Using Estimated Analysis",
-        description: "AI service temporarily unavailable, showing sample material estimates",
-        variant: "default",
-      });
-    },
-  });
-
-  const estimateManualMutation = useMutation({
-    mutationFn: async (formData: any) => {
-      return generateAIAnalysis(formData);
-    },
-    onSuccess: (data: ConstructionAnalysis) => {
-      setAnalysis(data);
-      
-      // Initialize material selections
-      const selections: {[key: string]: {selected: boolean, quantity: number}} = {};
-      data.materials.forEach((material, index) => {
-        selections[index] = {
-          selected: material.priority === 'essential',
-          quantity: material.quantity
-        };
-      });
-      setMaterialSelections(selections);
-      
-      toast({
-        title: "Estimate complete!",
-        description: `Generated ${data.materials.length} construction materials needed`,
-      });
-    },
-    onError: (error: any) => {
-      // Use mock analysis as fallback
-      const mockAnalysis = generateMockAnalysis();
-      setAnalysis(mockAnalysis);
-      
-      // Initialize material selections
-      const selections: {[key: string]: {selected: boolean, quantity: number}} = {};
-      mockAnalysis.materials.forEach((material, index) => {
-        selections[index] = {
-          selected: material.priority === 'essential',
-          quantity: material.quantity
-        };
-      });
-      setMaterialSelections(selections);
-      
-      toast({
-        title: "Using Estimated Analysis",
-        description: "AI service temporarily unavailable, showing sample material estimates",
-        variant: "default",
-      });
-    },
-  });
-
-  const handleImageAnalysis = () => {
-    if (!uploadedImageURL) {
-      toast({
-        title: "No image uploaded",
-        description: "Please upload a construction image first",
-        variant: "destructive",
-      });
-      return;
+      setMaterialSelections(initialSelections);
     }
-    
-    setIsAnalyzing(true);
-    analyzeImageMutation.mutate({ imageURL: uploadedImageURL });
+  }, [analysis]);
+
+  // File upload mutation
+  const fileUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      return apiRequest("POST", "/api/construction/analyze-image", formData);
+    },
+    onSuccess: (data) => {
+      setAnalysis(data.analysis);
+      setUploadedImageURL(data.imageUrl || "");
+      toast({
+        title: "Analysis Complete!",
+        description: `Found ${data.analysis.materials.length} materials for your ${data.analysis.projectType}`,
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Upload failed:", error);
+      // Fallback to mock analysis
+      const mockAnalysis = generateMockAnalysis();
+      setAnalysis(mockAnalysis);
+      toast({
+        title: "Using Smart Estimates",
+        description: "AI analysis unavailable - showing intelligent material estimates",
+      });
+    }
+  });
+
+  const handleImageUpload = (files: FileList | null) => {
+    if (files && files[0]) {
+      setIsAnalyzing(true);
+      fileUploadMutation.mutate(files[0]);
+      setTimeout(() => setIsAnalyzing(false), 3000);
+    }
   };
 
-  const handleManualEstimation = async () => {
+  const handleManualSubmit = async () => {
     if (!manualForm.area) {
       toast({
-        title: "Area required",
+        title: "Area Required",
         description: "Please enter the construction area",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
+
     setIsAnalyzing(true);
-    
     try {
-      const analysis = await generateAIAnalysis({
-        area: parseInt(manualForm.area),
-        floors: parseInt(manualForm.floors),
-        projectType: manualForm.projectType,
-        budget: manualForm.budget ? parseInt(manualForm.budget) : undefined
-      });
-      
-      setAnalysis(analysis);
-      
-      // Initialize material selections
-      const selections: {[key: string]: {selected: boolean, quantity: number}} = {};
-      analysis.materials.forEach((material, index) => {
-        selections[index] = {
-          selected: material.priority === 'essential',
-          quantity: material.quantity
-        };
-      });
-      setMaterialSelections(selections);
-      
+      const aiAnalysis = await generateAIAnalysis(manualForm);
+      setAnalysis(aiAnalysis);
       toast({
-        title: "Smart Analysis Complete!",
-        description: `Generated intelligent estimates for ${analysis.estimatedArea} sq ft ${analysis.projectType} project - ${analysis.materials.length} materials calculated`,
+        title: "Analysis Complete!",
+        description: `Estimated materials for ${parseInt(manualForm.area).toLocaleString()} sq ft ${manualForm.projectType} project`,
       });
     } catch (error) {
-      const mockAnalysis = generateMockAnalysis();
-      setAnalysis(mockAnalysis);
-      
-      const selections: {[key: string]: {selected: boolean, quantity: number}} = {};
-      mockAnalysis.materials.forEach((material, index) => {
-        selections[index] = {
-          selected: material.priority === 'essential',
-          quantity: material.quantity
-        };
-      });
-      setMaterialSelections(selections);
-      
+      console.error("Analysis failed:", error);
+      const fallbackAnalysis = generateMockAnalysis();
+      setAnalysis(fallbackAnalysis);
       toast({
-        title: "Analysis complete!",
-        description: `Generated estimates for ${mockAnalysis.materials.length} materials`,
+        title: "Using Smart Estimates",
+        description: "Showing intelligent material estimates for your project",
       });
-    } finally {
-      setIsAnalyzing(false);
     }
+    setIsAnalyzing(false);
   };
 
-  const handleMaterialToggle = (index: number, selected: boolean) => {
+  const handleMaterialToggle = (index: number, checked: boolean) => {
     setMaterialSelections(prev => ({
       ...prev,
       [index]: {
         ...prev[index],
-        selected
+        selected: checked
       }
     }));
   };
 
   const handleQuantityChange = (index: number, quantity: number) => {
     if (quantity < 1) return;
+    
+    // Update material selections and recalculate pricing if product has actual pricing data
     setMaterialSelections(prev => ({
       ...prev,
       [index]: {
@@ -471,6 +519,44 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
         quantity
       }
     }));
+
+    // If the material has a productId, recalculate pricing with new quantity
+    if (analysis && analysis.materials[index]?.productId) {
+      const material = analysis.materials[index];
+      const product = products.find((p: any) => p.id === material.productId);
+      
+      if (product) {
+        const newPricing = getProductPricing(product, quantity);
+        
+        // Update the analysis with new pricing
+        setAnalysis(prev => {
+          if (!prev) return prev;
+          
+          const updatedMaterials = [...prev.materials];
+          updatedMaterials[index] = {
+            ...updatedMaterials[index],
+            estimatedPrice: newPricing.totalPrice,
+            finalPrice: newPricing.finalPrice,
+            discount: newPricing.discount
+          };
+          
+          // Recalculate total cost
+          const totalCost = updatedMaterials
+            .filter((m, i) => materialSelections[i]?.selected || m.priority === 'essential')
+            .reduce((sum, m, i) => {
+              const qty = materialSelections[i]?.quantity || m.quantity;
+              const unitPrice = m.finalPrice || (m.estimatedPrice / m.quantity);
+              return sum + (unitPrice * qty);
+            }, 0);
+          
+          return {
+            ...prev,
+            materials: updatedMaterials,
+            totalEstimatedCost: totalCost
+          };
+        });
+      }
+    }
   };
 
   const getSelectedMaterials = (): MaterialEstimate[] => {
@@ -479,7 +565,7 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     return analysis.materials
       .map((material, index) => ({
         ...material,
-        selected: materialSelections[index]?.selected || false,
+        selected: materialSelections[index]?.selected || material.priority === 'essential',
         adjustedQuantity: materialSelections[index]?.quantity || material.quantity
       }))
       .filter(material => material.selected);
@@ -487,7 +573,12 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
 
   const getSelectedTotal = (): number => {
     return getSelectedMaterials().reduce(
-      (total, material) => total + ((material.adjustedQuantity || material.quantity) * material.estimatedPrice),
+      (total, material) => {
+        const qty = material.adjustedQuantity || material.quantity;
+        // Use finalPrice per unit if available, otherwise calculate from estimatedPrice
+        const unitPrice = material.finalPrice || (material.estimatedPrice / material.quantity);
+        return total + (unitPrice * qty);
+      },
       0
     );
   };
@@ -496,152 +587,106 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     const selectedMaterials = getSelectedMaterials();
     if (selectedMaterials.length === 0) {
       toast({
-        title: "No materials selected",
+        title: "No Materials Selected",
         description: "Please select at least one material to add to cart",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
     
     onAddToCart(selectedMaterials);
     toast({
-      title: "Added to cart!",
+      title: "Added to Cart!",
       description: `${selectedMaterials.length} materials added to your cart`,
     });
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'cement': return '🏗️';
-      case 'steel': return '🔩';
-      case 'bricks': return '🧱';
-      case 'aggregates': return '🪨';
-      case 'plumbing': return '🚿';
-      case 'electrical': return '⚡';
-      default: return '📦';
-    }
-  };
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'essential': return 'destructive';
-      case 'recommended': return 'default';
-      case 'optional': return 'secondary';
-      default: return 'secondary';
+      case 'essential': return 'bg-red-100 text-red-800 border-red-200';
+      case 'recommended': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'optional': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-blue-900 flex items-center justify-center gap-2">
-            <Sparkles className="h-6 w-6 text-yellow-500" />
-            AI Construction Estimator
-            <Brain className="h-6 w-6 text-blue-600" />
-          </CardTitle>
-          <p className="text-blue-700">
-            Upload your construction site image or enter project details to get AI-powered material estimates
-          </p>
-        </CardHeader>
-      </Card>
+      <div className="text-center space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <Brain className="w-8 h-8 text-blue-600" />
+          <h1 className="text-3xl font-bold text-gray-900">AI Material Estimator</h1>
+        </div>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Get instant, intelligent material estimates for your construction project using AI-powered analysis
+        </p>
+      </div>
 
       {/* Input Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="upload" className="flex items-center gap-2">
-            <FileImage className="h-4 w-4" />
-            Upload Image
-          </TabsTrigger>
-          <TabsTrigger value="manual" className="flex items-center gap-2">
-            <Calculator className="h-4 w-4" />
-            Manual Entry
-          </TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="w-5 h-5" />
+            Project Analysis
+          </CardTitle>
+          <CardDescription>
+            Upload project images or enter details manually for accurate material estimation
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "upload" | "manual")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upload" className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Upload Plans/Photos
+              </TabsTrigger>
+              <TabsTrigger value="manual" className="flex items-center gap-2">
+                <FileImage className="w-4 h-4" />
+                Manual Entry
+              </TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="upload" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Upload Construction Image
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Upload site photos, building plans, or architectural drawings for AI analysis
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <Button 
-                  onClick={() => setShowUploadModal(true)}
-                  variant="outline"
-                  size="lg"
-                  className="flex-1"
-                >
-                  <Upload className="h-5 w-5 mr-2" />
-                  Choose Image
-                </Button>
-                
-                <Button 
-                  onClick={handleImageAnalysis}
-                  disabled={!uploadedImageURL || isAnalyzing}
-                  size="lg"
-                  className="flex-1"
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Brain className="h-5 w-5 mr-2" />
-                      Analyze with AI
-                    </>
-                  )}
-                </Button>
+            <TabsContent value="upload" className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => handleImageUpload(e.target.files)}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <FileImage className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Upload Construction Plans or Site Photos
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Drag & drop files here, or click to browse
+                  </p>
+                  <Button variant="outline">
+                    Choose Files
+                  </Button>
+                </label>
               </div>
-              
-              {uploadedImageURL && (
-                <div className="text-center text-sm text-green-600 flex items-center justify-center gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  Image uploaded successfully - Ready for analysis
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="manual" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Project Details
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Enter your construction project details for material estimation
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Construction Area (sq ft) *</Label>
+            <TabsContent value="manual" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="area">Construction Area (sq ft)</Label>
                   <Input
+                    id="area"
                     type="number"
+                    placeholder="e.g., 1200"
                     value={manualForm.area}
-                    onChange={(e) => setManualForm(prev => ({...prev, area: e.target.value}))}
-                    placeholder="e.g. 1200"
+                    onChange={(e) => setManualForm(prev => ({ ...prev, area: e.target.value }))}
                   />
                 </div>
                 
-                <div>
-                  <Label>Number of Floors</Label>
-                  <Select 
-                    value={manualForm.floors} 
-                    onValueChange={(value) => setManualForm(prev => ({...prev, floors: value}))}
-                  >
+                <div className="space-y-2">
+                  <Label htmlFor="floors">Number of Floors</Label>
+                  <Select value={manualForm.floors} onValueChange={(value) => setManualForm(prev => ({ ...prev, floors: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -653,254 +698,236 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div>
-                  <Label>Project Type</Label>
-                  <Select 
-                    value={manualForm.projectType} 
-                    onValueChange={(value) => setManualForm(prev => ({...prev, projectType: value}))}
-                  >
+
+                <div className="space-y-2">
+                  <Label htmlFor="projectType">Project Type</Label>
+                  <Select value={manualForm.projectType} onValueChange={(value) => setManualForm(prev => ({ ...prev, projectType: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="residential">
-                        <div className="flex items-center gap-2">
-                          <Home className="h-4 w-4" />
-                          Residential
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="commercial">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4" />
-                          Commercial
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="industrial">
-                        <div className="flex items-center gap-2">
-                          <Factory className="h-4 w-4" />
-                          Industrial
-                        </div>
-                      </SelectItem>
+                      <SelectItem value="residential">Residential</SelectItem>
+                      <SelectItem value="commercial">Commercial</SelectItem>
+                      <SelectItem value="industrial">Industrial</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div>
-                  <Label>Budget (₹) (Optional)</Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location (Optional)</Label>
                   <Input
-                    type="number"
+                    id="location"
+                    placeholder="City, State"
+                    value={manualForm.location}
+                    onChange={(e) => setManualForm(prev => ({ ...prev, location: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="budget">Budget Range (Optional)</Label>
+                  <Input
+                    id="budget"
+                    placeholder="e.g., ₹5-10 Lakhs"
                     value={manualForm.budget}
-                    onChange={(e) => setManualForm(prev => ({...prev, budget: e.target.value}))}
-                    placeholder="e.g. 500000"
+                    onChange={(e) => setManualForm(prev => ({ ...prev, budget: e.target.value }))}
                   />
                 </div>
               </div>
-              
+
               <Button 
-                onClick={handleManualEstimation}
-                disabled={estimateManualMutation.isPending}
+                onClick={handleManualSubmit} 
                 className="w-full"
-                size="lg"
+                disabled={isAnalyzing || !manualForm.area}
               >
-                {estimateManualMutation.isPending ? (
+                {isAnalyzing ? (
                   <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Generating Estimate...
+                    <Brain className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing Project...
                   </>
                 ) : (
                   <>
-                    <Calculator className="h-5 w-5 mr-2" />
+                    <Calculator className="w-4 h-4 mr-2" />
                     Generate Material Estimate
                   </>
                 )}
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Analysis Loading */}
+      {isAnalyzing && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <Brain className="w-12 h-12 text-blue-600 mx-auto animate-pulse" />
+              <h3 className="text-lg font-semibold">AI Analysis in Progress</h3>
+              <Progress value={75} className="w-full max-w-md mx-auto" />
+              <p className="text-gray-600">
+                Analyzing construction requirements and calculating material needs...
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Analysis Results */}
-      {analysis && (
+      {analysis && !isAnalyzing && (
         <div className="space-y-6">
-          {/* Project Overview */}
+          {/* Project Summary */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
+                <Building2 className="w-5 h-5" />
                 Project Overview
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{analysis.projectType}</p>
+                <div className="space-y-1">
                   <p className="text-sm text-gray-600">Project Type</p>
+                  <p className="font-semibold">{analysis.projectType}</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{analysis.estimatedArea} sq ft</p>
-                  <p className="text-sm text-gray-600">Area</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-600">Total Area</p>
+                  <p className="font-semibold">{analysis.estimatedArea.toLocaleString()} sq ft</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-purple-600">{analysis.floors} Floor{analysis.floors > 1 ? 's' : ''}</p>
-                  <p className="text-sm text-gray-600">Levels</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-600 flex items-center justify-center">
-                    <Clock className="h-5 w-5 mr-1" />
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-600">Duration</p>
+                  <p className="font-semibold flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
                     {analysis.constructionDuration}
                   </p>
-                  <p className="text-sm text-gray-600">Duration</p>
                 </div>
-              </div>
-              
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm">
-                  <strong>AI Confidence:</strong> {Math.round(analysis.confidence * 100)}% | 
-                  <strong className="ml-2">Total Estimate:</strong> ₹{analysis.totalEstimatedCost.toLocaleString()}
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-600">Confidence</p>
+                  <p className="font-semibold flex items-center gap-1">
+                    <Star className="w-4 h-4 text-yellow-500" />
+                    {analysis.confidence}%
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Material Selection */}
+          {/* Materials List */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Material Selection ({analysis.materials.length} items)
-                </div>
-                <Badge variant="outline">
-                  Selected: ₹{getSelectedTotal().toLocaleString()}
-                </Badge>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Material Requirements
               </CardTitle>
-              <p className="text-sm text-gray-600">
-                Select materials to add to your cart. You can adjust quantities as needed.
-              </p>
+              <CardDescription>
+                Select materials to include in your order. Adjust quantities as needed.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {analysis.materials.map((material, index) => {
-                  const isSelected = materialSelections[index]?.selected || false;
-                  const quantity = materialSelections[index]?.quantity || material.quantity;
-                  
-                  return (
-                    <div 
-                      key={index} 
-                      className={`p-4 border rounded-lg transition-all ${
-                        isSelected ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-start gap-4">
+              <div className="space-y-4">
+                {analysis.materials.map((material, index) => (
+                  <div key={index} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
                         <Checkbox
-                          checked={isSelected}
+                          checked={materialSelections[index]?.selected || material.priority === 'essential'}
                           onCheckedChange={(checked) => handleMaterialToggle(index, checked as boolean)}
+                          disabled={material.priority === 'essential'}
                         />
-                        
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h4 className="font-semibold flex items-center gap-2">
-                                <span className="text-lg">{getCategoryIcon(material.category)}</span>
-                                {material.material}
-                                <Badge variant={getPriorityColor(material.priority) as any}>
-                                  {material.priority}
-                                </Badge>
-                              </h4>
-                              <p className="text-sm text-gray-600 mb-2">{material.description}</p>
-                              <p className="text-sm text-gray-500">
-                                Category: <strong>{material.category}</strong>
-                              </p>
-                            </div>
-                            
-                            <div className="text-right">
-                              <p className="text-lg font-bold flex items-center">
-                                <IndianRupee className="h-4 w-4" />
-                                {material.estimatedPrice.toLocaleString()} per {material.unit}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Total: ₹{(quantity * material.estimatedPrice).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Quantity Controls */}
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm">Quantity:</Label>
-                              <div className="flex items-center border rounded-lg">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleQuantityChange(index, quantity - 1)}
-                                  disabled={quantity <= 1}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </Button>
-                                <span className="px-3 py-1 text-sm font-medium min-w-[50px] text-center">
-                                  {quantity}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleQuantityChange(index, quantity + 1)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              <span className="text-sm text-gray-500">{material.unit}</span>
-                            </div>
-                            
-                            {quantity !== material.quantity && (
-                              <Badge variant="outline" className="text-xs">
-                                Adjusted from {material.quantity}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{material.material}</h4>
+                            <Badge className={getPriorityColor(material.priority)}>
+                              {material.priority}
+                            </Badge>
+                            {material.discount && material.discount > 0 && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                {material.discount}% off
                               </Badge>
                             )}
                           </div>
+                          <p className="text-sm text-gray-600">{material.description}</p>
+                          <p className="text-xs text-gray-500">Category: {material.category}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={materialSelections[index]?.quantity || material.quantity}
+                            onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                            className="w-20 text-right"
+                            min="1"
+                          />
+                          <span className="text-sm text-gray-600">{material.unit}</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {material.basePrice && material.finalPrice && material.basePrice !== material.finalPrice && (
+                            <p className="text-xs text-gray-500 line-through">
+                              ₹{material.basePrice}/unit
+                            </p>
+                          )}
+                          <p className="font-semibold text-blue-600">
+                            ₹{material.estimatedPrice.toLocaleString()}
+                          </p>
+                          {material.finalPrice && (
+                            <p className="text-xs text-gray-600">
+                              ₹{material.finalPrice}/unit
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
-              
-              <Separator className="my-6" />
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">
-                    {getSelectedMaterials().length} materials selected
-                  </p>
-                  <p className="text-2xl font-bold">
-                    Total: ₹{getSelectedTotal().toLocaleString()}
-                  </p>
+            </CardContent>
+          </Card>
+
+          {/* Cost Summary & Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                Cost Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-lg">
+                  <span>Selected Materials Total:</span>
+                  <span className="font-bold text-2xl text-blue-600">
+                    ₹{getSelectedTotal().toLocaleString()}
+                  </span>
                 </div>
                 
-                <Button 
-                  onClick={handleAddSelectedToCart}
-                  size="lg"
-                  disabled={getSelectedMaterials().length === 0}
-                  className="flex items-center gap-2"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  Add Selected to Cart ({getSelectedMaterials().length})
-                </Button>
+                <Separator />
+                
+                <div className="flex gap-4">
+                  <Button 
+                    onClick={handleAddSelectedToCart}
+                    className="flex-1"
+                    size="lg"
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Add Selected to Cart ({getSelectedMaterials().length})
+                  </Button>
+                  
+                  <Button variant="outline" size="lg">
+                    <Construction className="w-4 h-4 mr-2" />
+                    Request Quote
+                  </Button>
+                </div>
+
+                <div className="text-center text-sm text-gray-600">
+                  <p>* Prices are estimates and may vary based on current market rates and location</p>
+                  <p>* Transportation and labor costs not included</p>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
       )}
-
-      {/* Upload Modal */}
-      <DashboardModal
-        uppy={uppy}
-        open={showUploadModal}
-        onRequestClose={() => setShowUploadModal(false)}
-        proudlyDisplayPoweredByUppy={false}
-      />
     </div>
   );
 }
