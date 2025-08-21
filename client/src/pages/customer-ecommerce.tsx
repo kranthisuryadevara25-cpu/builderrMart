@@ -742,16 +742,16 @@ export default function CustomerEcommerce() {
               <Package className="w-12 h-12 text-gray-500" />
             </div>
             
-            {/* Badges */}
-            <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {/* Badges - Fixed positioning */}
+            <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
               {featured && (
-                <Badge className="bg-yellow-500 text-white">
+                <Badge className="bg-yellow-500 text-white text-xs px-2 py-1">
                   <Star className="w-3 h-3 mr-1" />
                   Featured
                 </Badge>
               )}
               {trending && (
-                <Badge className="bg-red-500 text-white">
+                <Badge className="bg-red-500 text-white text-xs px-2 py-1">
                   <Flame className="w-3 h-3 mr-1" />
                   Trending
                 </Badge>
@@ -759,13 +759,13 @@ export default function CustomerEcommerce() {
             </div>
           </div>
           
-          {/* Product Info */}
-          <div className={viewMode === 'list' ? 'flex-1' : 'p-4'}>
-            <h3 className="font-semibold text-lg group-hover:text-blue-600 transition-colors mb-2">
+          {/* Product Info - Enhanced layout */}
+          <div className={viewMode === 'list' ? 'flex-1' : 'p-4 flex flex-col min-h-64'}>
+            <h3 className="font-semibold text-lg group-hover:text-blue-600 transition-colors mb-2 line-clamp-2">
               {product.name}
             </h3>
             
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+            <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-shrink-0">
               {product.description || "High-quality construction material"}
             </p>
             
@@ -937,7 +937,7 @@ export default function CustomerEcommerce() {
                     e.stopPropagation();
                     shareProduct(product);
                   }}
-                  className="flex-1 text-xs"
+                  className="flex-1 text-xs min-h-8"
                 >
                   <Share2 className="w-3 h-3 mr-1" />
                   Share

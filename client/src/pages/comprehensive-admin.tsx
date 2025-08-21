@@ -59,7 +59,9 @@ export default function ComprehensiveAdminPanel() {
   const [activeTab, setActiveTab] = useState("overview");
   const [showExportModal, setShowExportModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [viewingItem, setViewingItem] = useState<any | undefined>();
+  const [editingItem, setEditingItem] = useState<any | undefined>();
   const [exportType, setExportType] = useState('orders');
   const [exportDateRange, setExportDateRange] = useState({ startDate: '', endDate: '' });
   const [csvUploadType, setCsvUploadType] = useState('products');
@@ -101,6 +103,11 @@ export default function ComprehensiveAdminPanel() {
   const handleView = (item: any, type: string) => {
     setViewingItem({ ...item, type });
     setShowViewModal(true);
+  };
+
+  const handleEdit = (item: any, type: string) => {
+    setEditingItem({ ...item, type });
+    setShowEditModal(true);
   };
 
   const handleDelete = (id: string, type: string) => {
@@ -312,7 +319,7 @@ export default function ComprehensiveAdminPanel() {
                               <Button variant="ghost" size="sm" onClick={() => handleView(product, 'product')}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(product, 'product')}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id, 'product')}>
@@ -608,24 +615,29 @@ export default function ComprehensiveAdminPanel() {
                         <Upload className="h-4 w-4 mr-2" />
                         Upload CSV
                       </Button>
-                      <Button variant="outline" onClick={() => {
+                      <Button variant="outline" onClick={async () => {
                         try {
+                          // Dynamic import to fix build issues
+                          const { generateCSVTemplate } = await import('@shared/csvTemplates');
                           const sampleData = generateCSVTemplate(csvUploadType);
-                          const blob = new Blob([sampleData], { type: 'text/csv' });
+                          const blob = new Blob([sampleData], { type: 'text/csv;charset=utf-8;' });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');
                           a.href = url;
                           a.download = `sample_${csvUploadType}.csv`;
+                          document.body.appendChild(a);
                           a.click();
+                          document.body.removeChild(a);
                           URL.revokeObjectURL(url);
                           toast({
-                            title: "Success",
-                            description: `Sample ${csvUploadType} CSV downloaded`,
+                            title: "CSV Download Success",
+                            description: `Sample ${csvUploadType} template downloaded successfully`,
                           });
                         } catch (error: any) {
+                          console.error('CSV Download Error:', error);
                           toast({
-                            title: "Error",
-                            description: error.message || "Failed to download sample",
+                            title: "Download Error",
+                            description: "Failed to download CSV template. Please try again.",
                             variant: "destructive",
                           });
                         }

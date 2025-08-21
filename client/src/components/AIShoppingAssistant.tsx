@@ -308,10 +308,32 @@ What type of construction project are you working on?`;
     setInputMessage("");
     setIsTyping(true);
 
+    // Auto-scroll to bottom when new message is added
+    setTimeout(() => {
+      const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollArea) {
+        scrollArea.scrollTo({
+          top: scrollArea.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+
     // Generate AI response
     const aiResponse = await generateAIResponse(inputMessage);
     setIsTyping(false);
     setMessages(prev => [...prev, aiResponse]);
+
+    // Auto-scroll after AI response
+    setTimeout(() => {
+      const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollArea) {
+        scrollArea.scrollTo({
+          top: scrollArea.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -431,7 +453,7 @@ What type of construction project are you working on?`;
         
         <div className="flex-1 flex flex-col min-h-0 relative">
           {/* Chat Messages */}
-          <ScrollArea className="flex-1 px-1" id="ai-chat-scroll">
+          <ScrollArea className="flex-1 px-1 smooth-scroll-area" id="ai-chat-scroll">
             <div className="space-y-4 py-4">
               {messages.map(renderMessage)}
               
@@ -453,39 +475,27 @@ What type of construction project are you working on?`;
             </div>
           </ScrollArea>
           
-          {/* Scroll Controls */}
-          {messages.length > 3 && (
-            <div className="absolute right-2 top-2 flex flex-col gap-1 z-10">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 w-8 p-0 bg-white shadow-md hover:bg-gray-50"
-                onClick={() => {
-                  const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
-                  if (scrollArea) {
-                    scrollArea.scrollTop = 0;
-                  }
-                }}
-                title="Scroll to top"
-              >
-                ▲
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 w-8 p-0 bg-white shadow-md hover:bg-gray-50"
-                onClick={() => {
-                  const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
-                  if (scrollArea) {
-                    scrollArea.scrollTop = scrollArea.scrollHeight;
-                  }
-                }}
-                title="Scroll to bottom"
-              >
-                ▼
-              </Button>
-            </div>
-          )}
+          {/* Enhanced Smooth Scroll Area - Auto-scroll to latest messages */}
+          <style jsx>{`
+            .smooth-scroll-area {
+              scroll-behavior: smooth;
+              transition: all 0.3s ease;
+            }
+            .smooth-scroll-area::-webkit-scrollbar {
+              width: 8px;
+            }
+            .smooth-scroll-area::-webkit-scrollbar-track {
+              background: #f1f1f1;
+              border-radius: 4px;
+            }
+            .smooth-scroll-area::-webkit-scrollbar-thumb {
+              background: #c1c1c1;
+              border-radius: 4px;
+            }
+            .smooth-scroll-area::-webkit-scrollbar-thumb:hover {
+              background: #a8a8a8;
+            }
+          `}</style>
           
           {/* Quick Suggestions */}
           {messages.length <= 1 && (
