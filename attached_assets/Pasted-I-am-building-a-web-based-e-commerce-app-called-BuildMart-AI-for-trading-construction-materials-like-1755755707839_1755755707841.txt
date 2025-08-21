@@ -1,0 +1,40 @@
+I am building a web-based e-commerce app called BuildMart AI for trading construction materials like cement, steel, plumbing, and others, using Replit for frontend (HTML/CSS/JS, or React if easier with templates) and Supabase as backend for database, auth, and real-time. I am a beginner with no coding experience, so generate simple, step-by-step code with explanations, comments, and easy-to-follow structure. Start with a basic project setup: index.html for home, separate pages/scripts for admin and vendor panels.
+Focus on implementing CRUD (Create, Read, Update, Delete) operations for Products and Categories in two panels:
+
+Admin Panels (for Owner Admin and Vendor Manager Admin): Full access to all products/categories across all vendors. Use Supabase Row Level Security (RLS) for role-based access.
+Vendor Panel: Vendors can only CRUD their own products (filtered by vendor_id). Categories might be view-only or limited CRUD if admin-approved.
+
+Use Supabase for:
+
+Authentication: Users log in with roles (e.g., 'owner_admin', 'vendor_manager', 'vendor') stored in user metadata or a profiles table.
+Database Tables:
+
+Categories: id (uuid, auto), name (text, required), description (text, optional), parent_id (uuid, optional for sub-categories, self-reference for nesting), created_at (timestamp, auto), updated_at (timestamp, auto).
+Products: id (uuid, auto), name (text, required), category_id (uuid, required, foreign key to categories), description (text, optional), specs (jsonb, optional, e.g., {"grade": "43", "size": "10mm"}), base_price (numeric, required), quantity_slabs (jsonb, dynamic, e.g., [{"min_qty": 1, "max_qty": 10, "price_per_unit": 10}, {"min_qty": 11, "max_qty": 50, "price_per_unit": 9}]), dynamic_charges (jsonb, dynamic, e.g., {"hamali": {"rate": 2, "unit": "bag", "description": "Loading fee"}, "transport": {"rate": 5, "unit": "km", "description": "Delivery fee"}}), image_url (text, optional), vendor_id (uuid, required, foreign key to users or vendors table), stock_quantity (integer, optional, default 0), is_active (boolean, default true), created_at (timestamp, auto), updated_at (timestamp, auto).
+
+
+
+All fields must be dynamic where possible: Use JSONB for specs, quantity_slabs, and dynamic_charges so admins/vendors can add/edit/remove sub-fields flexibly via forms (e.g., a form section to add multiple slabs or charges as key-value pairs).
+Frontend Implementation:
+
+Use vanilla JS or React components for forms/lists.
+Pages: /admin/dashboard.html (for admins), /vendor/dashboard.html (for vendors).
+For each CRUD:
+
+Read/List: Table or cards showing all fields (e.g., name, category, price, slabs as collapsible JSON, charges as collapsible JSON, etc.). Paginate if needed. Filter by category/vendor for admins.
+Create: Form with inputs for all fields. For JSON fields (specs, slabs, charges), use dynamic form elements: buttons to add/remove rows (e.g., for slabs: add rows with min_qty, max_qty, price_per_unit). Validate required fields.
+Update: Pre-fill form from selected item, allow editing all fields, including adding/removing JSON sub-items.
+Delete: Confirm dialog, soft-delete by setting is_active=false or hard-delete.
+
+
+Handle role checks: After login, check user role from Supabase auth and redirect/hide features.
+Use Supabase JS client: Import from CDN, handle inserts, selects, updates, deletes with error handling.
+UI: Simple, modern design with Bootstrap or plain CSS. Make forms intuitive with labels, placeholders.
+
+Generate the full code structure:
+
+Setup Supabase: Instructions to create project, tables, RLS policies (e.g., vendors can only access where vendor_id = auth.uid()).
+Auth code: Login form, store session.
+Category CRUD code for admin and vendor panels.
+Product CRUD code for admin and vendor panels.
+Example data seeding script.
