@@ -1,9 +1,10 @@
 import { storage } from "./storage";
+import type { InsertCategory, InsertProduct, InsertUser } from "@shared/schema";
 
-export const seedDummyData = async () => {
+export async function initializeDummyData() {
   try {
     console.log("Starting to seed dummy data...");
-
+    
     // Check if data already exists
     const existingCategories = await storage.getCategories();
     if (existingCategories.length > 0) {
@@ -11,258 +12,468 @@ export const seedDummyData = async () => {
       return;
     }
 
-    // Seed Categories
-    const categoriesData = [
-      // Main Categories
-      { name: "Cement & Concrete", description: "High-quality cement and concrete products", parentId: null, displayOrder: 1, isActive: true },
-      { name: "Steel & Iron", description: "Construction grade steel and iron materials", parentId: null, displayOrder: 2, isActive: true },
-      { name: "Bricks & Blocks", description: "Various types of bricks and building blocks", parentId: null, displayOrder: 3, isActive: true },
-      { name: "Plumbing Materials", description: "Pipes, fittings, and plumbing accessories", parentId: null, displayOrder: 4, isActive: true },
-      { name: "Electrical Supplies", description: "Wires, cables, and electrical components", parentId: null, displayOrder: 5, isActive: true },
-      { name: "Roofing Materials", description: "Tiles, sheets, and roofing accessories", parentId: null, displayOrder: 6, isActive: true },
-      { name: "Paints & Coatings", description: "Interior and exterior paints", parentId: null, displayOrder: 7, isActive: true },
-      { name: "Tools & Hardware", description: "Construction tools and hardware", parentId: null, displayOrder: 8, isActive: true },
-      { name: "Flooring", description: "Tiles, marble, and flooring materials", parentId: null, displayOrder: 9, isActive: true },
-      { name: "Doors & Windows", description: "Doors, windows, and frames", parentId: null, displayOrder: 10, isActive: true },
-    ];
-
-    const createdCategories = [];
-    for (const categoryData of categoriesData) {
-      const category = await storage.createCategory(categoryData);
-      createdCategories.push(category);
-      console.log(`Created category: ${category.name}`);
-    }
-
-    // Create sub-categories
-    const subCategoriesData = [
-      { name: "OPC Cement", description: "Ordinary Portland Cement", parentId: createdCategories[0].id, displayOrder: 1, isActive: true },
-      { name: "PPC Cement", description: "Portland Pozzolana Cement", parentId: createdCategories[0].id, displayOrder: 2, isActive: true },
-      { name: "Ready Mix Concrete", description: "Pre-mixed concrete", parentId: createdCategories[0].id, displayOrder: 3, isActive: true },
-      { name: "TMT Bars", description: "Thermo-mechanically treated bars", parentId: createdCategories[1].id, displayOrder: 1, isActive: true },
-      { name: "Mild Steel", description: "Mild steel products", parentId: createdCategories[1].id, displayOrder: 2, isActive: true },
-      { name: "Red Bricks", description: "Traditional clay bricks", parentId: createdCategories[2].id, displayOrder: 1, isActive: true },
-      { name: "Fly Ash Bricks", description: "Eco-friendly bricks", parentId: createdCategories[2].id, displayOrder: 2, isActive: true },
-      { name: "PVC Pipes", description: "Polyvinyl chloride pipes", parentId: createdCategories[3].id, displayOrder: 1, isActive: true },
-      { name: "CPVC Pipes", description: "Chlorinated polyvinyl chloride pipes", parentId: createdCategories[3].id, displayOrder: 2, isActive: true },
-    ];
-
-    const createdSubCategories = [];
-    for (const subCategoryData of subCategoriesData) {
-      const subCategory = await storage.createCategory(subCategoryData);
-      createdSubCategories.push(subCategory);
-      console.log(`Created sub-category: ${subCategory.name}`);
-    }
-
-    // Create vendor user for products
-    const vendorUser = await storage.createUser({
-      username: "buildmart_vendor",
-      email: "vendor@buildmart.com",
-      password: "$2a$10$8K1p/a5dqx5l7.8o4KFW0u1YvF7XZTb5Kv1Y.4J3Qp1Yt.d1Y9K2m", // password: admin123
-      role: "vendor"
-    });
-
-    // Seed Products
-    const productsData = [
-      // Cement Products
+    // Create users
+    const users = [
       {
-        name: "UltraTech Super Cement OPC 53",
-        description: "Premium quality Ordinary Portland Cement with superior strength and durability. Ideal for high-rise construction and infrastructure projects.",
-        categoryId: createdSubCategories[0].id,
-        vendorId: vendorUser.id,
-        basePrice: "425.00",
-        stockQuantity: 500,
-        specifications: { grade: "53", type: "OPC", brand: "UltraTech", weight: "50kg", compressive_strength: "53 MPa" },
-        quantitySlabs: { "1-10": 425, "11-50": 420, "51-100": 415, "100+": 410 },
-        dynamicCharges: { loading: 15, delivery: 25, tax: 8.5 },
-        isActive: true
+        username: "admin",
+        email: "admin@buildmart.ai", 
+        password: "$2a$10$rGfbJkWK4HmNAhE7HQFJOOw7jYU9sKi4cZjbJgB.Z3rNkU1Kz8/he", // password: admin123
+        role: "owner_admin"
       },
       {
-        name: "ACC Gold Water Resistant Cement",
-        description: "Advanced water-resistant cement with enhanced protection against moisture. Perfect for coastal and high-humidity areas.",
-        categoryId: createdSubCategories[1].id,
-        vendorId: vendorUser.id,
-        basePrice: "445.00",
-        stockQuantity: 300,
-        specifications: { grade: "43", type: "PPC", brand: "ACC", weight: "50kg", water_resistance: "High" },
-        quantitySlabs: { "1-10": 445, "11-50": 440, "51-100": 435, "100+": 430 },
-        dynamicCharges: { loading: 15, delivery: 25, tax: 8.5 },
-        isActive: true
-      },
-      {
-        name: "Ambuja Plus Roof Special Cement",
-        description: "Specialized cement designed for roof construction with superior heat resistance and strength.",
-        categoryId: createdSubCategories[0].id,
-        vendorId: vendorUser.id,
-        basePrice: "465.00",
-        stockQuantity: 200,
-        specifications: { grade: "53", type: "OPC", brand: "Ambuja", weight: "50kg", heat_resistance: "High" },
-        quantitySlabs: { "1-10": 465, "11-50": 460, "51-100": 455, "100+": 450 },
-        dynamicCharges: { loading: 15, delivery: 25, tax: 8.5 },
-        isActive: true
-      },
-
-      // Steel Products
-      {
-        name: "TATA Tiscon TMT Bar Fe500D",
-        description: "High-strength TMT bars with superior ductility and earthquake resistance. Corrosion-resistant and long-lasting.",
-        categoryId: createdSubCategories[3].id,
-        vendorId: vendorUser.id,
-        basePrice: "65.00",
-        stockQuantity: 1000,
-        specifications: { grade: "Fe500D", brand: "TATA", diameter: "12mm", length: "12m", yield_strength: "500 MPa" },
-        quantitySlabs: { "1-50": 65, "51-200": 63, "201-500": 61, "500+": 59 },
-        dynamicCharges: { loading: 2, delivery: 3, tax: 12 },
-        isActive: true
-      },
-      {
-        name: "JSW NeoSteel TMT Bar Fe500",
-        description: "Premium quality TMT bars with advanced metallurgy. Excellent bendability and weldability for all construction needs.",
-        categoryId: createdSubCategories[3].id,
-        vendorId: vendorUser.id,
-        basePrice: "63.00",
-        stockQuantity: 800,
-        specifications: { grade: "Fe500", brand: "JSW", diameter: "16mm", length: "12m", yield_strength: "500 MPa" },
-        quantitySlabs: { "1-50": 63, "51-200": 61, "201-500": 59, "500+": 57 },
-        dynamicCharges: { loading: 2, delivery: 3, tax: 12 },
-        isActive: true
-      },
-
-      // Brick Products
-      {
-        name: "Premium Red Clay Bricks",
-        description: "High-quality burnt clay bricks with excellent compressive strength. Perfect for load-bearing walls and construction.",
-        categoryId: createdSubCategories[5].id,
-        vendorId: vendorUser.id,
-        basePrice: "6.50",
-        stockQuantity: 10000,
-        specifications: { type: "First Class", material: "Clay", size: "230x110x75mm", compressive_strength: "7.5 MPa" },
-        quantitySlabs: { "1-1000": 6.5, "1001-5000": 6.2, "5001-10000": 5.9, "10000+": 5.5 },
-        dynamicCharges: { loading: 0.5, delivery: 1, tax: 5 },
-        isActive: true
-      },
-      {
-        name: "Eco-Friendly Fly Ash Bricks",
-        description: "Environment-friendly bricks made from fly ash. Lightweight, strong, and energy-efficient for modern construction.",
-        categoryId: createdSubCategories[6].id,
-        vendorId: vendorUser.id,
-        basePrice: "7.25",
-        stockQuantity: 8000,
-        specifications: { type: "Class F", material: "Fly Ash", size: "230x110x75mm", compressive_strength: "9 MPa" },
-        quantitySlabs: { "1-1000": 7.25, "1001-5000": 7.0, "5001-10000": 6.75, "10000+": 6.5 },
-        dynamicCharges: { loading: 0.5, delivery: 1, tax: 5 },
-        isActive: true
-      },
-
-      // Plumbing Products
-      {
-        name: "Supreme PVC Pipe 4 inch",
-        description: "High-quality PVC pipes for drainage and sewage systems. Chemical resistant and long-lasting.",
-        categoryId: createdSubCategories[7].id,
-        vendorId: vendorUser.id,
-        basePrice: "185.00",
-        stockQuantity: 400,
-        specifications: { brand: "Supreme", diameter: "4 inch", length: "6m", pressure: "4 kg/cm²", material: "PVC" },
-        quantitySlabs: { "1-10": 185, "11-50": 180, "51-100": 175, "100+": 170 },
-        dynamicCharges: { loading: 5, delivery: 10, tax: 12 },
-        isActive: true
-      },
-      {
-        name: "Astral CPVC Pipe 1 inch",
-        description: "Premium CPVC pipes for hot and cold water supply. Corrosion-resistant and safe for drinking water.",
-        categoryId: createdSubCategories[8].id,
-        vendorId: vendorUser.id,
-        basePrice: "125.00",
-        stockQuantity: 350,
-        specifications: { brand: "Astral", diameter: "1 inch", length: "3m", pressure: "25 kg/cm²", material: "CPVC" },
-        quantitySlabs: { "1-10": 125, "11-50": 120, "51-100": 115, "100+": 110 },
-        dynamicCharges: { loading: 3, delivery: 8, tax: 12 },
-        isActive: true
-      },
-
-      // Electrical Products
-      {
-        name: "Polycab Copper Wire 2.5mm",
-        description: "High-grade electrolytic copper wire for house wiring. Fire-resistant and durable with superior conductivity.",
-        categoryId: createdCategories[4].id,
-        vendorId: vendorUser.id,
-        basePrice: "8.50",
-        stockQuantity: 2000,
-        specifications: { brand: "Polycab", size: "2.5 sq mm", material: "Copper", insulation: "PVC", voltage: "1100V" },
-        quantitySlabs: { "1-100": 8.5, "101-500": 8.2, "501-1000": 7.9, "1000+": 7.5 },
-        dynamicCharges: { loading: 0.1, delivery: 0.2, tax: 12 },
-        isActive: true
-      },
-
-      // Roofing Materials
-      {
-        name: "Jindal Colour Roofing Sheets",
-        description: "Pre-painted galvanized steel roofing sheets. Weather-resistant and available in multiple colors.",
-        categoryId: createdCategories[5].id,
-        vendorId: vendorUser.id,
-        basePrice: "285.00",
-        stockQuantity: 250,
-        specifications: { brand: "Jindal", thickness: "0.5mm", width: "1050mm", length: "12ft", coating: "Galvanized" },
-        quantitySlabs: { "1-20": 285, "21-50": 280, "51-100": 275, "100+": 270 },
-        dynamicCharges: { loading: 10, delivery: 15, tax: 12 },
-        isActive: true
-      },
-
-      // Paint Products
-      {
-        name: "Asian Paints Royale Atmos",
-        description: "Premium interior emulsion paint with advanced air purifying technology. Long-lasting and beautiful finish.",
-        categoryId: createdCategories[6].id,
-        vendorId: vendorUser.id,
-        basePrice: "3250.00",
-        stockQuantity: 100,
-        specifications: { brand: "Asian Paints", type: "Emulsion", coverage: "140-160 sqft/liter", finish: "Matt", volume: "20L" },
-        quantitySlabs: { "1-5": 3250, "6-20": 3200, "21-50": 3150, "50+": 3100 },
-        dynamicCharges: { loading: 25, delivery: 40, tax: 12 },
-        isActive: true
-      },
-
-      // Tools & Hardware
-      {
-        name: "Bosch GSB 500W Impact Drill",
-        description: "Professional impact drill for heavy-duty construction work. Variable speed with hammer action.",
-        categoryId: createdCategories[7].id,
-        vendorId: vendorUser.id,
-        basePrice: "2850.00",
-        stockQuantity: 50,
-        specifications: { brand: "Bosch", power: "500W", chuck: "13mm", speed: "0-3000 rpm", features: "Impact Action" },
-        quantitySlabs: { "1-5": 2850, "6-10": 2800, "11-20": 2750, "20+": 2700 },
-        dynamicCharges: { loading: 50, delivery: 75, tax: 18 },
-        isActive: true
-      },
-
-      // Flooring Products
-      {
-        name: "Kajaria Vitrified Floor Tiles",
-        description: "Premium vitrified tiles with superior finish. Water-resistant and easy to maintain.",
-        categoryId: createdCategories[8].id,
-        vendorId: vendorUser.id,
-        basePrice: "45.00",
-        stockQuantity: 2000,
-        specifications: { brand: "Kajaria", size: "600x600mm", thickness: "8mm", finish: "Glossy", type: "Vitrified" },
-        quantitySlabs: { "1-100": 45, "101-500": 42, "501-1000": 40, "1000+": 38 },
-        dynamicCharges: { loading: 2, delivery: 5, tax: 12 },
-        isActive: true
+        username: "manager",
+        email: "manager@buildmart.ai",
+        password: "$2a$10$rGfbJkWK4HmNAhE7HQFJOOw7jYU9sKi4cZjbJgB.Z3rNkU1Kz8/he", // password: admin123
+        role: "vendor_manager"
       }
     ];
 
-    for (const productData of productsData) {
-      const product = await storage.createProduct(productData);
-      console.log(`Created product: ${product.name}`);
+    const createdUsers = [];
+    for (const userData of users) {
+      const user = await storage.createUser(userData);
+      createdUsers.push(user);
     }
 
-    console.log("Dummy data seeded successfully!");
+    // Create comprehensive categories
+    const categories = [
+      {
+        name: "Cement & Concrete",
+        description: "Portland cement, ready mix concrete, cement blocks"
+      },
+      {
+        name: "Steel & Iron",
+        description: "TMT bars, mild steel, stainless steel, iron rods"
+      },
+      {
+        name: "Bricks & Blocks",
+        description: "Red bricks, fly ash bricks, AAC blocks, concrete blocks"
+      },
+      {
+        name: "Sand & Aggregates",
+        description: "River sand, M-sand, stone chips, crushed aggregates"
+      },
+      {
+        name: "Plumbing Materials",
+        description: "PVC pipes, fittings, valves, bathroom fixtures"
+      },
+      {
+        name: "Electrical Supplies",
+        description: "Wires, cables, switches, electrical panels"
+      },
+      {
+        name: "Tiles & Flooring",
+        description: "Ceramic tiles, marble, granite, wooden flooring"
+      },
+      {
+        name: "Paints & Coatings",
+        description: "Interior paints, exterior paints, primers, waterproofing"
+      }
+    ];
+
+    const createdCategories = [];
+    for (const categoryData of categories) {
+      const category = await storage.createCategory(categoryData);
+      createdCategories.push(category);
+    }
+
+    // Create comprehensive products for each category
+    const products = [
+      // Cement & Concrete
+      {
+        name: "UltraTech Portland Cement OPC 53 Grade",
+        description: "High-quality Ordinary Portland Cement, 53 grade with superior strength and durability. Perfect for all construction needs.",
+        categoryId: createdCategories[0].id,
+        basePrice: "425",
+        specs: {
+          grade: "53",
+          type: "OPC",
+          compressiveStrength: "53 MPa",
+          packSize: "50 kg",
+          brand: "UltraTech"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 20, price_per_unit: 425 },
+          { min_qty: 21, max_qty: 100, price_per_unit: 415 },
+          { min_qty: 101, max_qty: 1000, price_per_unit: 405 }
+        ],
+        dynamicCharges: {
+          loading: { rate: 2, unit: "bag", description: "Loading charges" },
+          transportation: { rate: 0.5, unit: "km", description: "Per km transport cost" }
+        },
+        vendorId: createdUsers[0].id,
+        stockQuantity: 5000
+      },
+      {
+        name: "ACC Gold Water Resistant Cement",
+        description: "Premium water-resistant cement with advanced formula for enhanced durability in all weather conditions.",
+        categoryId: createdCategories[0].id,
+        basePrice: "445",
+        specs: {
+          grade: "53",
+          type: "PPC",
+          specialFeature: "Water Resistant",
+          packSize: "50 kg",
+          brand: "ACC"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 20, price_per_unit: 445 },
+          { min_qty: 21, max_qty: 100, price_per_unit: 435 },
+          { min_qty: 101, max_qty: 1000, price_per_unit: 425 }
+        ],
+        dynamicCharges: null,
+        vendorId: createdUsers[0].id,
+        stockQuantity: 3500
+      },
+      {
+        name: "Ready Mix Concrete M25 Grade",
+        description: "High-quality ready mix concrete M25 grade, perfect for residential and commercial construction.",
+        categoryId: createdCategories[0].id,
+        basePrice: "3500",
+        specs: {
+          grade: "M25",
+          compressiveStrength: "25 MPa",
+          slump: "75-100 mm",
+          unit: "per cubic meter"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 10, price_per_unit: 3500 },
+          { min_qty: 11, max_qty: 50, price_per_unit: 3400 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 3300 }
+        ],
+        vendorId: createdUsers[1].id,
+        stockQuantity: 1000
+      },
+
+      // Steel & Iron  
+      {
+        name: "TATA Steel TMT Bars Fe500D - 12mm",
+        description: "High-strength TMT bars with superior bendability and weldability. Earthquake resistant and corrosion resistant.",
+        categoryId: createdCategories[1].id,
+        basePrice: "65",
+        specs: {
+          grade: "Fe500D",
+          diameter: "12mm",
+          length: "12 meters",
+          standard: "IS 1786:2008",
+          brand: "TATA Steel"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 50, price_per_unit: 65 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 63 },
+          { min_qty: 201, max_qty: 1000, price_per_unit: 61 }
+        ],
+        vendorId: createdUsers[0].id,
+        stockQuantity: 8000
+      },
+      {
+        name: "JSW Neo Steel TMT Bars Fe415 - 16mm", 
+        description: "Premium quality TMT bars with excellent ductility and strength. Ideal for all construction applications.",
+        categoryId: createdCategories[1].id,
+        basePrice: "58",
+        specs: {
+          grade: "Fe415",
+          diameter: "16mm", 
+          length: "12 meters",
+          standard: "IS 1786:2008",
+          brand: "JSW"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 50, price_per_unit: 58 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 56 },
+          { min_qty: 201, max_qty: 1000, price_per_unit: 54 }
+        ],
+        vendorId: createdUsers[1].id,
+        stockQuantity: 6500
+      },
+      {
+        name: "MS Angle Iron 40x40x5mm",
+        description: "Mild steel angle iron for structural applications. Hot rolled with smooth finish.",
+        categoryId: createdCategories[1].id,
+        basePrice: "45",
+        specs: {
+          material: "Mild Steel",
+          size: "40x40x5mm",
+          length: "6 meters",
+          finish: "Hot Rolled",
+          weight: "2.98 kg/m"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 20, price_per_unit: 45 },
+          { min_qty: 21, max_qty: 100, price_per_unit: 43 },
+          { min_qty: 101, max_qty: 500, price_per_unit: 41 }
+        ],
+        vendorId: createdUsers[0].id,
+        stockQuantity: 2000
+      },
+
+      // Bricks & Blocks
+      {
+        name: "Red Clay Bricks - First Class",
+        description: "High-quality red clay bricks with excellent compressive strength and thermal insulation properties.",
+        categoryId: createdCategories[2].id,
+        basePrice: "6.50",
+        specs: {
+          class: "First Class",
+          size: "230x115x75mm",
+          compressiveStrength: "35 kg/cm²",
+          waterAbsorption: "15-20%",
+          weight: "3.5 kg"
+        },
+        quantitySlabs: [
+          { min_qty: 100, max_qty: 1000, price_per_unit: 6.50 },
+          { min_qty: 1001, max_qty: 5000, price_per_unit: 6.25 },
+          { min_qty: 5001, max_qty: 25000, price_per_unit: 6.00 }
+        ],
+        vendorId: createdUsers[1].id,
+        stockQuantity: 50000
+      },
+      {
+        name: "AAC Blocks 600x200x100mm",
+        description: "Autoclaved Aerated Concrete blocks - lightweight, insulated, and eco-friendly building material.",
+        categoryId: createdCategories[2].id,
+        basePrice: "85",
+        specs: {
+          size: "600x200x100mm",
+          density: "550-650 kg/m³",
+          compressiveStrength: "3.5-4.5 N/mm²",
+          thermalConductivity: "0.16 W/mK",
+          weight: "7-8 kg"
+        },
+        quantitySlabs: [
+          { min_qty: 10, max_qty: 100, price_per_unit: 85 },
+          { min_qty: 101, max_qty: 500, price_per_unit: 82 },
+          { min_qty: 501, max_qty: 2000, price_per_unit: 79 }
+        ],
+        vendorId: createdUsers[0].id,
+        stockQuantity: 15000
+      },
+
+      // Sand & Aggregates
+      {
+        name: "M-Sand (Manufactured Sand) - Fine Grade",
+        description: "High-quality manufactured sand, washed and graded. Perfect replacement for river sand.",
+        categoryId: createdCategories[3].id,
+        basePrice: "1850",
+        specs: {
+          type: "Manufactured Sand",
+          grade: "Fine",
+          zoneGradation: "Zone II",
+          fineness: "2.6-3.2",
+          unit: "per cubic meter"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 10, price_per_unit: 1850 },
+          { min_qty: 11, max_qty: 50, price_per_unit: 1800 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 1750 }
+        ],
+        vendorId: createdUsers[1].id,
+        stockQuantity: 500
+      },
+      {
+        name: "Blue Metal Stone Chips - 20mm",
+        description: "High-quality blue metal stone chips for concrete mixing and road construction.",
+        categoryId: createdCategories[3].id,
+        basePrice: "2200",
+        specs: {
+          size: "20mm",
+          material: "Blue Metal",
+          crushingValue: "18-22%",
+          specificGravity: "2.6-2.8",
+          unit: "per cubic meter"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 10, price_per_unit: 2200 },
+          { min_qty: 11, max_qty: 50, price_per_unit: 2150 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 2100 }
+        ],
+        vendorId: createdUsers[0].id,
+        stockQuantity: 800
+      },
+
+      // Plumbing Materials
+      {
+        name: "Supreme PVC Pipe 110mm - 6m Length",
+        description: "High-quality PVC drainage pipe with excellent chemical resistance and durability.",
+        categoryId: createdCategories[4].id,
+        basePrice: "485",
+        specs: {
+          diameter: "110mm",
+          length: "6 meters",
+          standard: "IS 13592",
+          pressure: "SWR Grade",
+          brand: "Supreme"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 20, price_per_unit: 485 },
+          { min_qty: 21, max_qty: 100, price_per_unit: 475 },
+          { min_qty: 101, max_qty: 500, price_per_unit: 465 }
+        ],
+        vendorId: createdUsers[0].id,
+        stockQuantity: 1200
+      },
+      {
+        name: "Hindware Bathroom Sink with Faucet",
+        description: "Premium ceramic bathroom sink with chrome-plated faucet. Modern design with excellent finish.",
+        categoryId: createdCategories[4].id,
+        basePrice: "3850",
+        specs: {
+          material: "Ceramic",
+          size: "550x400mm",
+          mounting: "Wall Mount",
+          faucetFinish: "Chrome Plated",
+          brand: "Hindware"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 10, price_per_unit: 3850 },
+          { min_qty: 11, max_qty: 50, price_per_unit: 3750 },
+          { min_qty: 51, max_qty: 100, price_per_unit: 3650 }
+        ],
+        vendorId: createdUsers[1].id,
+        stockQuantity: 150
+      },
+
+      // Electrical Supplies
+      {
+        name: "Havells PVC Insulated Copper Wire - 2.5mm²",
+        description: "High-quality PVC insulated copper wire for residential and commercial electrical installations.",
+        categoryId: createdCategories[5].id,
+        basePrice: "125",
+        specs: {
+          core: "Copper",
+          insulation: "PVC",
+          crossSection: "2.5mm²",
+          voltage: "1100V",
+          length: "90 meters",
+          brand: "Havells"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 10, price_per_unit: 125 },
+          { min_qty: 11, max_qty: 50, price_per_unit: 122 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 119 }
+        ],
+        vendorId: createdUsers[0].id,
+        stockQuantity: 2500
+      },
+      {
+        name: "Schneider Modular Switch 6A - White",
+        description: "Premium modular switch with elegant design and reliable performance. ISI marked.",
+        categoryId: createdCategories[5].id,
+        basePrice: "185",
+        specs: {
+          current: "6A",
+          voltage: "240V",
+          color: "White",
+          standard: "IS 3854",
+          warranty: "2 years",
+          brand: "Schneider"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 20, price_per_unit: 185 },
+          { min_qty: 21, max_qty: 100, price_per_unit: 180 },
+          { min_qty: 101, max_qty: 500, price_per_unit: 175 }
+        ],
+        vendorId: createdUsers[1].id,
+        stockQuantity: 800
+      },
+
+      // Tiles & Flooring  
+      {
+        name: "Kajaria Vitrified Floor Tiles 800x800mm",
+        description: "Premium vitrified floor tiles with nano polish technology. Water resistant and stain proof.",
+        categoryId: createdCategories[6].id,
+        basePrice: "125",
+        specs: {
+          size: "800x800mm",
+          finish: "Nano Polish",
+          thickness: "10mm",
+          waterAbsorption: "<0.5%",
+          application: "Floor & Wall",
+          brand: "Kajaria"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 50, price_per_unit: 125 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 122 },
+          { min_qty: 201, max_qty: 1000, price_per_unit: 119 }
+        ],
+        vendorId: createdUsers[0].id,
+        stockQuantity: 3000
+      },
+      {
+        name: "Italian Marble Carrara White - 18mm",
+        description: "Premium Italian Carrara white marble with beautiful veining. Perfect for luxury interiors.",
+        categoryId: createdCategories[6].id,
+        basePrice: "285",
+        specs: {
+          origin: "Italy",
+          thickness: "18mm",
+          finish: "Polished",
+          pattern: "Carrara White",
+          application: "Floor & Wall",
+          unit: "per sq ft"
+        },
+        quantitySlabs: [
+          { min_qty: 100, max_qty: 500, price_per_unit: 285 },
+          { min_qty: 501, max_qty: 1500, price_per_unit: 275 },
+          { min_qty: 1501, max_qty: 5000, price_per_unit: 265 }
+        ],
+        vendorId: createdUsers[1].id,
+        stockQuantity: 2000
+      },
+
+      // Paints & Coatings
+      {
+        name: "Asian Paints Royale Luxury Emulsion - 20L",
+        description: "Premium luxury emulsion with rich finish and excellent coverage. Available in multiple shades.",
+        categoryId: createdCategories[7].id,
+        basePrice: "4850",
+        specs: {
+          type: "Acrylic Emulsion",
+          finish: "Matt",
+          coverage: "140-160 sq ft/L",
+          dryingTime: "2-3 hours",
+          packSize: "20 liters",
+          brand: "Asian Paints"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 10, price_per_unit: 4850 },
+          { min_qty: 11, max_qty: 50, price_per_unit: 4750 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 4650 }
+        ],
+        vendorId: createdUsers[0].id,
+        stockQuantity: 500
+      },
+      {
+        name: "Berger Weathercoat Exterior Paint - 10L",
+        description: "High-performance exterior paint with 12-year performance warranty. Weather resistant formula.",
+        categoryId: createdCategories[7].id,
+        basePrice: "3250",
+        specs: {
+          type: "Acrylic Exterior",
+          finish: "Matt",
+          coverage: "120-140 sq ft/L", 
+          warranty: "12 years",
+          packSize: "10 liters",
+          brand: "Berger"
+        },
+        quantitySlabs: [
+          { min_qty: 1, max_qty: 10, price_per_unit: 3250 },
+          { min_qty: 11, max_qty: 50, price_per_unit: 3150 },
+          { min_qty: 51, max_qty: 200, price_per_unit: 3050 }
+        ],
+        vendorId: createdUsers[1].id,
+        stockQuantity: 750
+      }
+    ];
+
+    const createdProducts = [];
+    for (const productData of products) {
+      const product = await storage.createProduct(productData);
+      createdProducts.push(product);
+    }
+
+    console.log(`Successfully seeded ${createdUsers.length} users, ${createdCategories.length} categories, and ${createdProducts.length} products`);
     
   } catch (error) {
     console.error("Error seeding dummy data:", error);
   }
-};
-
-// Call this function to seed data
-export const initializeDummyData = async () => {
-  await seedDummyData();
-};
+}

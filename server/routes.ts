@@ -218,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Category routes
-  app.get("/api/categories", requireAuth, async (req, res) => {
+  app.get("/api/categories", async (req, res) => {
     try {
       const categories = await storage.getCategories();
       res.json(categories);
@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/categories/:id", requireAuth, async (req, res) => {
+  app.get("/api/categories/:id", async (req, res) => {
     try {
       const category = await storage.getCategory(req.params.id);
       if (!category) {
@@ -275,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Product routes
-  app.get("/api/products", requireAuth, async (req: any, res) => {
+  app.get("/api/products", async (req: any, res) => {
     try {
       const { vendorId, categoryId, search } = req.query;
       
@@ -292,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/products/:id", requireAuth, async (req: any, res) => {
+  app.get("/api/products/:id", async (req: any, res) => {
     try {
       const product = await storage.getProduct(req.params.id);
       if (!product) {
