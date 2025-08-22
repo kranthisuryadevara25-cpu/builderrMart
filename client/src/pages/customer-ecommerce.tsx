@@ -729,10 +729,46 @@ export default function CustomerEcommerce() {
             </Button>
             
             {user ? (
-              <Button variant="outline" className="flex items-center">
-                <User className="w-4 h-4 mr-2" />
-                {user.username}
-              </Button>
+              <div className="flex items-center space-x-2">
+                {/* Role-based Dashboard Navigation */}
+                {user.role === 'owner_admin' && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/admin">
+                      <Building2 className="w-4 h-4 mr-1" />
+                      Admin Panel
+                    </Link>
+                  </Button>
+                )}
+                {user.role === 'vendor_manager' && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/manager-dashboard">
+                      <Brain className="w-4 h-4 mr-1" />
+                      Manager Dashboard
+                    </Link>
+                  </Button>
+                )}
+                {user.role === 'vendor' && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/vendor-dashboard">
+                      <Package className="w-4 h-4 mr-1" />
+                      Vendor Dashboard
+                    </Link>
+                  </Button>
+                )}
+                
+                {/* Advanced Analytics - Available to all users */}
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/admin">
+                    <Zap className="w-4 h-4 mr-1" />
+                    Analytics
+                  </Link>
+                </Button>
+                
+                <Button variant="outline" className="flex items-center">
+                  <User className="w-4 h-4 mr-2" />
+                  {user.username}
+                </Button>
+              </div>
             ) : (
               <Button onClick={() => setShowAuthDialog(true)}>
                 Sign In
@@ -742,6 +778,97 @@ export default function CustomerEcommerce() {
         </div>
       </div>
     </header>
+  );
+
+  // New Features Banner Component
+  const NewFeaturesBanner = () => (
+    <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-6">
+          <h2 className="text-3xl font-bold mb-2">🚀 NEW: Advanced Analytics Features</h2>
+          <p className="text-blue-100 text-lg">Powerful business intelligence tools now available for all users</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <Card className="bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all cursor-pointer">
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="w-8 h-8 mx-auto mb-2 text-yellow-300" />
+              <h3 className="font-semibold text-sm mb-1">Price Heat Map</h3>
+              <p className="text-xs text-blue-100">Real-time material prices across India</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all cursor-pointer">
+            <CardContent className="p-4 text-center">
+              <Zap className="w-8 h-8 mx-auto mb-2 text-green-300" />
+              <h3 className="font-semibold text-sm mb-1">Sustainability Wizard</h3>
+              <p className="text-xs text-blue-100">Compare environmental impact</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all cursor-pointer">
+            <CardContent className="p-4 text-center">
+              <Brain className="w-8 h-8 mx-auto mb-2 text-pink-300" />
+              <h3 className="font-semibold text-sm mb-1">AI Personality Matcher</h3>
+              <p className="text-xs text-blue-100">Smart material recommendations</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all cursor-pointer">
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="w-8 h-8 mx-auto mb-2 text-orange-300" />
+              <h3 className="font-semibold text-sm mb-1">Performance Dashboard</h3>
+              <p className="text-xs text-blue-100">Vendor analytics & insights</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all cursor-pointer">
+            <CardContent className="p-4 text-center">
+              <Calendar className="w-8 h-8 mx-auto mb-2 text-purple-300" />
+              <h3 className="font-semibold text-sm mb-1">Project Journey</h3>
+              <p className="text-xs text-blue-100">Animated project tracking</p>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="text-center mt-6">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button variant="secondary" size="sm" asChild>
+              <Link href="/admin">
+                <Zap className="w-4 h-4 mr-1" />
+                View Analytics Dashboard
+              </Link>
+            </Button>
+            {user?.role === 'vendor_manager' && (
+              <Button variant="outline" size="sm" className="text-white border-white hover:bg-white hover:text-blue-600" asChild>
+                <Link href="/manager-dashboard">
+                  <Brain className="w-4 h-4 mr-1" />
+                  Manager Dashboard
+                </Link>
+              </Button>
+            )}
+            {user?.role === 'vendor' && (
+              <Button variant="outline" size="sm" className="text-white border-white hover:bg-white hover:text-blue-600" asChild>
+                <Link href="/vendor-dashboard">
+                  <Package className="w-4 h-4 mr-1" />
+                  Vendor Dashboard
+                </Link>
+              </Button>
+            )}
+          </div>
+          <p className="text-blue-100 text-sm mt-2">
+            {user ? (
+              user.role === 'owner_admin' ? 'Access full admin panel with all features' :
+              user.role === 'vendor_manager' ? 'Manage vendors and view business analytics' :
+              user.role === 'vendor' ? 'Track your products and performance' :
+              'Experience advanced analytics and business intelligence'
+            ) : (
+              'Sign in to access role-specific dashboards and analytics'
+            )}
+          </p>
+        </div>
+      </div>
+    </section>
   );
 
   // Category Grid Component
@@ -1073,6 +1200,9 @@ export default function CustomerEcommerce() {
     
     return (
       <>
+        {/* New Features Banner - Only show on home page without search */}
+        {!hasSearchResults && !hasSearchButNoResults && <NewFeaturesBanner />}
+        
         {/* Search Results Section */}
         {hasSearchResults && (
           <section className="py-8 px-4">
