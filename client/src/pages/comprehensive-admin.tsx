@@ -289,52 +289,52 @@ export default function ComprehensiveAdminPanel() {
   };
 
   // Entity queries
-  const { data: products } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ["/api/products"],
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
   });
 
-  const { data: users } = useQuery({
+  const { data: users = [] } = useQuery({
     queryKey: ["/api/users"],
   });
 
-  const { data: marketingMaterials } = useQuery({
+  const { data: marketingMaterials = [] } = useQuery({
     queryKey: ["/api/marketing-materials"],
   });
 
-  const { data: contractors } = useQuery({
+  const { data: contractors = [] } = useQuery({
     queryKey: ["/api/contractors"],
   });
 
-  const { data: advances } = useQuery({
+  const { data: advances = [] } = useQuery({
     queryKey: ["/api/advances"],
   });
 
-  const { data: orders } = useQuery({
+  const { data: orders = [] } = useQuery({
     queryKey: ["/api/orders"],
   });
 
-  const { data: pricingRules } = useQuery({
+  const { data: pricingRules = [] } = useQuery({
     queryKey: ["/api/pricing-rules"],
   });
 
   // Rewards & Loyalty queries
-  const { data: discounts } = useQuery({
+  const { data: discounts = [] } = useQuery({
     queryKey: ["/api/discounts"],
   });
 
-  const { data: loyaltyPrograms } = useQuery({
+  const { data: loyaltyPrograms = [] } = useQuery({
     queryKey: ["/api/loyalty-programs"],
   });
 
-  const { data: customerLoyalty } = useQuery({
+  const { data: customerLoyalty = [] } = useQuery({
     queryKey: ["/api/customer-loyalty"],
   });
 
-  const { data: rewardRedemptions } = useQuery({
+  const { data: rewardRedemptions = [] } = useQuery({
     queryKey: ["/api/reward-redemptions"],
   });
 

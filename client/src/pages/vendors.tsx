@@ -33,7 +33,7 @@ export default function Vendors() {
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedVendor, setSelectedVendor] = useState<User | undefined>();
+  const [selectedVendor, setSelectedVendor] = useState<any>();
   const [showVendorDetails, setShowVendorDetails] = useState(false);
 
   // Mock vendor data (in a real app, you'd have an API endpoint for users/vendors)
@@ -99,6 +99,23 @@ export default function Vendors() {
   const handleViewVendor = (vendor: any) => {
     setSelectedVendor(vendor);
     setShowVendorDetails(true);
+  };
+
+  const handleEditVendor = (vendor: any) => {
+    toast({
+      title: "Edit Vendor",
+      description: `Opening edit form for ${vendor.name}`,
+    });
+    // Add edit functionality here
+  };
+
+  const handleDeleteVendor = (vendorId: string) => {
+    toast({
+      title: "Delete Vendor",
+      description: "Vendor deletion functionality to be implemented",
+      variant: "destructive",
+    });
+    // Add delete functionality here
   };
 
   return (
@@ -252,10 +269,18 @@ export default function Vendors() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleEditVendor(vendor)}
+                                >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleDeleteVendor(vendor.id)}
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
