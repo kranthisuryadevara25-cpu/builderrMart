@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -274,84 +274,6 @@ export default function CustomerEcommerce() {
     },
   });
 
-  // Search Handler - Fixed to allow multiple letters/words
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setIsSearching(true);
-    
-    if (!value.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      setCurrentSection('home');
-      return;
-    }
-
-    // Advanced search with multiple strategies
-    if (!value || value.trim().length === 0) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    const searchTerms = value.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
-    
-    // Immediate search with debouncing
-    const searchTimeout = setTimeout(() => {
-      const results = products.filter(product => {
-        const productName = product.name?.toLowerCase() || '';
-        const productDesc = product.description?.toLowerCase() || '';
-        const categoryName = categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase() || '';
-        const specs = product.specs ? Object.values(product.specs).join(' ').toLowerCase() : '';
-        
-        // Multiple search strategies:
-        // 1. Exact phrase match (highest priority)
-        const searchPhrase = value.toLowerCase();
-        if (productName.includes(searchPhrase) || productDesc.includes(searchPhrase) || 
-            categoryName.includes(searchPhrase) || specs.includes(searchPhrase)) {
-          return true;
-        }
-        
-        // 2. All terms must be found somewhere (AND logic)
-        const allTermsFound = searchTerms.every(term => 
-          productName.includes(term) ||
-          productDesc.includes(term) ||
-          categoryName.includes(term) ||
-          specs.includes(term)
-        );
-        
-        if (allTermsFound) return true;
-        
-        // 3. At least half of the terms found (flexible matching)
-        const foundTerms = searchTerms.filter(term => 
-          productName.includes(term) ||
-          productDesc.includes(term) ||
-          categoryName.includes(term) ||
-          specs.includes(term)
-        );
-        
-        return foundTerms.length >= Math.ceil(searchTerms.length / 2);
-      });
-      
-      // Sort results by relevance
-      const sortedResults = results.sort((a, b) => {
-        const aName = a.name?.toLowerCase() || '';
-        const bName = b.name?.toLowerCase() || '';
-        const searchPhrase = value.toLowerCase();
-        
-        // Prioritize exact name matches
-        if (aName.includes(searchPhrase) && !bName.includes(searchPhrase)) return -1;
-        if (!aName.includes(searchPhrase) && bName.includes(searchPhrase)) return 1;
-        
-        // Then by name similarity
-        return aName.localeCompare(bName);
-      });
-      
-      setSearchResults(sortedResults);
-      setIsSearching(false);
-    }, 300);
-    
-    return () => clearTimeout(searchTimeout);
-  };
 
   // Helper functions for quote and booking
   const openQuoteDialog = (product?: Product) => {
@@ -384,6 +306,73 @@ export default function CustomerEcommerce() {
   const { data: trendingProducts = [] } = useQuery<Product[]>({
     queryKey: ['/api/products/trending'],
   });
+
+  // Search Handler - Fixed to allow multiple letters/words
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    
+    if (!value.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      setCurrentSection('home');
+      return;
+    }
+
+    setIsSearching(true);
+    const searchTerms = value.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
+    
+    const results = products.filter(product => {
+      const productName = product.name?.toLowerCase() || '';
+      const productDesc = product.description?.toLowerCase() || '';
+      const categoryName = categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase() || '';
+      const specs = product.specs ? Object.values(product.specs).join(' ').toLowerCase() : '';
+      
+      // Multiple search strategies:
+      // 1. Exact phrase match (highest priority)
+      const searchPhrase = value.toLowerCase();
+      if (productName.includes(searchPhrase) || productDesc.includes(searchPhrase) || 
+          categoryName.includes(searchPhrase) || specs.includes(searchPhrase)) {
+        return true;
+      }
+      
+      // 2. All terms must be found somewhere (AND logic)
+      const allTermsFound = searchTerms.every(term => 
+        productName.includes(term) ||
+        productDesc.includes(term) ||
+        categoryName.includes(term) ||
+        specs.includes(term)
+      );
+      
+      if (allTermsFound) return true;
+      
+      // 3. At least half of the terms found (flexible matching)
+      const foundTerms = searchTerms.filter(term => 
+        productName.includes(term) ||
+        productDesc.includes(term) ||
+        categoryName.includes(term) ||
+        specs.includes(term)
+      );
+      
+      return foundTerms.length >= Math.ceil(searchTerms.length / 2);
+    });
+    
+    // Sort results by relevance
+    const sortedResults = results.sort((a, b) => {
+      const aName = a.name?.toLowerCase() || '';
+      const bName = b.name?.toLowerCase() || '';
+      const searchPhrase = value.toLowerCase();
+      
+      // Prioritize exact name matches
+      if (aName.includes(searchPhrase) && !bName.includes(searchPhrase)) return -1;
+      if (!aName.includes(searchPhrase) && bName.includes(searchPhrase)) return 1;
+      
+      // Then by name similarity
+      return aName.localeCompare(bName);
+    });
+    
+    setSearchResults(sortedResults);
+    setIsSearching(false);
+  }, [products, categories]);
 
   // Save state to localStorage
   useEffect(() => {
