@@ -1292,32 +1292,6 @@ export default function CustomerEcommerce() {
     
     return (
       <>
-        {/* Voice Search Section with Language Support */}
-        {!hasSearchResults && !hasSearchButNoResults && (
-          <section className="bg-gradient-to-br from-blue-50 to-white py-8 px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">
-                🎤 Multilingual Voice Search
-              </h1>
-              <p className="text-lg text-gray-600 mb-6">
-                Search in your language - We'll translate and find products for you
-              </p>
-              
-              {/* Main Search Interface */}
-              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                <VoiceSearchInput
-                  value={searchTerm}
-                  onChange={(value) => {
-                    handleSearchChange(value);
-                  }}
-                  placeholder="Search: cement, steel, bricks... or say সিমেন্ট, సిమెంట్, सीमेंट 🎤"
-                  className="w-full text-lg h-14"
-                  showLanguageSelector={false}
-                  language={voiceLanguage}
-                  onLanguageChange={setVoiceLanguage}
-                  showDebugInfo={false}
-                />
-              </div>
               
               {/* Language Support Display */}
               <div className="text-sm text-gray-600 mb-4">
