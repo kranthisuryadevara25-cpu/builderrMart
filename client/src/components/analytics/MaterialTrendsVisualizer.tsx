@@ -30,12 +30,12 @@ export default function MaterialTrendsVisualizer() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
 
   // Fetch products for selection
-  const { data: products = [] } = useQuery({
+  const { data: products = [] } = useQuery<any[]>({
     queryKey: ['/api/products'],
   });
 
   // Fetch price trends
-  const { data: trends = [], isLoading } = useQuery({
+  const { data: trends = [], isLoading } = useQuery<TrendData[]>({
     queryKey: ['/api/material-trends', selectedProduct, selectedRegion, timeRange],
     enabled: !!selectedProduct,
   });
@@ -51,7 +51,7 @@ export default function MaterialTrendsVisualizer() {
     { date: '2024-04-01', price: 400, change: 2.0, condition: 'rising' },
   ];
 
-  const trendData = trends.length > 0 ? trends : mockTrendData;
+  const trendData: TrendData[] = (trends && trends.length > 0) ? trends as TrendData[] : mockTrendData;
 
   const formatPrice = (value: number) => `₹${value.toLocaleString()}`;
   
@@ -175,7 +175,7 @@ export default function MaterialTrendsVisualizer() {
             
             <div>
               <label className="text-sm font-medium mb-2 block">Time Range</label>
-              <Select value={timeRange} onValueChange={setTimeRange}>
+              <Select value={timeRange} onValueChange={(value: string) => setTimeRange(value as '7d' | '30d' | '90d' | '1y')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

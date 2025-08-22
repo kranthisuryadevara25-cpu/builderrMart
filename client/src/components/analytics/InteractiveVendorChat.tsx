@@ -146,7 +146,7 @@ export default function InteractiveVendorChat() {
   const generateRealVendorChats = (vendors: any[], products: any[]): VendorChat[] => {
     return vendors.map((vendor, index) => {
       const vendorProducts = products.filter(p => Math.random() > 0.7); // Random vendor specialties
-      const specialties = [...new Set(vendorProducts.map(p => p.categoryName).filter(Boolean))].slice(0, 3);
+      const specialties = Array.from(new Set(vendorProducts.map(p => p.categoryName).filter(Boolean))).slice(0, 3);
       
       const messages: ChatMessage[] = [
         {

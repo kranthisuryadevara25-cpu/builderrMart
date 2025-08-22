@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Scale, Building2, Leaf, Sparkles, BarChart3, MapPin, Zap, Brain, Users } from 'lucide-react';
+import { TrendingUp, Scale, Building2, Leaf, Sparkles, BarChart3, MapPin, Zap, Brain, Users, MessageCircle, DollarSign, Calculator, TreePine, Activity } from 'lucide-react';
 import MaterialTrendsVisualizer from '@/components/analytics/MaterialTrendsVisualizer';
 import MaterialComparisonDashboard from '@/components/analytics/MaterialComparisonDashboard';
 import ProjectJourneyTracker from '@/components/analytics/ProjectJourneyTracker';
@@ -13,6 +13,11 @@ import SustainabilityComparisonWizard from '@/components/analytics/Sustainabilit
 import AIPersonalityMatcher from '@/components/analytics/AIPersonalityMatcher';
 import VendorPerformanceStorytellingDashboard from '@/components/analytics/VendorPerformanceStorytellingDashboard';
 import PlayfulProjectJourneyAnimator from '@/components/analytics/PlayfulProjectJourneyAnimator';
+import InteractiveVendorChat from '@/components/analytics/InteractiveVendorChat';
+import RealTimePriceNegotiation from '@/components/analytics/RealTimePriceNegotiation';
+import SmartBudgetCalculator from '@/components/analytics/SmartBudgetCalculator';
+import EcoImpactCalculator from '@/components/analytics/EcoImpactCalculator';
+import PredictiveMaterialForecast from '@/components/analytics/PredictiveMaterialForecast';
 
 export default function AnalyticsDashboard() {
   const [activeTab, setActiveTab] = useState('trends');
@@ -51,30 +56,6 @@ export default function AnalyticsDashboard() {
       color: 'bg-green-100 text-green-600'
     },
     {
-      id: 'projects',
-      name: 'Project Journey',
-      icon: Building2,
-      description: 'Interactive construction project journey tracker',
-      component: ProjectJourneyTracker,
-      color: 'bg-cyan-100 text-cyan-600'
-    },
-    {
-      id: 'playful-projects',
-      name: 'Playful Project Journey Animator',
-      icon: Zap,
-      description: 'Fun animated project tracking with celebrations and milestones',
-      component: PlayfulProjectJourneyAnimator,
-      color: 'bg-yellow-100 text-yellow-600'
-    },
-    {
-      id: 'sustainability',
-      name: 'Sustainability Scorer',
-      icon: Leaf,
-      description: 'AI-powered material sustainability assessment',
-      component: SustainabilityScorer,
-      color: 'bg-emerald-100 text-emerald-600'
-    },
-    {
       id: 'ai-matcher',
       name: 'AI Material Matchmaker',
       icon: Brain,
@@ -91,11 +72,51 @@ export default function AnalyticsDashboard() {
       color: 'bg-pink-100 text-pink-600'
     },
     {
-      id: 'recommendations',
-      name: 'Personalized Recommendations',
-      icon: Sparkles,
-      description: 'AI-driven personalized material recommendations',
-      component: PersonalizedRecommendations,
+      id: 'playful-projects',
+      name: 'Playful Project Journey Animator',
+      icon: Zap,
+      description: 'Fun animated project tracking with celebrations and milestones',
+      component: PlayfulProjectJourneyAnimator,
+      color: 'bg-yellow-100 text-yellow-600'
+    },
+    {
+      id: 'vendor-chat',
+      name: 'Interactive Vendor Chat',
+      icon: MessageCircle,
+      description: 'Real-time chat support with vendors and instant communication',
+      component: InteractiveVendorChat,
+      color: 'bg-blue-100 text-blue-600'
+    },
+    {
+      id: 'price-negotiation',
+      name: 'Real-time Price Negotiation',
+      icon: DollarSign,
+      description: 'Dynamic price negotiation tool with live market data',
+      component: RealTimePriceNegotiation,
+      color: 'bg-green-100 text-green-600'
+    },
+    {
+      id: 'budget-calculator',
+      name: 'Smart Budget Calculator',
+      icon: Calculator,
+      description: 'AI-powered project budget planning with cost optimization',
+      component: SmartBudgetCalculator,
+      color: 'bg-cyan-100 text-cyan-600'
+    },
+    {
+      id: 'eco-impact',
+      name: 'Eco-Impact Carbon Calculator',
+      icon: TreePine,
+      description: 'Environmental impact assessment with carbon footprint tracking',
+      component: EcoImpactCalculator,
+      color: 'bg-emerald-100 text-emerald-600'
+    },
+    {
+      id: 'material-forecast',
+      name: 'Predictive Material Forecast',
+      icon: Activity,
+      description: 'AI-driven material availability and price predictions',
+      component: PredictiveMaterialForecast,
       color: 'bg-orange-100 text-orange-600'
     }
   ];
@@ -120,12 +141,12 @@ export default function AnalyticsDashboard() {
         </div>
         <Badge variant="outline" className="px-3 py-1">
           <BarChart3 className="w-4 h-4 mr-2" />
-          10 Analytics Tools
+          12 Analytics Tools
         </Badge>
       </div>
 
       {/* Feature Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {analyticsFeatures.map((feature) => {
           const IconComponent = feature.icon;
           const isActive = activeTab === feature.id;

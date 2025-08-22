@@ -39,7 +39,7 @@ export default function MaterialComparisonDashboard() {
   const queryClient = useQueryClient();
 
   // Fetch products for selection
-  const { data: products = [] } = useQuery({
+  const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
   });
 
