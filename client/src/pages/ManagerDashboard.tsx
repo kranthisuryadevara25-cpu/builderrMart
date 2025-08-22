@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/components/auth/auth-context';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
@@ -7,7 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Package, Users, TrendingUp, DollarSign, Star, BarChart3, Brain, MapPin, Leaf, Rocket, Settings, Shield } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Package, Users, TrendingUp, DollarSign, Star, BarChart3, Brain, MapPin, Leaf, Rocket, Settings, Shield, Plus, Edit, Trash2, UserCheck, UserX, Download, FileText, Clock } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 // Import all 5 advanced analytics components
 import InteractivePriceHeatMap from '@/components/analytics/InteractivePriceHeatMap';
@@ -16,9 +28,31 @@ import AIPersonalityMatcher from '@/components/analytics/AIPersonalityMatcher';
 import VendorPerformanceStorytellingDashboard from '@/components/analytics/VendorPerformanceStorytellingDashboard';
 import PlayfulProjectJourneyAnimator from '@/components/analytics/PlayfulProjectJourneyAnimator';
 
+// Form schemas for manager operations
+const vendorFormSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+const bulkUpdateSchema = z.object({
+  category: z.string().min(1, 'Category is required'),
+  action: z.string().min(1, 'Action is required'),
+  value: z.string().optional(),
+});
+
 export default function ManagerDashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
+  const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<any>(null);
+  const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
 
   // Data queries for manager-level data
   const { data: products = [] } = useQuery({
@@ -40,6 +74,128 @@ export default function ManagerDashboard() {
   const { data: vendorPerformance = [] } = useQuery({
     queryKey: ['/api/analytics/vendor-performance']
   });
+
+  // Form configurations
+  const vendorForm = useForm({
+    resolver: zodResolver(vendorFormSchema),
+    defaultValues: {
+      email: '',
+      firstName: '',
+      lastName: '',
+      phone: '',
+      company: '',
+      isActive: true,
+    },
+  });
+
+  const bulkUpdateForm = useForm({
+    resolver: zodResolver(bulkUpdateSchema),
+    defaultValues: {
+      category: '',
+      action: '',
+      value: '',
+    },
+  });
+
+  // Mutations
+  const createVendorMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', '/api/users', { ...data, role: 'vendor' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({ title: 'Success', description: 'Vendor created successfully' });
+      vendorForm.reset();
+      setVendorDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateVendorMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => 
+      apiRequest('PUT', `/api/users/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({ title: 'Success', description: 'Vendor updated successfully' });
+      vendorForm.reset();
+      setVendorDialogOpen(false);
+      setEditingVendor(null);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const toggleVendorStatusMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
+      apiRequest('PUT', `/api/users/${id}`, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({ title: 'Success', description: 'Vendor status updated successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteVendorMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({ title: 'Success', description: 'Vendor deleted successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', '/api/bulk-update', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      toast({ title: 'Success', description: 'Bulk update completed successfully' });
+      bulkUpdateForm.reset();
+      setBulkUpdateOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Form handlers
+  const handleVendorSubmit = (data: any) => {
+    if (editingVendor) {
+      updateVendorMutation.mutate({ id: editingVendor.id, data });
+    } else {
+      createVendorMutation.mutate(data);
+    }
+  };
+
+  const handleBulkUpdate = (data: any) => {
+    bulkUpdateMutation.mutate(data);
+  };
+
+  const openEditVendor = (vendor: any) => {
+    setEditingVendor(vendor);
+    vendorForm.reset(vendor);
+    setVendorDialogOpen(true);
+  };
+
+  const resetForms = () => {
+    setEditingVendor(null);
+    vendorForm.reset();
+    bulkUpdateForm.reset();
+  };
+
+  const generateReport = async (reportType: string) => {
+    try {
+      const response = await apiRequest('POST', '/api/reports/generate', { type: reportType });
+      toast({ title: 'Success', description: `${reportType} report generated successfully` });
+      setReportDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
 
   if (!user) return null;
 
@@ -302,9 +458,127 @@ export default function ManagerDashboard() {
 
             <TabsContent value="vendors" className="space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Vendor Management</CardTitle>
-                  <CardDescription>Manage and monitor all vendor accounts</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Vendor Management</CardTitle>
+                    <CardDescription>Manage and monitor all vendor accounts</CardDescription>
+                  </div>
+                  <Dialog open={vendorDialogOpen} onOpenChange={setVendorDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={resetForms}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Vendor
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
+                        </DialogTitle>
+                        <DialogDescription>
+                          {editingVendor ? 'Update vendor account details' : 'Create a new vendor account'}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <Form {...vendorForm}>
+                        <form onSubmit={vendorForm.handleSubmit(handleVendorSubmit)} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={vendorForm.control}
+                              name="firstName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>First Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Enter first name" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={vendorForm.control}
+                              name="lastName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Last Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Enter last name" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <FormField
+                            control={vendorForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="vendor@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={vendorForm.control}
+                              name="phone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Phone</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Enter phone number" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={vendorForm.control}
+                              name="company"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Company</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Enter company name" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <FormField
+                            control={vendorForm.control}
+                            name="isActive"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel>Active Account</FormLabel>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                          <div className="flex justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={() => setVendorDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" disabled={createVendorMutation.isPending || updateVendorMutation.isPending}>
+                              {editingVendor ? 'Update Vendor' : 'Create Vendor'}
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -315,7 +589,7 @@ export default function ManagerDashboard() {
                           <CardDescription>{vendor.email}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <div className="flex justify-between">
                               <span>Products:</span>
                               <span className="font-medium">
@@ -334,6 +608,55 @@ export default function ManagerDashboard() {
                                 <Star className="h-4 w-4 text-yellow-500" />
                                 {(4.0 + Math.random() * 1).toFixed(1)}
                               </span>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                              <Button size="sm" variant="outline" onClick={() => openEditVendor(vendor)}>
+                                <Edit className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => toggleVendorStatusMutation.mutate({ 
+                                  id: vendor.id, 
+                                  isActive: !vendor.isActive 
+                                })}
+                                disabled={toggleVendorStatusMutation.isPending}
+                              >
+                                {vendor.isActive ? (
+                                  <>
+                                    <UserX className="h-3 w-3 mr-1" />
+                                    Deactivate
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheck className="h-3 w-3 mr-1" />
+                                    Activate
+                                  </>
+                                )}
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="outline">
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Vendor</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{vendor.username}"? This action cannot be undone and will also remove all their products.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteVendorMutation.mutate(vendor.id)}>
+                                      Delete Vendor
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
                         </CardContent>
@@ -386,19 +709,138 @@ export default function ManagerDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <Button variant="outline" className="w-full justify-start">
-                        <Package className="h-4 w-4 mr-2" />
-                        Bulk Product Update
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start">
+                      <Dialog open={bulkUpdateOpen} onOpenChange={setBulkUpdateOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start" onClick={resetForms}>
+                            <Package className="h-4 w-4 mr-2" />
+                            Bulk Product Update
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Bulk Product Update</DialogTitle>
+                            <DialogDescription>
+                              Update multiple products at once by category or criteria
+                            </DialogDescription>
+                          </DialogHeader>
+                          <Form {...bulkUpdateForm}>
+                            <form onSubmit={bulkUpdateForm.handleSubmit(handleBulkUpdate)} className="space-y-4">
+                              <FormField
+                                control={bulkUpdateForm.control}
+                                name="category"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Category</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select category to update" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        {categories.map((category: any) => (
+                                          <SelectItem key={category.id} value={category.id}>
+                                            {category.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={bulkUpdateForm.control}
+                                name="action"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Action</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select action" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="price_increase">Increase Price</SelectItem>
+                                        <SelectItem value="price_decrease">Decrease Price</SelectItem>
+                                        <SelectItem value="mark_featured">Mark as Featured</SelectItem>
+                                        <SelectItem value="unmark_featured">Remove Featured</SelectItem>
+                                        <SelectItem value="activate">Activate Products</SelectItem>
+                                        <SelectItem value="deactivate">Deactivate Products</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={bulkUpdateForm.control}
+                                name="value"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Value (if applicable)</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="e.g., 10 for 10% increase" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button type="button" variant="outline" onClick={() => setBulkUpdateOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button type="submit" disabled={bulkUpdateMutation.isPending}>
+                                  Apply Changes
+                                </Button>
+                              </div>
+                            </form>
+                          </Form>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: 'Vendor Approval', description: 'No pending vendor approvals at this time' })}>
                         <Users className="h-4 w-4 mr-2" />
                         Vendor Approval Queue
                       </Button>
-                      <Button variant="outline" className="w-full justify-start">
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Generate Reports
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start">
+
+                      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start">
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Generate Reports
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Generate Reports</DialogTitle>
+                            <DialogDescription>
+                              Select the type of report you want to generate
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid grid-cols-2 gap-4">
+                            <Button onClick={() => generateReport('Sales Report')} className="h-20 flex-col">
+                              <FileText className="h-6 w-6 mb-2" />
+                              Sales Report
+                            </Button>
+                            <Button onClick={() => generateReport('Inventory Report')} className="h-20 flex-col">
+                              <Package className="h-6 w-6 mb-2" />
+                              Inventory Report
+                            </Button>
+                            <Button onClick={() => generateReport('Vendor Performance')} className="h-20 flex-col">
+                              <Users className="h-6 w-6 mb-2" />
+                              Vendor Performance
+                            </Button>
+                            <Button onClick={() => generateReport('Analytics Summary')} className="h-20 flex-col">
+                              <BarChart3 className="h-6 w-6 mb-2" />
+                              Analytics Summary
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: 'System Settings', description: 'System settings accessed successfully' })}>
                         <Settings className="h-4 w-4 mr-2" />
                         System Settings
                       </Button>
