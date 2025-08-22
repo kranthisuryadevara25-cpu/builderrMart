@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Scale, Building2, Leaf, Sparkles, BarChart3, MapPin, Zap, Brain, Users, MessageCircle, DollarSign, Calculator, TreePine, Activity } from 'lucide-react';
+import { TrendingUp, Scale, Building2, Leaf, Sparkles, BarChart3, MapPin, Zap, Brain, Users, MessageCircle, DollarSign, Calculator, TreePine, Activity, Trophy } from 'lucide-react';
 import MaterialTrendsVisualizer from '@/components/analytics/MaterialTrendsVisualizer';
 import MaterialComparisonDashboard from '@/components/analytics/MaterialComparisonDashboard';
 import ProjectJourneyTracker from '@/components/analytics/ProjectJourneyTracker';
@@ -186,7 +186,7 @@ export default function AnalyticsDashboard() {
         </div>
         <Badge variant="outline" className="px-3 py-1">
           <BarChart3 className="w-4 h-4 mr-2" />
-          12 Analytics Tools
+          17 Tools
         </Badge>
       </div>
 
