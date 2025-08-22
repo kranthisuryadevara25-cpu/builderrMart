@@ -18,6 +18,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -25,13 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, FolderTree } from "lucide-react";
+import { Plus, Edit, Trash2, FolderTree, Search, Filter } from "lucide-react";
 
 export default function Categories() {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [parentFilter, setParentFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
   const [deletingCategory, setDeletingCategory] = useState<Category | undefined>();
@@ -71,6 +75,27 @@ export default function Categories() {
     return categories?.filter((c: Category) => c.parentId === categoryId).length || 0;
   };
 
+  // Filter categories based on search and parent filter
+  const filteredCategories = categories?.filter((category: Category) => {
+    const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         category.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         getParentCategoryName(category.parentId).toLowerCase().includes(searchTerm.toLowerCase());
+    
+    let matchesParentFilter = true;
+    if (parentFilter === "root") {
+      matchesParentFilter = !category.parentId;
+    } else if (parentFilter === "sub") {
+      matchesParentFilter = !!category.parentId;
+    } else if (parentFilter !== "all") {
+      matchesParentFilter = category.parentId === parentFilter;
+    }
+    
+    return matchesSearch && matchesParentFilter;
+  }) || [];
+
+  const rootCategories = categories?.filter((c: Category) => !c.parentId).length || 0;
+  const subCategories = categories?.filter((c: Category) => c.parentId).length || 0;
+
   const canEditCategories = isAdmin;
 
   if (isLoading) {
@@ -89,10 +114,10 @@ export default function Categories() {
         <div className="flex-1 overflow-auto p-6">
           <div className="space-y-6">
             {/* Action Bar */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
               <div className="flex items-center space-x-4">
                 <h3 className="text-lg font-medium text-gray-900">
-                  All Categories ({categories?.length || 0})
+                  All Categories ({filteredCategories.length}/{categories?.length || 0})
                 </h3>
               </div>
               
@@ -102,6 +127,39 @@ export default function Categories() {
                   Add Category
                 </Button>
               )}
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search categories by name, description, or parent..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-categories"
+                  />
+                </div>
+              </div>
+              
+              <Select value={parentFilter} onValueChange={setParentFilter}>
+                <SelectTrigger className="w-full lg:w-64">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by parent" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="root">Root Categories</SelectItem>
+                  <SelectItem value="sub">Subcategories</SelectItem>
+                  {categories?.filter((c: Category) => !c.parentId).map((category: Category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      Children of {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Stats Cards */}
@@ -179,7 +237,7 @@ export default function Categories() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categories?.map((category: Category) => (
+                    {filteredCategories.map((category: Category) => (
                       <TableRow key={category.id}>
                         <TableCell className="font-medium">
                           {category.name}
@@ -227,10 +285,15 @@ export default function Categories() {
                   </TableBody>
                 </Table>
                 
-                {!categories?.length && (
+                {!filteredCategories.length && (
                   <div className="text-center py-8">
-                    <p className="text-gray-500">No categories found.</p>
-                    {canEditCategories && (
+                    <p className="text-gray-500">
+                      {searchTerm || parentFilter !== "all" ? 
+                        "No categories found matching your criteria" :
+                        "No categories found."
+                      }
+                    </p>
+                    {canEditCategories && !searchTerm && parentFilter === "all" && (
                       <Button
                         className="mt-2"
                         onClick={() => setShowCreateModal(true)}

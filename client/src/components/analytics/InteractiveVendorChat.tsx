@@ -73,6 +73,7 @@ export default function InteractiveVendorChat() {
   const [activeTab, setActiveTab] = useState('chats');
   const [messageInput, setMessageInput] = useState('');
   const [chatFilter, setChatFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [vendorChats, setVendorChats] = useState<VendorChat[]>([]);
   const [currentUser] = useState({ id: 'current-user', name: 'You', type: 'customer' });
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -308,9 +309,22 @@ export default function InteractiveVendorChat() {
   const selectedChatData = vendorChats.find(chat => chat.id === selectedChat);
 
   const filteredChats = vendorChats.filter(chat => {
-    if (chatFilter === 'active') return chat.chatStatus === 'active';
-    if (chatFilter === 'unread') return chat.unreadCount > 0;
-    return true;
+    // Filter by search term
+    let matchesSearch = true;
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      matchesSearch = chat.vendorName.toLowerCase().includes(search) ||
+                     chat.vendorLocation.toLowerCase().includes(search) ||
+                     chat.vendorSpecialty.some(specialty => specialty.toLowerCase().includes(search)) ||
+                     chat.lastMessage.toLowerCase().includes(search);
+    }
+    
+    // Filter by chat status
+    let matchesFilter = true;
+    if (chatFilter === 'active') matchesFilter = chat.chatStatus === 'active';
+    else if (chatFilter === 'unread') matchesFilter = chat.unreadCount > 0;
+    
+    return matchesSearch && matchesFilter;
   });
 
   useEffect(() => {
@@ -339,7 +353,16 @@ export default function InteractiveVendorChat() {
           <div className="flex h-full">
             {/* Chat List */}
             <div className="w-1/3 border-r bg-gray-50 dark:bg-gray-800">
-              <div className="p-4 border-b">
+              <div className="p-4 border-b space-y-3">
+                <div className="relative">
+                  <Input
+                    placeholder="Search vendors by name, location, or specialty..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-4"
+                    data-testid="input-search-vendors"
+                  />
+                </div>
                 <Select value={chatFilter} onValueChange={setChatFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter chats" />
@@ -351,7 +374,7 @@ export default function InteractiveVendorChat() {
                   </SelectContent>
                 </Select>
               </div>
-              <ScrollArea className="h-[calc(100%-80px)]">
+              <ScrollArea className="h-[calc(100%-140px)]">
                 {filteredChats.map((chat) => (
                   <motion.div
                     key={chat.id}

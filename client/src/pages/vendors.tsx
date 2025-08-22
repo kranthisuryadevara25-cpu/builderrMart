@@ -86,10 +86,21 @@ export default function Vendors() {
     );
   }
 
-  const filteredVendors = vendorStats.filter(vendor =>
-    vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredVendors = vendorStats.filter(vendor => {
+    if (!searchTerm) return true;
+    
+    const search = searchTerm.toLowerCase();
+    return vendor.name.toLowerCase().includes(search) ||
+           vendor.email.toLowerCase().includes(search) ||
+           vendor.id.toLowerCase().includes(search) ||
+           vendor.role.toLowerCase().includes(search) ||
+           vendor.productsCount.toString().includes(search) ||
+           vendor.totalValue.toString().includes(search) ||
+           vendor.joinedDate.includes(search) ||
+           (vendor.isActive ? 'active' : 'inactive').includes(search) ||
+           (vendor.lowStockItems > 0 ? 'low stock' : '').includes(search) ||
+           (vendor.outOfStockItems > 0 ? 'out of stock' : '').includes(search);
+  });
 
   const totalVendors = vendorStats.length;
   const activeVendors = vendorStats.filter(v => v.isActive).length;
@@ -196,10 +207,11 @@ export default function Vendors() {
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      placeholder="Search vendors..."
+                      placeholder="Search vendors by name, email, status, products count, or join date..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
+                      data-testid="input-search-vendors"
                     />
                   </div>
                 </div>

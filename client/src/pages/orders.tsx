@@ -157,8 +157,26 @@ export default function Orders() {
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!searchTerm && statusFilter === "all") return true;
+    
+    let matchesSearch = true;
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      matchesSearch = order.orderNumber.toLowerCase().includes(search) ||
+                     order.customerName.toLowerCase().includes(search) ||
+                     order.customerEmail.toLowerCase().includes(search) ||
+                     order.shippingAddress.toLowerCase().includes(search) ||
+                     order.totalAmount.toString().includes(search) ||
+                     order.status.toLowerCase().includes(search) ||
+                     order.orderDate.includes(search) ||
+                     order.deliveryDate?.includes(search) ||
+                     order.products.some(product => 
+                       product.name.toLowerCase().includes(search) ||
+                       product.price.toString().includes(search) ||
+                       product.quantity.toString().includes(search)
+                     );
+    }
+    
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -245,10 +263,11 @@ export default function Orders() {
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      placeholder="Search orders..."
+                      placeholder="Search orders by number, customer, email, address, products, or amount..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
+                      data-testid="input-search-orders"
                     />
                   </div>
                   
