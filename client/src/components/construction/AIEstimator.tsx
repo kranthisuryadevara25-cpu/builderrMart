@@ -163,24 +163,24 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     const isCommercial = projectInfo?.projectType === 'commercial';
     const isIndustrial = projectInfo?.projectType === 'industrial';
     
-    // Smart calculation factors based on project type
-    let bricksPerSqFt, cementBagsPerSqFt, steelKgPerSqFt, sandCubicMetersPerSqFt;
+    // Accurate calculation factors based on project type (per sq ft)
+    let bricksPerSqFt, cementBagsPerSqFt, steelKgPerSqFt, sandCubicFeetPerSqFt;
     
     if (isIndustrial) {
-      bricksPerSqFt = 15;
-      cementBagsPerSqFt = 0.1;
-      steelKgPerSqFt = 5;
-      sandCubicMetersPerSqFt = 0.04;
+      bricksPerSqFt = 18;          // 1800 bricks per 100 sq ft for heavy construction
+      cementBagsPerSqFt = 0.16;    // 16 bags per 100 sq ft for industrial
+      steelKgPerSqFt = 0.8;        // 80 kg per 100 sq ft for industrial
+      sandCubicFeetPerSqFt = 0.5;  // 50 cubic feet per 100 sq ft
     } else if (isCommercial) {
-      bricksPerSqFt = 12;
-      cementBagsPerSqFt = 0.08;
-      steelKgPerSqFt = 4;
-      sandCubicMetersPerSqFt = 0.035;
+      bricksPerSqFt = 16;          // 1600 bricks per 100 sq ft for commercial
+      cementBagsPerSqFt = 0.14;    // 14 bags per 100 sq ft for commercial  
+      steelKgPerSqFt = 0.7;        // 70 kg per 100 sq ft for commercial
+      sandCubicFeetPerSqFt = 0.42; // 42 cubic feet per 100 sq ft
     } else {
-      bricksPerSqFt = 10;
-      cementBagsPerSqFt = 0.06;
-      steelKgPerSqFt = 3;
-      sandCubicMetersPerSqFt = 0.03;
+      bricksPerSqFt = 15;          // 1500 bricks per 100 sq ft for residential
+      cementBagsPerSqFt = 0.13;    // 13 bags per 100 sq ft for residential
+      steelKgPerSqFt = 0.6;        // 60 kg per 100 sq ft for residential
+      sandCubicFeetPerSqFt = 0.39; // 39 cubic feet per 100 sq ft
     }
     
     const totalArea = area * floors;
@@ -296,31 +296,31 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
 
     // M-Sand
     const sandProduct = findProduct(['sand', 'm-sand', 'manufactured']);
-    const sandQty = Math.round(totalArea * sandCubicMetersPerSqFt);
+    const sandQty = Math.round(totalArea * sandCubicFeetPerSqFt);
     if (sandProduct) {
       const pricing = getProductPricing(sandProduct, sandQty);
       materials.push({
         material: sandProduct.name,
         category: "Aggregate",
         quantity: sandQty,
-        unit: "cubic meters",
+        unit: "cubic feet",
         estimatedPrice: pricing.totalPrice,
         basePrice: pricing.basePrice,
         finalPrice: pricing.finalPrice,
         discount: pricing.discount,
         productId: sandProduct.id,
-        description: sandProduct.description || "Quality manufactured sand for construction",
+        description: sandProduct.description || "Fine aggregate for concrete, mortar and plastering",
         priority: 'essential',
         selected: true
       });
     } else {
       materials.push({
-        material: "M-Sand (Manufactured Sand)",
-        category: "Aggregate",
+        material: "River Sand",
+        category: "Aggregate", 
         quantity: sandQty,
-        unit: "cubic meters",
-        estimatedPrice: Math.round(sandQty * 1800),
-        description: "Quality manufactured sand for construction",
+        unit: "cubic feet",
+        estimatedPrice: Math.round(sandQty * 45),
+        description: "Fine aggregate for concrete, mortar and plastering",
         priority: 'essential',
         selected: true
       });
@@ -328,14 +328,14 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
 
     // Stone Aggregate
     const aggregateProduct = findProduct(['aggregate', 'stone', '20mm']);
-    const aggregateQty = Math.round(totalArea * 0.025);
+    const aggregateQty = Math.round(totalArea * 0.23);
     if (aggregateProduct) {
       const pricing = getProductPricing(aggregateProduct, aggregateQty);
       materials.push({
         material: aggregateProduct.name,
         category: "Aggregate",
         quantity: aggregateQty,
-        unit: "cubic meters",
+        unit: "cubic feet",
         estimatedPrice: pricing.totalPrice,
         basePrice: pricing.basePrice,
         finalPrice: pricing.finalPrice,
@@ -350,8 +350,8 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
         material: "Stone Aggregate (20mm)",
         category: "Aggregate",
         quantity: aggregateQty,
-        unit: "cubic meters",
-        estimatedPrice: Math.round(aggregateQty * 2200),
+        unit: "cubic feet",
+        estimatedPrice: Math.round(aggregateQty * 50),
         description: "Coarse aggregate for concrete work",
         priority: 'recommended',
         selected: false

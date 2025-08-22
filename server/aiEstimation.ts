@@ -61,19 +61,19 @@ For each material, provide:
 Consider accurate construction practices in India with precise material calculations:
 
 For 100 sq ft construction area:
-- Cement: 7-8 bags (50kg each) for RCC work, 4-5 bags for plastering
-- Steel (TMT bars): 45-55 kg for residential, 60-70 kg for commercial
-- Bricks: 1400-1600 standard bricks (9"x4"x3")
-- Sand: 12-15 cubic feet for concrete + 8-10 cubic feet for plastering = 20-25 cubic feet total
-- Coarse Aggregate: 18-22 cubic feet for concrete work
+- Cement: 10-12 bags (50kg each) for RCC work + 3-4 bags for plastering = 13-16 bags total
+- Steel (TMT bars): 55-65 kg for residential, 70-80 kg for commercial  
+- Bricks: 1500-1700 standard bricks (9"x4"x3")
+- Sand: 20-25 cubic feet for concrete + 8-12 cubic feet for plastering + 5-8 cubic feet for brick laying = 33-45 cubic feet total
+- Coarse Aggregate: 20-25 cubic feet for concrete work
 - Water: 200-250 liters
 - Labor cost: 40-50% of material cost
 
-Precise Sand Calculations:
-- For concrete (1:2:4 ratio): 1.5 cubic feet sand per 100 sq ft
-- For mortar/plastering: 1 cubic feet sand per 100 sq ft
-- For brick laying: 0.8 cubic feet sand per 100 sq ft
-- Total sand requirement: 3.3 cubic feet per 100 sq ft minimum
+Accurate Sand Calculations:
+- For concrete (1:2:4 ratio): 15-18 cubic feet sand per 100 sq ft
+- For mortar/plastering: 8-12 cubic feet sand per 100 sq ft  
+- For brick laying: 10-15 cubic feet sand per 100 sq ft
+- Total sand requirement: 33-45 cubic feet per 100 sq ft (industry standard)
 
 Current Market Rates (2024-25):
 - Cement: ₹350-400 per bag
@@ -171,46 +171,46 @@ Provide response in JSON format with the following structure:
       {
         material: "Portland Cement (OPC 43 Grade)",
         category: "cement",
-        quantity: 100,
+        quantity: 130,
         unit: "bags",
         estimatedPrice: 380,
-        description: "High-quality cement for structural construction (10 bags per 100 sq ft)",
+        description: "High-quality cement for structural construction (13 bags per 100 sq ft)",
         priority: "essential"
       },
       {
         material: "TMT Steel Bars (Fe 500)",
         category: "steel",
-        quantity: 550,
+        quantity: 600,
         unit: "kg",
         estimatedPrice: 60,
-        description: "Thermo-mechanically treated steel bars for reinforcement (55 kg per 100 sq ft)",
+        description: "Thermo-mechanically treated steel bars for reinforcement (60 kg per 100 sq ft)",
         priority: "essential"
       },
       {
         material: "Red Clay Bricks",
         category: "bricks",
-        quantity: 15000,
+        quantity: 16000,
         unit: "pieces",
         estimatedPrice: 10,
-        description: "Standard burnt clay bricks for walls (1500 per 100 sq ft)",
+        description: "Standard burnt clay bricks for walls (1600 per 100 sq ft)",
         priority: "essential"
       },
       {
         material: "River Sand",
         category: "aggregates",
-        quantity: 250,
+        quantity: 390,
         unit: "cubic feet",
         estimatedPrice: 45,
-        description: "Fine aggregate for concrete, mortar and plastering (25 cubic feet per 100 sq ft)",
+        description: "Fine aggregate for concrete, mortar and plastering (39 cubic feet per 100 sq ft)",
         priority: "essential"
       },
       {
         material: "20mm Stone Aggregate",
         category: "aggregates",
-        quantity: 200,
+        quantity: 230,
         unit: "cubic feet",
         estimatedPrice: 50,
-        description: "Coarse aggregate for concrete (20 cubic feet per 100 sq ft)",
+        description: "Coarse aggregate for concrete (23 cubic feet per 100 sq ft)",
         priority: "essential"
       }
     ];
@@ -239,46 +239,46 @@ Provide response in JSON format with the following structure:
         {
           material: "Portland Cement (OPC 43 Grade)",
           category: "cement",
-          quantity: 100,
+          quantity: 156,
           unit: "bags",
           estimatedPrice: 400,
-          description: "High-quality cement for structural construction",
+          description: "High-quality cement for structural construction (13 bags per 100 sq ft)",
           priority: "essential"
         },
         {
           material: "TMT Steel Bars (Fe 500)",
           category: "steel",
-          quantity: 600,
+          quantity: 720,
           unit: "kg",
           estimatedPrice: 65,
-          description: "Thermo-mechanically treated steel bars",
+          description: "Thermo-mechanically treated steel bars (60 kg per 100 sq ft)",
           priority: "essential"
         },
         {
           material: "Red Clay Bricks",
           category: "bricks",
-          quantity: 18000,
+          quantity: 19200,
           unit: "pieces",
           estimatedPrice: 6,
-          description: "Standard burnt clay bricks",
+          description: "Standard burnt clay bricks (1600 per 100 sq ft)",
           priority: "essential"
         },
         {
           material: "River Sand",
           category: "aggregates",
-          quantity: 30,
+          quantity: 468,
           unit: "cubic feet",
           estimatedPrice: 50,
-          description: "Fine aggregate for construction",
+          description: "Fine aggregate for construction (39 cubic feet per 100 sq ft)",
           priority: "essential"
         },
         {
           material: "Stone Aggregate (20mm)",
           category: "aggregates",
-          quantity: 25,
+          quantity: 276,
           unit: "cubic feet",
           estimatedPrice: 45,
-          description: "Coarse aggregate for concrete",
+          description: "Coarse aggregate for concrete (23 cubic feet per 100 sq ft)",
           priority: "essential"
         },
         {

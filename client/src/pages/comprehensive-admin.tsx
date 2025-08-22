@@ -2413,13 +2413,13 @@ export default function ComprehensiveAdminPanel() {
                   <Label>Parent Category</Label>
                   <Select 
                     value={newCategory.parentId || ""} 
-                    onValueChange={(value) => setNewCategory({...newCategory, parentId: value || null})}
+                    onValueChange={(value) => setNewCategory({...newCategory, parentId: value === "none" ? null : value})}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select parent (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None (Root Category)</SelectItem>
+                      <SelectItem value="none">None (Root Category)</SelectItem>
                       {categories?.map((category) => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}
