@@ -440,7 +440,7 @@ What type of construction project are you working on?`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Brain className="w-6 h-6 mr-2 text-purple-600" />
@@ -453,7 +453,7 @@ What type of construction project are you working on?`;
         
         <div className="flex-1 flex flex-col min-h-0 relative">
           {/* Chat Messages */}
-          <ScrollArea className="flex-1 px-1 smooth-scroll-area" id="ai-chat-scroll">
+          <ScrollArea className="flex-1 px-2 smooth-scroll-area" style={{ height: 'calc(85vh - 200px)' }}>
             <div className="space-y-4 py-4">
               {messages.map(renderMessage)}
               
@@ -475,25 +475,27 @@ What type of construction project are you working on?`;
             </div>
           </ScrollArea>
           
-          {/* Enhanced Smooth Scroll Area - Auto-scroll to latest messages */}
+          {/* Enhanced Smooth Scroll Area - Better scrolling experience */}
           <style jsx>{`
             .smooth-scroll-area {
               scroll-behavior: smooth;
-              transition: all 0.3s ease;
+              transition: all 0.2s ease;
+              overflow-y: auto;
+              max-height: calc(85vh - 200px);
             }
             .smooth-scroll-area::-webkit-scrollbar {
-              width: 8px;
+              width: 6px;
             }
             .smooth-scroll-area::-webkit-scrollbar-track {
-              background: #f1f1f1;
-              border-radius: 4px;
+              background: #f8fafc;
+              border-radius: 6px;
             }
             .smooth-scroll-area::-webkit-scrollbar-thumb {
-              background: #c1c1c1;
-              border-radius: 4px;
+              background: #cbd5e1;
+              border-radius: 6px;
             }
             .smooth-scroll-area::-webkit-scrollbar-thumb:hover {
-              background: #a8a8a8;
+              background: #94a3b8;
             }
           `}</style>
           

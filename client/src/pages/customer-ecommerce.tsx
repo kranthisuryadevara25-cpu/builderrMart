@@ -271,7 +271,7 @@ export default function CustomerEcommerce() {
     },
   });
 
-  // Search Handler
+  // Search Handler - Fixed to allow multiple letters/words
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setIsSearching(true);
@@ -283,13 +283,20 @@ export default function CustomerEcommerce() {
       return;
     }
 
-    // Perform search
-    const term = value.toLowerCase();
-    const results = products.filter(product => 
-      product.name?.toLowerCase().includes(term) ||
-      product.description?.toLowerCase().includes(term) ||
-      categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase().includes(term)
-    );
+    // Enhanced search - allow multiple words and better matching
+    const searchTerms = value.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
+    const results = products.filter(product => {
+      const productName = product.name?.toLowerCase() || '';
+      const productDesc = product.description?.toLowerCase() || '';
+      const categoryName = categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase() || '';
+      
+      // Check if all search terms are found in any of the fields
+      return searchTerms.every(term => 
+        productName.includes(term) ||
+        productDesc.includes(term) ||
+        categoryName.includes(term)
+      );
+    });
     
     setSearchResults(results);
     setIsSearching(false);
@@ -970,8 +977,8 @@ export default function CustomerEcommerce() {
             View All <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {featuredProducts.slice(0, 8).map((product) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {featuredProducts.slice(0, 6).map((product) => (
             <ProductCard key={product.id} product={product} featured />
           ))}
         </div>
@@ -1375,20 +1382,104 @@ export default function CustomerEcommerce() {
           </div>
         </div>
         
-        {/* AI Recommendations */}
-        {aiRecommendations.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6 flex items-center">
-              <Sparkles className="w-6 h-6 mr-2 text-purple-600" />
-              You might also like
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {aiRecommendations.map((product) => (
+        {/* Construction Business Recommended Products */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6 flex items-center">
+            <Construction className="w-6 h-6 mr-2 text-blue-600" />
+            Recommended for Construction Projects
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Construction professionals who viewed this product also considered these essential materials
+          </p>
+          
+          {/* Show recommended products based on category or similar type */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {(() => {
+              // Get products from same category or complementary categories
+              const currentCategory = categories.find(cat => cat.id === selectedProduct.categoryId);
+              let recommendedProducts = [];
+              
+              if (currentCategory) {
+                // Get 2-3 products from same category (excluding current product)
+                const sameCategory = products
+                  .filter(p => p.categoryId === selectedProduct.categoryId && p.id !== selectedProduct.id)
+                  .slice(0, 3);
+                
+                // Get complementary products based on construction logic
+                let complementaryProducts = [];
+                if (currentCategory.name.toLowerCase().includes('cement') || currentCategory.name.toLowerCase().includes('concrete')) {
+                  // If viewing cement, recommend steel and bricks
+                  complementaryProducts = products.filter(p => 
+                    p.name.toLowerCase().includes('steel') || 
+                    p.name.toLowerCase().includes('brick') ||
+                    p.name.toLowerCase().includes('sand')
+                  ).slice(0, 2);
+                } else if (currentCategory.name.toLowerCase().includes('steel') || currentCategory.name.toLowerCase().includes('bar')) {
+                  // If viewing steel, recommend cement and bricks
+                  complementaryProducts = products.filter(p => 
+                    p.name.toLowerCase().includes('cement') || 
+                    p.name.toLowerCase().includes('brick') ||
+                    p.name.toLowerCase().includes('wire')
+                  ).slice(0, 2);
+                } else if (currentCategory.name.toLowerCase().includes('brick')) {
+                  // If viewing bricks, recommend cement and steel
+                  complementaryProducts = products.filter(p => 
+                    p.name.toLowerCase().includes('cement') || 
+                    p.name.toLowerCase().includes('steel') ||
+                    p.name.toLowerCase().includes('sand')
+                  ).slice(0, 2);
+                } else if (currentCategory.name.toLowerCase().includes('plumbing')) {
+                  // If viewing plumbing, recommend related items
+                  complementaryProducts = products.filter(p => 
+                    p.name.toLowerCase().includes('pipe') || 
+                    p.name.toLowerCase().includes('fitting') ||
+                    p.name.toLowerCase().includes('valve')
+                  ).slice(0, 2);
+                } else if (currentCategory.name.toLowerCase().includes('electrical')) {
+                  // If viewing electrical, recommend related items
+                  complementaryProducts = products.filter(p => 
+                    p.name.toLowerCase().includes('wire') || 
+                    p.name.toLowerCase().includes('cable') ||
+                    p.name.toLowerCase().includes('switch')
+                  ).slice(0, 2);
+                } else {
+                  // Default: get trending or featured products
+                  complementaryProducts = featuredProducts.slice(0, 2);
+                }
+                
+                recommendedProducts = [...sameCategory, ...complementaryProducts]
+                  .filter((product, index, self) => 
+                    index === self.findIndex(p => p.id === product.id) // Remove duplicates
+                  )
+                  .slice(0, 5); // Show max 5 products
+              }
+              
+              // Fallback to featured products if no category-based recommendations
+              if (recommendedProducts.length === 0) {
+                recommendedProducts = featuredProducts.slice(0, 5);
+              }
+              
+              return recommendedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+              ));
+            })()}
           </div>
-        )}
+          
+          {/* AI-powered recommendations if available */}
+          {aiRecommendations.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
+                AI-Powered Suggestions
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {aiRecommendations.slice(0, 3).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };

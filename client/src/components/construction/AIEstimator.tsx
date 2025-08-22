@@ -850,7 +850,7 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
                         </div>
                       </div>
                       
-                      <div className="text-right space-y-1">
+                      <div className="text-right space-y-2">
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
@@ -861,20 +861,39 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
                           />
                           <span className="text-sm text-gray-600">{material.unit}</span>
                         </div>
-                        <div className="space-y-0.5">
-                          {material.basePrice && material.finalPrice && material.basePrice !== material.finalPrice && (
-                            <p className="text-xs text-gray-500 line-through">
-                              ₹{material.basePrice}/unit
-                            </p>
-                          )}
-                          <p className="font-semibold text-blue-600">
-                            ₹{material.estimatedPrice.toLocaleString()}
-                          </p>
-                          {material.finalPrice && (
-                            <p className="text-xs text-gray-600">
-                              ₹{material.finalPrice}/unit
-                            </p>
-                          )}
+                        
+                        {/* Clear Pricing Breakdown */}
+                        <div className="bg-gray-50 p-3 rounded border text-xs space-y-1">
+                          <div className="flex justify-between text-gray-600">
+                            <span>Material Needed:</span>
+                            <span>{materialSelections[index]?.quantity || material.quantity} {material.unit}</span>
+                          </div>
+                          
+                          <div className="flex justify-between text-gray-600">
+                            <span>Product Price:</span>
+                            <div className="text-right">
+                              {material.basePrice && material.finalPrice && material.basePrice !== material.finalPrice ? (
+                                <>
+                                  <span className="line-through text-gray-400">₹{material.basePrice}</span>
+                                  <br />
+                                  <span className="text-green-600 font-semibold">₹{material.finalPrice}/unit</span>
+                                  {material.discount && <span className="text-green-600 ml-1">({material.discount}% off)</span>}
+                                </>
+                              ) : (
+                                <span>₹{material.finalPrice || (material.estimatedPrice / material.quantity)}/unit</span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="border-t border-gray-200 pt-1 mt-1">
+                            <div className="flex justify-between font-semibold text-blue-600">
+                              <span>Total Price:</span>
+                              <span>₹{material.estimatedPrice.toLocaleString()}</span>
+                            </div>
+                            <div className="text-xs text-gray-500 text-right mt-0.5">
+                              {materialSelections[index]?.quantity || material.quantity} × ₹{material.finalPrice || (material.estimatedPrice / material.quantity)} = ₹{material.estimatedPrice.toLocaleString()}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
