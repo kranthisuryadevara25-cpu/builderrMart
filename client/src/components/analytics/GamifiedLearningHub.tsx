@@ -265,14 +265,21 @@ export default function GamifiedLearningHub() {
   });
 
   useEffect(() => {
-    // Generate leaderboard
+    // Generate leaderboard with loop prevention
     if (Array.isArray(users) && users.length > 0) {
       const mockLeaderboard = generateLeaderboard(users as any[]);
-      setLeaderboard(mockLeaderboard);
-    } else {
+      setLeaderboard(prev => {
+        // Only update if the data has actually changed
+        if (JSON.stringify(prev.map(l => l.id)) !== JSON.stringify(mockLeaderboard.map(l => l.id))) {
+          return mockLeaderboard;
+        }
+        return prev;
+      });
+    } else if (leaderboard.length === 0) {
+      // Only set mock data if leaderboard is empty
       setLeaderboard(generateMockLeaderboard());
     }
-  }, [users]);
+  }, [Array.isArray(users) ? users.length : 0]); // Only depend on array length to avoid infinite loops
 
   const generateLeaderboard = (users: any[]): Leaderboard[] => {
     return users.slice(0, 10).map((user, index) => ({

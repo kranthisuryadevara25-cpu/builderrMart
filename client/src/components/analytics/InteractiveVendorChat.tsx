@@ -128,20 +128,32 @@ export default function InteractiveVendorChat() {
 
   // Generate realistic vendor chats from real users
   useEffect(() => {
-    if (Array.isArray(users) && users.length > 0) {
+    if (Array.isArray(users) && users.length > 0 && Array.isArray(products)) {
       const vendorUsers = (users as any[]).filter(user => user.role === 'vendor');
-      const realVendorChats = generateRealVendorChats(vendorUsers, products as any[]);
-      setVendorChats(realVendorChats);
-      if (realVendorChats.length > 0) {
-        setSelectedChat(realVendorChats[0].id);
+      
+      if (vendorUsers.length > 0) {
+        const realVendorChats = generateRealVendorChats(vendorUsers, products as any[]);
+        setVendorChats(prev => {
+          // Only update if the data has actually changed
+          if (JSON.stringify(prev.map(c => c.id)) !== JSON.stringify(realVendorChats.map(c => c.id))) {
+            return realVendorChats;
+          }
+          return prev;
+        });
+        
+        if (realVendorChats.length > 0 && !selectedChat) {
+          setSelectedChat(realVendorChats[0].id);
+        }
+      } else {
+        // Fallback mock data only if no vendor users
+        const mockChats = generateMockVendorChats();
+        setVendorChats(prev => prev.length === 0 ? mockChats : prev);
+        if (!selectedChat) {
+          setSelectedChat(mockChats[0].id);
+        }
       }
-    } else {
-      // Fallback mock data
-      const mockChats = generateMockVendorChats();
-      setVendorChats(mockChats);
-      setSelectedChat(mockChats[0].id);
     }
-  }, [users, products]);
+  }, [Array.isArray(users) ? users.length : 0, Array.isArray(products) ? products.length : 0]); // Only depend on array lengths to avoid infinite loops
 
   const generateRealVendorChats = (vendors: any[], products: any[]): VendorChat[] => {
     return vendors.map((vendor, index) => {

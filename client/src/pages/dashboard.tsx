@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   BarChart,
   Bar,
@@ -21,7 +22,13 @@ import {
   Users,
   DollarSign,
   AlertTriangle,
+  MessageCircle,
+  Scale,
+  Zap,
+  Calculator,
+  ArrowRight,
 } from "lucide-react";
+import { useLocation } from "wouter";
 
 const salesData = [
   { month: "Jan", sales: 12000, orders: 45 },
@@ -41,8 +48,70 @@ const productData = [
 
 export default function Dashboard() {
   const { user, isAdmin, isVendor } = useAuth();
+  const [, setLocation] = useLocation();
 
   if (!user) return null;
+
+  // Top 5 Features for customers and vendors
+  const topFeatures = [
+    {
+      id: 'vendor-chat',
+      name: 'Vendor Chat',
+      description: 'Chat with vendors in real-time, negotiate prices, and get instant support',
+      icon: MessageCircle,
+      route: '/analytics',
+      analyticsTab: 'vendor-chat',
+      color: 'from-blue-500 to-cyan-500',
+      textColor: 'text-white'
+    },
+    {
+      id: 'material-comparison',
+      name: 'Material Comparison',
+      description: 'Compare materials side-by-side with AI-powered insights and recommendations',
+      icon: Scale,
+      route: '/analytics',
+      analyticsTab: 'comparison',
+      color: 'from-purple-500 to-pink-500',
+      textColor: 'text-white'
+    },
+    {
+      id: 'price-negotiation',
+      name: 'Real-time Price Negotiation',
+      description: 'Dynamic price negotiation with live market data and instant offers',
+      icon: DollarSign,
+      route: '/analytics',
+      analyticsTab: 'price-negotiation',
+      color: 'from-green-500 to-emerald-500',
+      textColor: 'text-white'
+    },
+    {
+      id: 'budget-calculator',
+      name: 'Smart Budget Calculator',
+      description: 'AI-powered project budget planning with cost optimization suggestions',
+      icon: Calculator,
+      route: '/analytics',
+      analyticsTab: 'budget-calculator',
+      color: 'from-cyan-500 to-blue-500',
+      textColor: 'text-white'
+    },
+    {
+      id: 'project-optimizer',
+      name: 'One-Click Project Optimizer',
+      description: 'Instantly optimize your project costs and material selection with AI',
+      icon: Zap,
+      route: '/analytics',
+      analyticsTab: 'project-optimizer',
+      color: 'from-orange-500 to-red-500',
+      textColor: 'text-white'
+    }
+  ];
+
+  const navigateToFeature = (feature: typeof topFeatures[0]) => {
+    // Navigate to analytics page and set the specific tab
+    setLocation('/analytics');
+    // Store the selected tab in sessionStorage so AnalyticsDashboard can pick it up
+    sessionStorage.setItem('selectedAnalyticsTab', feature.analyticsTab);
+  };
 
   const stats = [
     {
@@ -106,7 +175,91 @@ export default function Dashboard() {
         />
         
         <div className="flex-1 overflow-auto p-6">
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* Top 5 Features Section */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    🚀 Top Features for {isAdmin ? 'Admins' : isVendor ? 'Vendors' : 'Customers'}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    Access our most popular tools with a single click
+                  </p>
+                </div>
+                <Badge variant="secondary" className="px-4 py-2">
+                  <Zap className="w-4 h-4 mr-2" />
+                  5 Power Tools
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {topFeatures.map((feature, index) => {
+                  const Icon = feature.icon;
+                  return (
+                    <Card 
+                      key={feature.id} 
+                      className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-0 overflow-hidden"
+                      onClick={() => navigateToFeature(feature)}
+                      data-testid={`feature-${feature.id}`}
+                    >
+                      <div className={`bg-gradient-to-br ${feature.color} p-1`}>
+                        <CardContent className="p-6 bg-white dark:bg-gray-900 m-1 rounded-lg">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center shadow-lg`}>
+                              <Icon className={`h-6 w-6 ${feature.textColor}`} />
+                            </div>
+                            <div className="opacity-50 group-hover:opacity-100 transition-opacity">
+                              <ArrowRight className="h-5 w-5 text-gray-400" />
+                            </div>
+                          </div>
+                          
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 transition-colors">
+                            {feature.name}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                            {feature.description}
+                          </p>
+                          
+                          <div className="mt-4 flex items-center justify-between">
+                            <Badge variant="outline" className="text-xs">
+                              Analytics Tool
+                            </Badge>
+                            <div className="flex items-center text-xs text-gray-500">
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              Most Popular
+                            </div>
+                          </div>
+                        </CardContent>
+                      </div>
+                    </Card>
+                  );
+                })}
+                
+                {/* View All Analytics Button */}
+                <Card 
+                  className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-dashed border-gray-300 hover:border-blue-400"
+                  onClick={() => setLocation('/analytics')}
+                  data-testid="view-all-analytics"
+                >
+                  <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
+                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4 group-hover:bg-blue-50 transition-colors">
+                      <Package className="h-6 w-6 text-gray-600 group-hover:text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2 group-hover:text-blue-600 transition-colors">
+                      View All 17 Tools
+                    </h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">
+                      Explore our complete analytics dashboard with advanced features
+                    </p>
+                    <Button variant="outline" className="mt-4 group-hover:bg-blue-50">
+                      Explore All <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {stats.map((stat, index) => {

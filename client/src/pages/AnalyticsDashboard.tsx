@@ -25,7 +25,15 @@ import GamifiedLearningHub from '@/components/analytics/GamifiedLearningHub';
 import PersonalizedSustainabilityDashboard from '@/components/analytics/PersonalizedSustainabilityDashboard';
 
 export default function AnalyticsDashboard() {
-  const [activeTab, setActiveTab] = useState('heatmap');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Check if we have a specific tab to open from the dashboard navigation
+    const savedTab = sessionStorage.getItem('selectedAnalyticsTab');
+    if (savedTab) {
+      sessionStorage.removeItem('selectedAnalyticsTab'); // Clear it after use
+      return savedTab;
+    }
+    return 'heatmap'; // Default tab
+  });
 
   const analyticsFeatures = [
     {
