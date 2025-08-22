@@ -70,6 +70,16 @@ export function useVoiceSearch({ onResult, language = 'en-US' }: UseVoiceSearchP
   // Check if Speech Recognition is supported
   const isSupported = typeof window !== 'undefined' && 
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  
+  // Log support status for debugging
+  useEffect(() => {
+    console.log('Voice Search Support Status:', {
+      windowExists: typeof window !== 'undefined',
+      speechRecognition: typeof window !== 'undefined' && 'SpeechRecognition' in window,
+      webkitSpeechRecognition: typeof window !== 'undefined' && 'webkitSpeechRecognition' in window,
+      isSupported
+    });
+  }, [isSupported]);
 
   useEffect(() => {
     if (!isSupported) return;
