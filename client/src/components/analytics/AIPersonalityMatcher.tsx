@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -267,6 +268,11 @@ export default function AIPersonalityMatcher() {
     speedOfDelivery: 50,
     brandLoyalty: 40,
     innovationAppeal: 55
+  });
+
+  // Fetch real products from API
+  const { data: products = [] } = useQuery({
+    queryKey: ['/api/products'],
   });
 
   const analyzePersonality = () => {

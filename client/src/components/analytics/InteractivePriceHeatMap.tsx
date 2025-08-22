@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -62,12 +63,68 @@ export default function InteractivePriceHeatMap() {
   const [heatMapData, setHeatMapData] = useState<HeatMapData[]>([]);
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
+  const [realTimeMode, setRealTimeMode] = useState(false);
+
+  // Fetch real products from API
+  const { data: products = [] } = useQuery({
+    queryKey: ['/api/products'],
+  });
 
   useEffect(() => {
-    const data = generateMockHeatMapData(selectedMaterial);
-    setHeatMapData(data);
+    if (products.length > 0) {
+      // Generate dynamic data based on real products
+      const materialProducts = products.filter((p: any) => 
+        p.name.toLowerCase().includes(selectedMaterial.toLowerCase()) ||
+        p.category?.toLowerCase().includes(selectedMaterial.toLowerCase())
+      );
+      
+      const dynamicData = states.map((state, index) => {
+        const baseProduct = materialProducts[index % materialProducts.length];
+        const basePrice = baseProduct ? parseFloat(baseProduct.basePrice) : Math.floor(Math.random() * 1000) + 300;
+        const regionalMultiplier = 0.8 + (Math.random() * 0.4); // 0.8 to 1.2 multiplier
+        
+        return {
+          id: `${selectedMaterial}-${state}-${index}`,
+          materialType: selectedMaterial,
+          region: regions[index % regions.length],
+          state,
+          city: state,
+          currentPrice: Math.floor(basePrice * regionalMultiplier),
+          priceChange: (Math.random() - 0.5) * 20,
+          marketDemand: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
+          supplyStatus: ['shortage', 'adequate', 'surplus'][Math.floor(Math.random() * 3)] as 'shortage' | 'adequate' | 'surplus',
+          priceVolatility: Math.random() * 15,
+          competitorCount: Math.floor(Math.random() * 20) + 5,
+          coordinates: { lat: 28.6139 + (Math.random() - 0.5) * 10, lng: 77.2090 + (Math.random() - 0.5) * 10 },
+          productName: baseProduct?.name || `${selectedMaterial} Product`,
+          productId: baseProduct?.id || `mock-${index}`
+        };
+      });
+      
+      setHeatMapData(dynamicData);
+    } else {
+      // Fallback to mock data if no products available
+      const data = generateMockHeatMapData(selectedMaterial);
+      setHeatMapData(data);
+    }
     setAnimationKey(prev => prev + 1);
-  }, [selectedMaterial, selectedRegion]);
+  }, [selectedMaterial, selectedRegion, products]);
+
+  // Real-time price updates simulation
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (realTimeMode) {
+      interval = setInterval(() => {
+        setHeatMapData(prev => prev.map(item => ({
+          ...item,
+          currentPrice: item.currentPrice + (Math.random() - 0.5) * 10,
+          priceChange: item.priceChange + (Math.random() - 0.5) * 5,
+          priceVolatility: Math.random() * 15
+        })));
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [realTimeMode]);
 
   const getHeatColor = (priceChange: number, volatility: number) => {
     const intensity = Math.abs(priceChange) + volatility;

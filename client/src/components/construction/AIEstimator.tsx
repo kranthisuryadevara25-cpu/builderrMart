@@ -193,9 +193,10 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
       );
     };
 
+    // EXACTLY 4 MATERIALS: Cement, Steel, Bricks, Metal (NO sand as per user requirement)
     const materials: MaterialEstimate[] = [];
     
-    // 1. Portland Cement (First priority)
+    // 1. CEMENT (First priority)
     const cementProduct = findProduct(['cement', 'portland', '53']);
     const cementQty = Math.round(totalArea * cementBagsPerSqFt);
     if (cementProduct) {
@@ -291,71 +292,39 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
       });
     }
 
-    // 4. Stone Aggregate/Metal (Fourth priority)
-    const aggregateProduct = findProduct(['aggregate', 'stone', '20mm']);
-    const aggregateQty = Math.round(totalArea * 0.23);
-    if (aggregateProduct) {
-      const pricing = getProductPricing(aggregateProduct, aggregateQty);
+    // 4. METAL/AGGREGATE (Fourth priority - completing exactly 4 materials)
+    const metalProduct = findProduct(['aggregate', 'stone', '20mm', 'metal']);
+    const metalQty = Math.round(totalArea * 0.23);
+    if (metalProduct) {
+      const pricing = getProductPricing(metalProduct, metalQty);
       materials.push({
-        material: aggregateProduct.name,
+        material: metalProduct.name,
         category: "Metal",
-        quantity: aggregateQty,
+        quantity: metalQty,
         unit: "cubic feet",
         estimatedPrice: pricing.totalPrice,
         basePrice: pricing.basePrice,
         finalPrice: pricing.finalPrice,
         discount: pricing.discount,
-        productId: aggregateProduct.id,
-        description: aggregateProduct.description || "Coarse aggregate for concrete work",
+        productId: metalProduct.id,
+        description: metalProduct.description || "Metal aggregate for construction work",
         priority: 'essential',
         selected: true
       });
     } else {
       materials.push({
-        material: "Stone Aggregate (20mm)",
+        material: "Metal Aggregate (20mm)",
         category: "Metal",
-        quantity: aggregateQty,
+        quantity: metalQty,
         unit: "cubic feet",
-        estimatedPrice: Math.round(aggregateQty * 50),
+        estimatedPrice: Math.round(metalQty * 50),
         description: "Coarse aggregate for concrete work",
         priority: 'essential',
         selected: true
       });
     }
 
-    // Add specialized materials for commercial/industrial projects
-    if (isCommercial || isIndustrial) {
-      const concreteProduct = findProduct(['concrete', 'ready mix', 'm25']);
-      const concreteQty = Math.round(totalArea * 0.15);
-      if (concreteProduct) {
-        const pricing = getProductPricing(concreteProduct, concreteQty);
-        materials.push({
-          material: concreteProduct.name,
-          category: "Concrete",
-          quantity: concreteQty,
-          unit: "cubic meters",
-          estimatedPrice: pricing.totalPrice,
-          basePrice: pricing.basePrice,
-          finalPrice: pricing.finalPrice,
-          discount: pricing.discount,
-          productId: concreteProduct.id,
-          description: concreteProduct.description || "High-grade ready mix concrete for commercial use",
-          priority: 'recommended',
-          selected: true
-        });
-      } else {
-        materials.push({
-          material: "Ready Mix Concrete (M25)",
-          category: "Concrete",
-          quantity: concreteQty,
-          unit: "cubic meters",
-          estimatedPrice: Math.round(concreteQty * 4500),
-          description: "High-grade ready mix concrete for commercial use",
-          priority: 'recommended',
-          selected: true
-        });
-      }
-    }
+    // EXACTLY 4 MATERIALS MAINTAINED: Cement, Steel, Bricks, Metal (No additional materials)
     
     const totalCost = materials
       .filter(m => m.selected || m.priority === 'essential')
