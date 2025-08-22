@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/components/auth/auth-context';
+import { Sidebar } from '@/components/layout/sidebar';
+import { Topbar } from '@/components/layout/topbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -49,6 +52,7 @@ const discountFormSchema = z.object({
 export default function AdminPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -283,17 +287,22 @@ export default function AdminPanel() {
     discountForm.reset();
   };
 
+  if (!user) return null;
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            BuildMart AI Admin Panel
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage your e-commerce platform with comprehensive CRUD operations
-          </p>
-        </div>
+    <div className="min-h-screen flex">
+      <Sidebar />
+      <main className="flex-1 flex flex-col">
+        <Topbar title="Admin Panel" subtitle="Manage your e-commerce platform" />
+        <div className="flex-1 p-6 bg-gray-50 dark:bg-gray-900">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              BuildMart AI Admin Panel
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage your e-commerce platform with comprehensive CRUD operations
+            </p>
+          </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
@@ -1039,7 +1048,8 @@ export default function AdminPanel() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
