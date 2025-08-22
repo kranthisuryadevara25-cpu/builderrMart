@@ -193,70 +193,76 @@ export default function Dashboard() {
                 </Badge>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {topFeatures.map((feature, index) => {
-                  const Icon = feature.icon;
-                  return (
-                    <Card 
-                      key={feature.id} 
-                      className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-0 overflow-hidden"
-                      onClick={() => navigateToFeature(feature)}
-                      data-testid={`feature-${feature.id}`}
-                    >
-                      <div className={`bg-gradient-to-br ${feature.color} p-1`}>
-                        <CardContent className="p-6 bg-white dark:bg-gray-900 m-1 rounded-lg">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center shadow-lg`}>
-                              <Icon className={`h-6 w-6 ${feature.textColor}`} />
+              {/* Top 5 Features in a horizontal scroll layout */}
+              <div className="flex flex-col space-y-4">
+                {/* Main 5 features in a single row */}
+                <div className="flex overflow-x-auto space-x-4 pb-4">
+                  {topFeatures.map((feature, index) => {
+                    const Icon = feature.icon;
+                    return (
+                      <Card 
+                        key={feature.id} 
+                        className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-0 overflow-hidden flex-shrink-0 w-80"
+                        onClick={() => navigateToFeature(feature)}
+                        data-testid={`feature-${feature.id}`}
+                      >
+                        <div className={`bg-gradient-to-br ${feature.color} p-1`}>
+                          <CardContent className="p-6 bg-white dark:bg-gray-900 m-1 rounded-lg">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center shadow-lg`}>
+                                <Icon className={`h-7 w-7 ${feature.textColor}`} />
+                              </div>
+                              <div className="opacity-50 group-hover:opacity-100 transition-opacity">
+                                <ArrowRight className="h-5 w-5 text-gray-400" />
+                              </div>
                             </div>
-                            <div className="opacity-50 group-hover:opacity-100 transition-opacity">
-                              <ArrowRight className="h-5 w-5 text-gray-400" />
+                            
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-600 transition-colors">
+                              {feature.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                              {feature.description}
+                            </p>
+                            
+                            <div className="flex items-center justify-between">
+                              <Badge variant="outline" className="text-xs">
+                                Analytics Tool
+                              </Badge>
+                              <div className="flex items-center text-xs text-gray-500">
+                                <TrendingUp className="h-3 w-3 mr-1" />
+                                Top Feature
+                              </div>
                             </div>
-                          </div>
-                          
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 transition-colors">
-                            {feature.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                            {feature.description}
-                          </p>
-                          
-                          <div className="mt-4 flex items-center justify-between">
-                            <Badge variant="outline" className="text-xs">
-                              Analytics Tool
-                            </Badge>
-                            <div className="flex items-center text-xs text-gray-500">
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                              Most Popular
-                            </div>
-                          </div>
-                        </CardContent>
-                      </div>
-                    </Card>
-                  );
-                })}
+                          </CardContent>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
                 
-                {/* View All Analytics Button */}
-                <Card 
-                  className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-dashed border-gray-300 hover:border-blue-400"
-                  onClick={() => setLocation('/analytics')}
-                  data-testid="view-all-analytics"
-                >
-                  <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
-                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4 group-hover:bg-blue-50 transition-colors">
-                      <Package className="h-6 w-6 text-gray-600 group-hover:text-blue-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2 group-hover:text-blue-600 transition-colors">
-                      View All 17 Tools
-                    </h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">
-                      Explore our complete analytics dashboard with advanced features
-                    </p>
-                    <Button variant="outline" className="mt-4 group-hover:bg-blue-50">
-                      Explore All <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </CardContent>
-                </Card>
+                {/* View All Analytics Button - standalone */}
+                <div className="flex justify-center">
+                  <Card 
+                    className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-dashed border-gray-300 hover:border-blue-400 w-full max-w-md"
+                    onClick={() => setLocation('/analytics')}
+                    data-testid="view-all-analytics"
+                  >
+                    <CardContent className="p-6 flex items-center justify-center space-x-4">
+                      <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:bg-blue-50 transition-colors">
+                        <Package className="h-6 w-6 text-gray-600 group-hover:text-blue-600" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors">
+                          View All 17 Analytics Tools
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Explore complete analytics dashboard with advanced features
+                        </p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
 

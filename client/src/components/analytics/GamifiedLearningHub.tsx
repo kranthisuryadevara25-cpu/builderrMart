@@ -270,7 +270,7 @@ export default function GamifiedLearningHub() {
       const mockLeaderboard = generateLeaderboard(users as any[]);
       setLeaderboard(prev => {
         // Only update if the data has actually changed
-        if (JSON.stringify(prev.map(l => l.id)) !== JSON.stringify(mockLeaderboard.map(l => l.id))) {
+        if (JSON.stringify(prev.map(l => l.username)) !== JSON.stringify(mockLeaderboard.map(l => l.username))) {
           return mockLeaderboard;
         }
         return prev;
