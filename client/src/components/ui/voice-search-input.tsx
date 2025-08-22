@@ -150,6 +150,17 @@ export function VoiceSearchInput({
           )}
         </Button>
       </div>
+
+      {/* Language Selector */}
+      {showLanguageSelector && (
+        <div className="flex justify-center">
+          <LanguageSelector
+            currentLanguage={currentLanguage}
+            onLanguageChange={changeLanguage}
+            variant={languageSelectorVariant}
+          />
+        </div>
+      )}
       
       {/* Browser compatibility warning */}
       {!isSupported && (
