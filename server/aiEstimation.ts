@@ -49,9 +49,15 @@ Please analyze the image and provide:
 5. Estimated costs in Indian Rupees
 6. Construction timeline
 
+For each material, provide ONLY these 4 materials in this exact order:
+1. Cement (Portland Cement 53 Grade) - Category: "Cement"
+2. Steel (TMT Steel Bars Fe500D) - Category: "Steel" 
+3. Bricks (Red Clay Bricks) - Category: "Bricks"
+4. Metal (Stone Aggregate 20mm) - Category: "Metal"
+
 For each material, provide:
 - Material name
-- Category (cement, steel, bricks, etc.)
+- Category (Cement, Steel, Bricks, Metal only)
 - Quantity needed
 - Unit of measurement
 - Estimated price per unit in INR
@@ -60,27 +66,23 @@ For each material, provide:
 
 Consider accurate construction practices in India with precise material calculations:
 
+IMPORTANT: Only include these 4 core materials in exact order:
+1. CEMENT (First priority)
+2. STEEL (Second priority) 
+3. BRICKS (Third priority)
+4. METAL/AGGREGATE (Fourth priority)
+
 For 100 sq ft construction area:
 - Cement: 10-12 bags (50kg each) for RCC work + 3-4 bags for plastering = 13-16 bags total
 - Steel (TMT bars): 55-65 kg for residential, 70-80 kg for commercial  
 - Bricks: 1500-1700 standard bricks (9"x4"x3")
-- Sand: 20-25 cubic feet for concrete + 8-12 cubic feet for plastering + 5-8 cubic feet for brick laying = 33-45 cubic feet total
-- Coarse Aggregate: 20-25 cubic feet for concrete work
-- Water: 200-250 liters
-- Labor cost: 40-50% of material cost
-
-Accurate Sand Calculations:
-- For concrete (1:2:4 ratio): 15-18 cubic feet sand per 100 sq ft
-- For mortar/plastering: 8-12 cubic feet sand per 100 sq ft  
-- For brick laying: 10-15 cubic feet sand per 100 sq ft
-- Total sand requirement: 33-45 cubic feet per 100 sq ft (industry standard)
+- Metal/Aggregate: 20-25 cubic feet for concrete work
 
 Current Market Rates (2024-25):
 - Cement: ₹350-400 per bag
 - Steel: ₹55-65 per kg
 - Bricks: ₹8-12 per brick
-- Sand: ₹35-50 per cubic feet
-- Aggregate: ₹40-60 per cubic feet
+- Metal/Aggregate: ₹40-60 per cubic feet
 
 Provide response in JSON format with the following structure:
 {
