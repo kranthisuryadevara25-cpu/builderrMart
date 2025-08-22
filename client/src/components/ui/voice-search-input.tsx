@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -32,6 +32,16 @@ export function VoiceSearchInput({
   languageSelectorVariant = 'compact',
   onLanguageChange
 }: VoiceSearchInputProps) {
+  // Memoize callbacks to prevent infinite re-renders
+  const stableOnResult = useCallback((transcript: string) => {
+    console.log('🎤 Voice search result:', transcript);
+    onChange(transcript);
+  }, [onChange]);
+
+  const stableOnLanguageChange = useCallback((lang: string) => {
+    onLanguageChange?.(lang);
+  }, [onLanguageChange]);
+
   const { 
     isListening, 
     isSupported, 
@@ -42,15 +52,9 @@ export function VoiceSearchInput({
     getBrowserCompatibility, 
     getDebugInfo 
   } = useVoiceSearch({
-    onResult: (transcript) => {
-      console.log('🎤 Voice search result:', transcript);
-      onChange(transcript);
-    },
+    onResult: stableOnResult,
     language,
-    onLanguageDetected: (detectedLang) => {
-      console.log('🎤 Language detected:', detectedLang);
-      onLanguageChange?.(detectedLang);
-    }
+    onLanguageDetected: stableOnLanguageChange
   });
   
   // Enhanced debugging information

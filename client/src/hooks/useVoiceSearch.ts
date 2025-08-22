@@ -111,6 +111,15 @@ export function useVoiceSearch({ onResult, language = 'en-US', onLanguageDetecte
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const { toast } = useToast();
 
+  // Use callbacks to prevent re-renders
+  const stableOnResult = useCallback((text: string) => {
+    onResult?.(text);
+  }, [onResult]);
+
+  const stableOnLanguageDetected = useCallback((lang: string) => {
+    onLanguageDetected?.(lang);
+  }, [onLanguageDetected]);
+
   // Check if Speech Recognition is supported
   const isSupported = typeof window !== 'undefined' && 
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
@@ -167,7 +176,7 @@ export function useVoiceSearch({ onResult, language = 'en-US', onLanguageDetecte
       setTranscript(fullTranscript);
 
       if (finalTranscript) {
-        onResult(finalTranscript);
+        stableOnResult(finalTranscript);
         setIsListening(false);
       }
     };
