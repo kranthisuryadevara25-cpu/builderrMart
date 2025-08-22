@@ -101,22 +101,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
+      console.log(`🔐 Login attempt - Email: ${email}, Password length: ${password?.length}`);
       
       const user = await storage.getUserByEmail(email);
       if (!user) {
+        console.log(`❌ User not found for email: ${email}`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      console.log(`✅ User found: ${user.username} (${user.role})`);
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
+        console.log(`❌ Password validation failed for: ${email}`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      console.log(`✅ Login successful for: ${email}`);
       req.session.userId = user.id;
       
       const { password: _, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword });
     } catch (error: any) {
+      console.error(`🚨 Login error:`, error);
       res.status(400).json({ message: error.message });
     }
   });

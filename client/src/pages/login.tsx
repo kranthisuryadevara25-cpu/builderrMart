@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HardHat } from "lucide-react";
+import LoginHelper from "@/components/login-helper";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -61,7 +62,14 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
+      <div className="w-full max-w-4xl flex gap-8 items-start">
+        {/* Login Helper */}
+        <div className="flex-shrink-0">
+          <LoginHelper />
+        </div>
+        
+        {/* Main Login Form */}
+        <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center">
           <div className="flex justify-center mb-4">
@@ -197,6 +205,7 @@ export default function Login() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );
