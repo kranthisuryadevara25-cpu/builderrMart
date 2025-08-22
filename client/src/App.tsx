@@ -22,6 +22,8 @@ import CustomerEcommerce from "@/pages/customer-ecommerce";
 import AdminDashboard from "@/pages/admin";
 import UserProfile from "@/pages/user-profile";
 import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
+import VendorDashboard from "@/pages/VendorDashboard";
+import ManagerDashboard from "@/pages/ManagerDashboard";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -139,6 +141,18 @@ function Router() {
       <Route path="/vendor-panel">
         <ProtectedRoute>
           <VendorPanel />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/vendor-dashboard">
+        <ProtectedRoute>
+          <VendorDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/manager-dashboard">
+        <ProtectedRoute>
+          <ManagerDashboard />
         </ProtectedRoute>
       </Route>
       

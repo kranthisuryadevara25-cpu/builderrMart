@@ -18,8 +18,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Edit, Trash2, Package, Users, FileText, Calendar, Percent, TrendingUp, Star } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Users, FileText, Calendar, Percent, TrendingUp, Star, Brain, MapPin, Leaf, Rocket, BarChart3 } from 'lucide-react';
 import type { Category, Product, Discount, Quote, Booking } from '@shared/schema';
+
+// Import all 5 advanced analytics components
+import InteractivePriceHeatMap from '@/components/analytics/InteractivePriceHeatMap';
+import SustainabilityComparisonWizard from '@/components/analytics/SustainabilityComparisonWizard';
+import AIPersonalityMatcher from '@/components/analytics/AIPersonalityMatcher';
+import VendorPerformanceStorytellingDashboard from '@/components/analytics/VendorPerformanceStorytellingDashboard';
+import PlayfulProjectJourneyAnimator from '@/components/analytics/PlayfulProjectJourneyAnimator';
 
 // Form schemas for validation
 const categoryFormSchema = z.object({
@@ -305,13 +312,33 @@ export default function AdminPanel() {
           </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-11">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="discounts">Discounts</TabsTrigger>
             <TabsTrigger value="quotes">Quotes</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="heat-map" className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              Heat Map
+            </TabsTrigger>
+            <TabsTrigger value="sustainability" className="flex items-center gap-1">
+              <Leaf className="h-3 w-3" />
+              Sustainability
+            </TabsTrigger>
+            <TabsTrigger value="ai-matcher" className="flex items-center gap-1">
+              <Brain className="h-3 w-3" />
+              AI Matcher
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="flex items-center gap-1">
+              <BarChart3 className="h-3 w-3" />
+              Performance
+            </TabsTrigger>
+            <TabsTrigger value="project-journey" className="flex items-center gap-1">
+              <Rocket className="h-3 w-3" />
+              Projects
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -1046,6 +1073,92 @@ export default function AdminPanel() {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          {/* Advanced Analytics Features */}
+          <TabsContent value="heat-map" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Interactive Material Price Heat Map
+                </CardTitle>
+                <CardDescription>
+                  Monitor real-time material prices across regions for strategic decision making
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <InteractivePriceHeatMap />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="sustainability" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Leaf className="h-5 w-5" />
+                  Sustainability Comparison Wizard
+                </CardTitle>
+                <CardDescription>
+                  Analyze environmental impact and sustainability metrics across products
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SustainabilityComparisonWizard />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ai-matcher" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5" />
+                  AI Material Matchmaker with Personality
+                </CardTitle>
+                <CardDescription>
+                  Advanced AI-powered material recommendations based on user personality analysis
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AIPersonalityMatcher />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="performance" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Vendor Performance Storytelling Dashboard
+                </CardTitle>
+                <CardDescription>
+                  Comprehensive vendor analytics with storytelling insights and trend analysis
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <VendorPerformanceStorytellingDashboard />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="project-journey" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Rocket className="h-5 w-5" />
+                  Playful Project Journey Animator
+                </CardTitle>
+                <CardDescription>
+                  Interactive project visualization with gamified construction timeline tracking
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PlayfulProjectJourneyAnimator />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
         </div>

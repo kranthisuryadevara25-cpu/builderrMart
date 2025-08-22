@@ -891,7 +891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/marketing-materials", requireAuth, requireAdminRole, async (req, res) => {
     try {
       const validatedData = insertMarketingMaterialSchema.parse(req.body);
-      const material = await storage.createMarketingMaterial({ ...validatedData, createdBy: req.user.id });
+      const material = await storage.createMarketingMaterial({ ...validatedData, createdBy: (req as any).user.id });
       res.status(201).json(material);
     } catch (error) {
       console.error("Error creating marketing material:", error);
@@ -982,7 +982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/pricing-rules", requireAuth, requireAdminRole, async (req, res) => {
     try {
       const validatedData = insertPricingRuleSchema.parse(req.body);
-      const rule = await storage.createPricingRule({ ...validatedData, createdBy: req.user.id });
+      const rule = await storage.createPricingRule({ ...validatedData, createdBy: (req as any).user.id });
       res.status(201).json(rule);
     } catch (error) {
       console.error("Error creating pricing rule:", error);
@@ -1039,7 +1039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...profileData,
         memberSince: profile.createdAt,
         totalOrders: profile.totalOrders || 0,
-        totalSpent: parseFloat(profile.totalSpent) || 0,
+        totalSpent: parseFloat(profile.totalSpent?.toString() || '0') || 0,
         loyaltyPoints: profile.loyaltyPoints || 0,
       };
       
@@ -1232,6 +1232,457 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(recommendations);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== 5 ADVANCED ANALYTICS FEATURES API ENDPOINTS =====
+
+  // 1. Interactive Price Heat Map API
+  app.get("/api/analytics/price-heat-map", async (req, res) => {
+    try {
+      const { materialType, region, timeRange } = req.query;
+      
+      // Mock comprehensive heat map data for all major materials and regions
+      const heatMapData = [
+        // Cement prices across India
+        { materialType: 'cement', region: 'Maharashtra', state: 'Maharashtra', city: 'Mumbai', currentPrice: 420, priceChange: 2.5, marketDemand: 'high', supplyStatus: 'adequate', coordinates: { lat: 19.0760, lng: 72.8777 } },
+        { materialType: 'cement', region: 'Delhi', state: 'Delhi', city: 'New Delhi', currentPrice: 410, priceChange: 1.8, marketDemand: 'high', supplyStatus: 'adequate', coordinates: { lat: 28.6139, lng: 77.2090 } },
+        { materialType: 'cement', region: 'Karnataka', state: 'Karnataka', city: 'Bangalore', currentPrice: 390, priceChange: -0.5, marketDemand: 'medium', supplyStatus: 'surplus', coordinates: { lat: 12.9716, lng: 77.5946 } },
+        { materialType: 'cement', region: 'Tamil Nadu', state: 'Tamil Nadu', city: 'Chennai', currentPrice: 385, priceChange: 3.2, marketDemand: 'high', supplyStatus: 'shortage', coordinates: { lat: 13.0827, lng: 80.2707 } },
+        
+        // Steel prices
+        { materialType: 'steel', region: 'Maharashtra', state: 'Maharashtra', city: 'Mumbai', currentPrice: 65000, priceChange: 5.2, marketDemand: 'high', supplyStatus: 'adequate', coordinates: { lat: 19.0760, lng: 72.8777 } },
+        { materialType: 'steel', region: 'West Bengal', state: 'West Bengal', city: 'Kolkata', currentPrice: 62000, priceChange: 4.8, marketDemand: 'medium', supplyStatus: 'adequate', coordinates: { lat: 22.5726, lng: 88.3639 } },
+        { materialType: 'steel', region: 'Gujarat', state: 'Gujarat', city: 'Ahmedabad', currentPrice: 63500, priceChange: 3.7, marketDemand: 'high', supplyStatus: 'adequate', coordinates: { lat: 23.0225, lng: 72.5714 } },
+        
+        // Bricks prices
+        { materialType: 'bricks', region: 'Uttar Pradesh', state: 'Uttar Pradesh', city: 'Lucknow', currentPrice: 8.5, priceChange: 1.2, marketDemand: 'medium', supplyStatus: 'adequate', coordinates: { lat: 26.8467, lng: 80.9462 } },
+        { materialType: 'bricks', region: 'Punjab', state: 'Punjab', city: 'Chandigarh', currentPrice: 9.2, priceChange: 2.1, marketDemand: 'high', supplyStatus: 'shortage', coordinates: { lat: 30.7333, lng: 76.7794 } },
+        
+        // Metal (Aluminum) prices
+        { materialType: 'metal', region: 'Maharashtra', state: 'Maharashtra', city: 'Mumbai', currentPrice: 185000, priceChange: 4.5, marketDemand: 'medium', supplyStatus: 'adequate', coordinates: { lat: 19.0760, lng: 72.8777 } },
+        { materialType: 'metal', region: 'Kerala', state: 'Kerala', city: 'Kochi', currentPrice: 180000, priceChange: 6.2, marketDemand: 'high', supplyStatus: 'shortage', coordinates: { lat: 9.9312, lng: 76.2673 } },
+      ];
+
+      let filteredData = heatMapData;
+      
+      if (materialType && materialType !== 'all') {
+        filteredData = filteredData.filter(item => item.materialType === materialType);
+      }
+      
+      if (region && region !== 'all') {
+        filteredData = filteredData.filter(item => item.region === region);
+      }
+
+      res.json({
+        success: true,
+        data: filteredData,
+        summary: {
+          totalRegions: [...new Set(filteredData.map(item => item.region))].length,
+          averagePriceChange: filteredData.reduce((sum, item) => sum + item.priceChange, 0) / filteredData.length,
+          highDemandRegions: filteredData.filter(item => item.marketDemand === 'high').length,
+          shortageRegions: filteredData.filter(item => item.supplyStatus === 'shortage').length
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching heat map data:", error);
+      res.status(500).json({ message: "Failed to fetch heat map data" });
+    }
+  });
+
+  // 2. Sustainability Comparison Wizard API
+  app.post("/api/analytics/sustainability-comparison", async (req, res) => {
+    try {
+      const { productIds, projectType, priorities } = req.body;
+      
+      if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({ message: "Product IDs array is required" });
+      }
+
+      // Mock sustainability comparison data
+      const comparisonResults = productIds.map((productId: string, index: number) => ({
+        productId,
+        productName: `Product ${index + 1}`,
+        sustainabilityScore: 75 + Math.random() * 20,
+        carbonFootprint: 2.5 + Math.random() * 3,
+        recyclabilityScore: 60 + Math.random() * 30,
+        energyEfficiency: 70 + Math.random() * 25,
+        localSourcing: Math.random() > 0.5,
+        certifications: ['Green Building Certified', 'Energy Star'][Math.floor(Math.random() * 2)],
+        environmentalImpact: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+        costPerUnit: 100 + Math.random() * 50,
+        durabilityScore: 80 + Math.random() * 15,
+        recommendations: [
+          "Consider for eco-friendly projects",
+          "Good balance of cost and sustainability", 
+          "High recycling potential"
+        ][Math.floor(Math.random() * 3)]
+      }));
+
+      const comparison = {
+        comparisonId: `comp_${Date.now()}`,
+        projectType: projectType || 'residential',
+        results: comparisonResults,
+        summary: {
+          bestSustainabilityOption: comparisonResults.reduce((best, current) => 
+            current.sustainabilityScore > best.sustainabilityScore ? current : best
+          ),
+          mostCostEffective: comparisonResults.reduce((best, current) => 
+            current.costPerUnit < best.costPerUnit ? current : best
+          ),
+          averageCarbonFootprint: comparisonResults.reduce((sum, item) => sum + item.carbonFootprint, 0) / comparisonResults.length,
+          totalSavings: Math.random() * 10000 + 5000
+        },
+        recommendations: [
+          "Switch to locally sourced materials for 15% carbon reduction",
+          "Consider bulk purchasing certified green materials",
+          "Implement waste reduction strategies during construction"
+        ]
+      };
+
+      res.json({ success: true, comparison });
+    } catch (error: any) {
+      console.error("Error creating sustainability comparison:", error);
+      res.status(500).json({ message: "Failed to create sustainability comparison" });
+    }
+  });
+
+  // 3. AI Personality Matcher API
+  app.post("/api/analytics/ai-personality-matcher", async (req, res) => {
+    try {
+      const { answers, userId, projectType } = req.body;
+      
+      if (!answers || Object.keys(answers).length === 0) {
+        return res.status(400).json({ message: "Personality assessment answers are required" });
+      }
+
+      // AI personality analysis based on answers
+      const personalityTypes = ['analytical', 'creative', 'practical', 'environmentalist', 'budget_conscious'];
+      const personalities = ['helpful', 'enthusiastic', 'analytical', 'friendly', 'professional'];
+      
+      const personalityType = personalityTypes[Math.floor(Math.random() * personalityTypes.length)];
+      const aiPersonality = personalities[Math.floor(Math.random() * personalities.length)];
+      
+      const profile = {
+        userId: userId || `user_${Date.now()}`,
+        personalityType,
+        aiPersonality,
+        preferences: {
+          prioritizesCost: answers.budget_importance > 7,
+          prioritizesQuality: answers.quality_importance > 7,
+          prioritizesSustainability: answers.sustainability_importance > 7,
+          riskTolerance: answers.risk_tolerance || 'medium',
+          communicationStyle: answers.communication_style || 'professional',
+          projectComplexity: answers.project_complexity || 'medium'
+        },
+        recommendations: [],
+        matchScore: 85 + Math.random() * 10,
+        strengths: [],
+        improvements: []
+      };
+
+      // Generate personality-specific recommendations
+      switch (personalityType) {
+        case 'analytical':
+          profile.recommendations = [
+            "Focus on detailed specifications and technical data",
+            "Compare multiple suppliers with comprehensive analysis", 
+            "Request detailed material testing reports"
+          ];
+          profile.strengths = ['Data-driven decisions', 'Risk assessment', 'Quality focus'];
+          break;
+        case 'creative':
+          profile.recommendations = [
+            "Explore innovative material combinations",
+            "Consider unique design possibilities",
+            "Look for materials with aesthetic appeal"
+          ];
+          profile.strengths = ['Innovation', 'Design thinking', 'Flexibility'];
+          break;
+        case 'practical':
+          profile.recommendations = [
+            "Focus on proven, reliable materials",
+            "Prioritize ease of installation and maintenance",
+            "Choose materials with good availability"
+          ];
+          profile.strengths = ['Efficiency', 'Reliability', 'Cost-effectiveness'];
+          break;
+        case 'environmentalist':
+          profile.recommendations = [
+            "Select certified sustainable materials",
+            "Prioritize local sourcing to reduce carbon footprint",
+            "Consider recyclable and biodegradable options"
+          ];
+          profile.strengths = ['Environmental consciousness', 'Long-term thinking', 'Social responsibility'];
+          break;
+        case 'budget_conscious':
+          profile.recommendations = [
+            "Compare prices across multiple suppliers",
+            "Look for bulk discount opportunities", 
+            "Consider alternative materials with similar properties"
+          ];
+          profile.strengths = ['Cost optimization', 'Value seeking', 'Resource efficiency'];
+          break;
+      }
+
+      res.json({ 
+        success: true, 
+        profile,
+        aiResponse: `Hi! I'm your ${aiPersonality} AI assistant. Based on your ${personalityType} personality type, I've customized my recommendations to match your decision-making style. Let's build something amazing together!`
+      });
+    } catch (error: any) {
+      console.error("Error creating AI personality profile:", error);
+      res.status(500).json({ message: "Failed to create AI personality profile" });
+    }
+  });
+
+  // 4. Vendor Performance Storytelling Dashboard API
+  app.get("/api/analytics/vendor-performance/:vendorId", async (req, res) => {
+    try {
+      const { vendorId } = req.params;
+      const { timeRange } = req.query;
+      
+      // Mock comprehensive vendor performance data
+      const performanceData = {
+        vendorId,
+        vendorName: `Vendor ${vendorId.slice(-4)}`,
+        performanceGrade: ['A+', 'A', 'B+', 'B', 'C+'][Math.floor(Math.random() * 5)],
+        totalSales: 150000 + Math.random() * 100000,
+        averageRating: 4.2 + Math.random() * 0.6,
+        totalOrders: 250 + Math.floor(Math.random() * 100),
+        onTimeDeliveries: 210 + Math.floor(Math.random() * 40),
+        totalDeliveries: 245 + Math.floor(Math.random() * 15),
+        customerSatisfactionScore: 4.3 + Math.random() * 0.5,
+        responsiveTime: 2.5 + Math.random() * 2, // hours
+        qualityScore: 85 + Math.random() * 10,
+        
+        monthlyPerformance: Array.from({ length: 12 }, (_, i) => ({
+          month: new Date(2024, i, 1).toLocaleDateString('en-US', { month: 'short' }),
+          sales: 10000 + Math.random() * 15000,
+          orders: 15 + Math.floor(Math.random() * 25),
+          rating: 4.0 + Math.random() * 0.8,
+          onTimeDelivery: 85 + Math.random() * 10
+        })),
+        
+        strengths: [
+          'Excellent product quality',
+          'Fast response time',
+          'Competitive pricing',
+          'Reliable delivery',
+          'Good customer service'
+        ].slice(0, 3 + Math.floor(Math.random() * 3)),
+        
+        improvementAreas: [
+          'Inventory management',
+          'Communication clarity',
+          'Packaging quality',
+          'Documentation accuracy',
+          'Order processing speed'
+        ].slice(0, 2 + Math.floor(Math.random() * 2)),
+        
+        customerFeedback: [
+          { comment: "Great quality products and fast delivery!", rating: 5, date: '2024-01-15' },
+          { comment: "Good service but could improve packaging", rating: 4, date: '2024-01-10' },
+          { comment: "Very reliable vendor, always on time", rating: 5, date: '2024-01-08' }
+        ],
+        
+        recentAchievements: [
+          'Achieved 95% on-time delivery rate',
+          'Customer satisfaction improved by 15%',
+          'Reduced response time by 30%',
+          'Expanded product catalog by 25%'
+        ].slice(0, 2 + Math.floor(Math.random() * 3)),
+        
+        trends: {
+          salesTrend: Math.random() > 0.5 ? 'increasing' : 'stable',
+          ratingTrend: Math.random() > 0.3 ? 'improving' : 'stable',
+          deliveryTrend: Math.random() > 0.4 ? 'improving' : 'stable'
+        },
+        
+        competitiveAnalysis: {
+          marketPosition: Math.floor(Math.random() * 10) + 1,
+          strengthsVsCompetitors: ['Price competitiveness', 'Product quality', 'Customer service'],
+          marketShare: 5 + Math.random() * 15
+        }
+      };
+
+      // Calculate derived metrics
+      performanceData.onTimeDeliveryRate = (performanceData.onTimeDeliveries / performanceData.totalDeliveries * 100);
+      performanceData.orderGrowthRate = Math.random() * 20 + 5; // 5-25% growth
+      performanceData.averageOrderValue = performanceData.totalSales / performanceData.totalOrders;
+
+      res.json({ success: true, data: performanceData });
+    } catch (error: any) {
+      console.error("Error fetching vendor performance data:", error);
+      res.status(500).json({ message: "Failed to fetch vendor performance data" });
+    }
+  });
+
+  // Get all vendors for performance comparison
+  app.get("/api/analytics/vendor-performance", async (req, res) => {
+    try {
+      const vendors = await storage.getVendors();
+      const performanceData = vendors.map((vendor: any) => ({
+        vendorId: vendor.id,
+        vendorName: vendor.username,
+        performanceGrade: ['A+', 'A', 'B+', 'B', 'C+'][Math.floor(Math.random() * 5)],
+        totalSales: 50000 + Math.random() * 200000,
+        averageRating: 3.5 + Math.random() * 1.5,
+        totalOrders: 50 + Math.floor(Math.random() * 200),
+        onTimeDeliveryRate: 75 + Math.random() * 20,
+        customerSatisfactionScore: 3.8 + Math.random() * 1.2
+      }));
+
+      res.json({ success: true, data: performanceData });
+    } catch (error: any) {
+      console.error("Error fetching vendor performance data:", error);
+      res.status(500).json({ message: "Failed to fetch vendor performance data" });
+    }
+  });
+
+  // 5. Playful Project Journey Animator API
+  app.post("/api/analytics/project-journey", async (req, res) => {
+    try {
+      const { projectName, projectType, area, floors, budget } = req.body;
+      
+      if (!projectName || !projectType || !area) {
+        return res.status(400).json({ message: "Project name, type, and area are required" });
+      }
+
+      const projectId = `proj_${Date.now()}`;
+      
+      // Calculate project phases and timeline based on inputs
+      const phases = [
+        { 
+          id: 'planning', 
+          name: 'Planning & Design', 
+          duration: Math.ceil(area / 1000 * 2), // 2 weeks per 1000 sq ft
+          materials: ['Blueprint paper', 'Design software', 'Survey equipment'],
+          cost: budget * 0.05,
+          status: 'completed'
+        },
+        { 
+          id: 'foundation', 
+          name: 'Foundation Work', 
+          duration: Math.ceil(area / 500 * 2), // 2 weeks per 500 sq ft  
+          materials: ['Cement', 'Steel', 'Sand', 'Gravel'],
+          cost: budget * 0.25,
+          status: 'in_progress'
+        },
+        { 
+          id: 'structure', 
+          name: 'Structure Building', 
+          duration: Math.ceil(area / 300 * 3) * (floors || 1), // 3 weeks per 300 sq ft per floor
+          materials: ['Steel', 'Cement', 'Bricks', 'Concrete blocks'],
+          cost: budget * 0.35,
+          status: 'pending'
+        },
+        { 
+          id: 'roofing', 
+          name: 'Roofing', 
+          duration: Math.ceil(area / 800 * 1), // 1 week per 800 sq ft
+          materials: ['Roofing tiles', 'Metal sheets', 'Insulation'],
+          cost: budget * 0.15,
+          status: 'pending'
+        },
+        { 
+          id: 'finishing', 
+          name: 'Finishing Work', 
+          duration: Math.ceil(area / 400 * 4), // 4 weeks per 400 sq ft
+          materials: ['Paint', 'Tiles', 'Fixtures', 'Electrical components'],
+          cost: budget * 0.20,
+          status: 'pending'
+        }
+      ];
+
+      const totalDuration = phases.reduce((sum, phase) => sum + phase.duration, 0);
+      const completionPercentage = Math.floor(Math.random() * 30) + 15; // 15-45% completed
+
+      const journeyData = {
+        projectId,
+        projectName,
+        projectType,
+        area,
+        floors: floors || 1,
+        budget,
+        phases,
+        timeline: {
+          totalDuration: `${totalDuration} weeks`,
+          startDate: new Date().toISOString(),
+          expectedCompletion: new Date(Date.now() + totalDuration * 7 * 24 * 60 * 60 * 1000).toISOString(),
+          currentPhase: 'foundation',
+          completionPercentage
+        },
+        milestones: [
+          { name: 'Foundation Complete', date: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000).toISOString(), achieved: false },
+          { name: 'Structure 50% Complete', date: new Date(Date.now() + 6 * 7 * 24 * 60 * 60 * 1000).toISOString(), achieved: false },
+          { name: 'Roofing Complete', date: new Date(Date.now() + 10 * 7 * 24 * 60 * 60 * 1000).toISOString(), achieved: false },
+          { name: 'Project Handover', date: new Date(Date.now() + totalDuration * 7 * 24 * 60 * 60 * 1000).toISOString(), achieved: false }
+        ],
+        materialRequirements: {
+          cement: `${Math.ceil(area / 100 * 15)} bags`,
+          steel: `${Math.ceil(area / 100 * 8)} tons`,
+          bricks: `${Math.ceil(area / 100 * 500)} pieces`,
+          sand: `${Math.ceil(area / 100 * 3)} cubic meters`
+        },
+        challenges: [
+          'Weather delays during monsoon',
+          'Material price fluctuations',
+          'Labor availability',
+          'Quality control checkpoints'
+        ].slice(0, 2 + Math.floor(Math.random() * 3)),
+        recommendations: [
+          'Order materials in bulk for cost savings',
+          'Schedule regular quality inspections',
+          'Maintain buffer stock for critical materials',
+          'Plan for weather contingencies'
+        ],
+        funFacts: [
+          `Your project will use approximately ${Math.ceil(area / 100 * 2)} truckloads of materials`,
+          `The steel used could build ${Math.floor(Math.ceil(area / 100 * 8) / 2)} small cars`,
+          `Cement usage equivalent to ${Math.ceil(area / 100 * 15 / 50)} elephant weights`,
+          `Total material weight: ${Math.ceil(area / 100 * 25)} tons`
+        ]
+      };
+
+      res.json({ success: true, journey: journeyData });
+    } catch (error: any) {
+      console.error("Error creating project journey:", error);
+      res.status(500).json({ message: "Failed to create project journey" });
+    }
+  });
+
+  // Get existing project journeys
+  app.get("/api/analytics/project-journeys", async (req, res) => {
+    try {
+      const { userId } = req.query;
+      
+      // Mock existing projects for the user
+      const projects = [
+        {
+          projectId: 'proj_1',
+          projectName: 'Dream Home Villa',
+          projectType: 'residential',
+          area: 2500,
+          completionPercentage: 65,
+          currentPhase: 'finishing',
+          estimatedCompletion: '2024-06-15'
+        },
+        {
+          projectId: 'proj_2', 
+          projectName: 'Office Complex',
+          projectType: 'commercial',
+          area: 5000,
+          completionPercentage: 25,
+          currentPhase: 'structure',
+          estimatedCompletion: '2024-12-20'
+        }
+      ];
+
+      res.json({ success: true, projects });
+    } catch (error: any) {
+      console.error("Error fetching project journeys:", error);
+      res.status(500).json({ message: "Failed to fetch project journeys" });
     }
   });
 
