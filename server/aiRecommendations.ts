@@ -229,8 +229,8 @@ Respond with only a JSON array of recommendations:
 
   private getComplementaryProducts(currentProduct: Product, allProducts: Product[]): Product[] {
     const complementaryMapping: { [key: string]: string[] } = {
-      // Cement goes with steel, bricks, sand
-      'cement': ['steel', 'brick', 'sand', 'aggregate'],
+      // Cement goes with steel, bricks, aggregate
+      'cement': ['steel', 'brick', 'aggregate'],
       'steel': ['cement', 'brick', 'wire'],
       'brick': ['cement', 'steel', 'mortar'],
       'pipe': ['fitting', 'valve', 'joint'],

@@ -21,6 +21,7 @@ import CustomerApp from "@/pages/customer-app";
 import CustomerEcommerce from "@/pages/customer-ecommerce";
 import AdminDashboard from "@/pages/admin";
 import UserProfile from "@/pages/user-profile";
+import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -86,6 +87,12 @@ function Router() {
       <Route path="/analytics">
         <ProtectedRoute>
           <Analytics />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/advanced-analytics">
+        <ProtectedRoute>
+          <AnalyticsDashboard />
         </ProtectedRoute>
       </Route>
       

@@ -1089,6 +1089,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Material Trends API
+  app.get("/api/material-trends", async (req, res) => {
+    try {
+      const { productId, region, timeRange } = req.query;
+      // Mock data for now - replace with actual database query
+      const trends = [
+        {
+          id: '1',
+          productId: productId || 'default',
+          price: 380 + Math.random() * 20,
+          marketCondition: 'rising',
+          region: region || 'national',
+          recordDate: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        }
+      ];
+      res.json(trends);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Material Comparisons API
+  app.post("/api/material-comparisons", async (req, res) => {
+    try {
+      const comparisonData = req.body;
+      // Mock saving - replace with actual database insert
+      const saved = { id: 'comp-' + Date.now(), ...comparisonData, createdAt: new Date() };
+      res.json(saved);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/material-comparisons", async (req, res) => {
+    try {
+      // Mock data - replace with actual database query
+      res.json([]);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Project Journey API
+  app.get("/api/project-journeys", async (req, res) => {
+    try {
+      // Mock data for demonstration
+      const projects = [
+        {
+          id: 'proj-1',
+          userId: 'user-1',
+          projectName: 'Dream Home Construction',
+          projectType: 'residential',
+          estimatedArea: 2500,
+          currentPhase: 'structure',
+          materialsOrdered: [],
+          timeline: {},
+          budget: 3500000,
+          spentAmount: 1400000,
+          completionPercentage: 45,
+          isActive: true,
+          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+      res.json(projects);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/project-journeys", async (req, res) => {
+    try {
+      const projectData = req.body;
+      const newProject = {
+        id: 'proj-' + Date.now(),
+        userId: 'user-1', // Replace with actual user ID from auth
+        ...projectData,
+        currentPhase: 'planning',
+        spentAmount: 0,
+        completionPercentage: 5,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      res.json(newProject);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/project-journeys/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const updated = {
+        id: req.params.id,
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Material Sustainability API
+  app.get("/api/material-sustainability", async (req, res) => {
+    try {
+      // Mock sustainability data
+      res.json([]);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Personalized Recommendations API
+  app.get("/api/personalized-recommendations", async (req, res) => {
+    try {
+      // Mock recommendations
+      res.json([]);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/personalized-recommendations/generate", async (req, res) => {
+    try {
+      const context = req.body.context;
+      // Mock AI recommendation generation
+      const recommendations = {
+        generated: true,
+        context: context,
+        timestamp: new Date().toISOString()
+      };
+      res.json(recommendations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

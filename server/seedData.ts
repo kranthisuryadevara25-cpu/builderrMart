@@ -72,7 +72,7 @@ export async function initializeDummyData() {
       },
       {
         name: "Sand & Aggregates",
-        description: "River sand, M-sand, stone chips, crushed aggregates"
+        description: "Stone chips, crushed aggregates, metal components"
       },
       {
         name: "Plumbing Materials",
@@ -279,28 +279,7 @@ export async function initializeDummyData() {
         isTrending: true
       },
 
-      // Sand & Aggregates
-      {
-        name: "M-Sand (Manufactured Sand) - Fine Grade",
-        description: "High-quality manufactured sand, washed and graded. Perfect replacement for river sand.",
-        categoryId: createdCategories[3].id,
-        basePrice: "1850",
-        specs: {
-          type: "Manufactured Sand",
-          grade: "Fine",
-          zoneGradation: "Zone II",
-          fineness: "2.6-3.2",
-          unit: "per cubic meter"
-        },
-        quantitySlabs: [
-          { min_qty: 1, max_qty: 10, price_per_unit: 1850 },
-          { min_qty: 11, max_qty: 50, price_per_unit: 1800 },
-          { min_qty: 51, max_qty: 200, price_per_unit: 1750 }
-        ],
-        vendorId: createdUsers[1].id,
-        stockQuantity: 500,
-        isFeatured: true
-      },
+      // Metal & Aggregates
       {
         name: "Blue Metal Stone Chips - 20mm",
         description: "High-quality blue metal stone chips for concrete mixing and road construction.",

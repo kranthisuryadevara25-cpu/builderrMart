@@ -252,6 +252,73 @@ export const marketingMaterials = pgTable("marketing_materials", {
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
 
+// Material Price Trends
+export const materialPriceTrends = pgTable("material_price_trends", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid("product_id").references(() => products.id),
+  price: numeric("price").notNull(),
+  marketCondition: text("market_condition"), // stable, rising, falling, volatile
+  region: text("region").default("national"),
+  recordDate: timestamp("record_date").default(sql`now()`),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Material Comparisons
+export const materialComparisons = pgTable("material_comparisons", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id"),
+  productIds: jsonb("product_ids").notNull(), // Array of product IDs being compared
+  comparisonData: jsonb("comparison_data"), // Comparison results and metrics
+  projectType: text("project_type"), // residential, commercial, industrial
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Project Journey Tracking
+export const projectJourneys = pgTable("project_journeys", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  projectName: text("project_name").notNull(),
+  projectType: text("project_type").notNull(),
+  estimatedArea: numeric("estimated_area"),
+  currentPhase: text("current_phase").default("planning"), // planning, foundation, structure, finishing, completed
+  materialsOrdered: jsonb("materials_ordered"), // Track materials ordered in each phase
+  timeline: jsonb("timeline"), // Phase-wise timeline tracking
+  budget: numeric("budget"),
+  spentAmount: numeric("spent_amount").default(sql`0`),
+  completionPercentage: integer("completion_percentage").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+// Material Sustainability Scores
+export const materialSustainability = pgTable("material_sustainability", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid("product_id").references(() => products.id),
+  carbonFootprint: numeric("carbon_footprint"), // CO2 equivalent per unit
+  recyclabilityScore: integer("recyclability_score"), // 0-100 scale
+  energyEfficiency: integer("energy_efficiency"), // 0-100 scale
+  localSourcing: boolean("local_sourcing").default(false),
+  certifications: jsonb("certifications"), // Green building certifications
+  environmentalImpact: text("environmental_impact"), // low, medium, high
+  overallScore: integer("overall_score"), // 0-100 composite score
+  lastUpdated: timestamp("last_updated").default(sql`now()`),
+});
+
+// Personalized Recommendations
+export const personalizedRecommendations = pgTable("personalized_recommendations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  productId: uuid("product_id").references(() => products.id),
+  recommendationType: text("recommendation_type").notNull(), // ai_based, trend_based, sustainability_based, budget_based
+  score: numeric("score"), // Recommendation confidence score
+  reason: text("reason"), // Why this product is recommended
+  context: jsonb("context"), // User context and preferences
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  expiresAt: timestamp("expires_at"),
+});
+
 // Contractors Management
 export const contractors = pgTable("contractors", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

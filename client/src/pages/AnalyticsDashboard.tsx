@@ -1,0 +1,183 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, Scale, Building2, Leaf, Sparkles, BarChart3 } from 'lucide-react';
+import MaterialTrendsVisualizer from '@/components/analytics/MaterialTrendsVisualizer';
+import MaterialComparisonDashboard from '@/components/analytics/MaterialComparisonDashboard';
+import ProjectJourneyTracker from '@/components/analytics/ProjectJourneyTracker';
+import SustainabilityScorer from '@/components/analytics/SustainabilityScorer';
+import PersonalizedRecommendations from '@/components/analytics/PersonalizedRecommendations';
+
+export default function AnalyticsDashboard() {
+  const [activeTab, setActiveTab] = useState('trends');
+
+  const analyticsFeatures = [
+    {
+      id: 'trends',
+      name: 'Price Trends',
+      icon: TrendingUp,
+      description: 'Animated material price trend visualizer with market predictions',
+      component: MaterialTrendsVisualizer,
+      color: 'bg-blue-100 text-blue-600'
+    },
+    {
+      id: 'comparison',
+      name: 'Material Comparison',
+      icon: Scale,
+      description: 'One-click material comparison dashboard with AI insights',
+      component: MaterialComparisonDashboard,
+      color: 'bg-purple-100 text-purple-600'
+    },
+    {
+      id: 'projects',
+      name: 'Project Journey',
+      icon: Building2,
+      description: 'Interactive construction project journey tracker',
+      component: ProjectJourneyTracker,
+      color: 'bg-green-100 text-green-600'
+    },
+    {
+      id: 'sustainability',
+      name: 'Sustainability Scorer',
+      icon: Leaf,
+      description: 'AI-powered material sustainability assessment',
+      component: SustainabilityScorer,
+      color: 'bg-emerald-100 text-emerald-600'
+    },
+    {
+      id: 'recommendations',
+      name: 'Personalized Recommendations',
+      icon: Sparkles,
+      description: 'AI-driven personalized material recommendations',
+      component: PersonalizedRecommendations,
+      color: 'bg-orange-100 text-orange-600'
+    }
+  ];
+
+  const renderActiveComponent = () => {
+    const feature = analyticsFeatures.find(f => f.id === activeTab);
+    if (!feature) return null;
+    
+    const Component = feature.component;
+    return <Component />;
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Advanced Analytics Dashboard</h1>
+          <p className="text-gray-600 mt-2">
+            Comprehensive material analytics with AI-powered insights
+          </p>
+        </div>
+        <Badge variant="outline" className="px-3 py-1">
+          <BarChart3 className="w-4 h-4 mr-2" />
+          5 Analytics Tools
+        </Badge>
+      </div>
+
+      {/* Feature Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {analyticsFeatures.map((feature) => {
+          const IconComponent = feature.icon;
+          const isActive = activeTab === feature.id;
+          
+          return (
+            <Card 
+              key={feature.id}
+              className={`cursor-pointer transition-all duration-200 ${
+                isActive ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:shadow-md'
+              }`}
+              onClick={() => setActiveTab(feature.id)}
+            >
+              <CardContent className="p-4">
+                <div className={`w-12 h-12 rounded-lg ${feature.color} flex items-center justify-center mb-3`}>
+                  <IconComponent className="w-6 h-6" />
+                </div>
+                <h3 className="font-semibold text-sm mb-1">{feature.name}</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {feature.description}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Main Analytics Content */}
+      <Card className="min-h-[600px]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {(() => {
+              const feature = analyticsFeatures.find(f => f.id === activeTab);
+              const IconComponent = feature?.icon || TrendingUp;
+              return (
+                <>
+                  <IconComponent className="w-6 h-6 text-blue-600" />
+                  {feature?.name} Dashboard
+                </>
+              );
+            })()}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {renderActiveComponent()}
+        </CardContent>
+      </Card>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Materials Analyzed</p>
+                <p className="text-2xl font-bold">150+</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Comparisons Made</p>
+                <p className="text-2xl font-bold">1,240</p>
+              </div>
+              <Scale className="w-8 h-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Active Projects</p>
+                <p className="text-2xl font-bold">89</p>
+              </div>
+              <Building2 className="w-8 h-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Sustainability Score</p>
+                <p className="text-2xl font-bold">87%</p>
+              </div>
+              <Leaf className="w-8 h-8 text-emerald-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
