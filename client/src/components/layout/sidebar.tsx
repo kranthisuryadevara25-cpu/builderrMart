@@ -92,7 +92,7 @@ const navigation = [
     href: "/advanced-analytics",
     icon: BarChart3,
     roles: ["owner_admin", "vendor_manager", "vendor", "user", "customer"],
-    badge: "12 Tools",
+    badge: "17 Tools",
     badgeVariant: "default" as const,
   },
   {

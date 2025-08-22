@@ -37,7 +37,7 @@ export default function Login() {
     try {
       const loggedInUser = await login(loginForm.email, loginForm.password);
       if (loggedInUser?.role === "user") {
-        setLocation("/shop-ecommerce");
+        setLocation("/");
       } else {
         setLocation("/dashboard");
       }
@@ -51,7 +51,7 @@ export default function Login() {
     try {
       const newUser = await register(registerForm.username, registerForm.email, registerForm.password, registerForm.role);
       if (newUser?.role === "user") {
-        setLocation("/shop-ecommerce");
+        setLocation("/");
       } else {
         setLocation("/dashboard");
       }

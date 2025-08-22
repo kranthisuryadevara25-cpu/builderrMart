@@ -18,6 +18,11 @@ import RealTimePriceNegotiation from '@/components/analytics/RealTimePriceNegoti
 import SmartBudgetCalculator from '@/components/analytics/SmartBudgetCalculator';
 import EcoImpactCalculator from '@/components/analytics/EcoImpactCalculator';
 import PredictiveMaterialForecast from '@/components/analytics/PredictiveMaterialForecast';
+import InteractiveCustomerJourney from '@/components/analytics/InteractiveCustomerJourney';
+import OneClickProjectOptimizer from '@/components/analytics/OneClickProjectOptimizer';
+import AIRecommendationEngine from '@/components/analytics/AIRecommendationEngine';
+import GamifiedLearningHub from '@/components/analytics/GamifiedLearningHub';
+import PersonalizedSustainabilityDashboard from '@/components/analytics/PersonalizedSustainabilityDashboard';
 
 export default function AnalyticsDashboard() {
   const [activeTab, setActiveTab] = useState('heatmap');
@@ -118,6 +123,46 @@ export default function AnalyticsDashboard() {
       description: 'AI-driven material availability and price predictions',
       component: PredictiveMaterialForecast,
       color: 'bg-orange-100 text-orange-600'
+    },
+    {
+      id: 'customer-journey',
+      name: 'Interactive Customer Journey',
+      icon: MapPin,
+      description: 'Visualize and optimize customer interactions in real-time',
+      component: InteractiveCustomerJourney,
+      color: 'bg-blue-100 text-blue-600'
+    },
+    {
+      id: 'project-optimizer',
+      name: 'One-Click Project Optimizer',
+      icon: Zap,
+      description: 'AI-powered cost optimization with instant recommendations',
+      component: OneClickProjectOptimizer,
+      color: 'bg-orange-100 text-orange-600'
+    },
+    {
+      id: 'ai-recommendations',
+      name: 'AI Recommendation Engine',
+      icon: Brain,
+      description: 'Personalized material suggestions powered by machine learning',
+      component: AIRecommendationEngine,
+      color: 'bg-indigo-100 text-indigo-600'
+    },
+    {
+      id: 'learning-hub',
+      name: 'Gamified Learning Hub',
+      icon: Trophy,
+      description: 'Interactive learning platform for construction professionals',
+      component: GamifiedLearningHub,
+      color: 'bg-rose-100 text-rose-600'
+    },
+    {
+      id: 'sustainability-dashboard',
+      name: 'Sustainability Dashboard',
+      icon: Leaf,
+      description: 'Track and optimize your environmental impact in construction',
+      component: PersonalizedSustainabilityDashboard,
+      color: 'bg-teal-100 text-teal-600'
     }
   ];
 
