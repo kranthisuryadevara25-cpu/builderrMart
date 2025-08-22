@@ -68,47 +68,47 @@ const generateMockAnalysis = (): ConstructionAnalysis => {
     floors: 2,
     materials: [
       {
+        material: "Portland Cement (53 Grade)",
+        category: "Cement",
+        quantity: 100,
+        unit: "bags",
+        estimatedPrice: 38000,
+        description: "Premium 53-grade cement for strong construction",
+        priority: 'essential',
+        selected: true
+      },
+      {
+        material: "TMT Steel Bars (Fe500D)",
+        category: "Steel",
+        quantity: 800,
+        unit: "kg",
+        estimatedPrice: 52000,
+        description: "High-strength TMT bars for structural reinforcement",
+        priority: 'essential',
+        selected: true
+      },
+      {
         material: "Red Clay Bricks",
-        category: "Masonry",
+        category: "Bricks",
         quantity: 5000,
         unit: "pieces",
-        estimatedPrice: 32500,
+        estimatedPrice: 40000,
         description: "High-quality red clay bricks for construction",
         priority: 'essential',
         selected: true
       },
       {
-        material: "Portland Cement",
-        category: "Binding",
-        quantity: 100,
-        unit: "bags",
-        estimatedPrice: 42500,
-        description: "Premium cement for strong construction",
-        priority: 'essential',
-        selected: true
-      },
-      {
-        material: "TMT Steel Bars",
-        category: "Reinforcement",
-        quantity: 800,
-        unit: "kg",
-        estimatedPrice: 52000,
-        description: "High-strength steel bars for reinforcement",
-        priority: 'essential',
-        selected: true
-      },
-      {
-        material: "M-Sand",
-        category: "Aggregate",
+        material: "Stone Aggregate (20mm)",
+        category: "Metal",
         quantity: 25,
-        unit: "cubic meters",
-        estimatedPrice: 45000,
-        description: "Quality manufactured sand",
-        priority: 'recommended',
-        selected: false
+        unit: "cubic feet",
+        estimatedPrice: 12500,
+        description: "Coarse aggregate for concrete work",
+        priority: 'essential',
+        selected: true
       }
     ],
-    totalEstimatedCost: 172000,
+    totalEstimatedCost: 139500,
     constructionDuration: "4-6 months",
     confidence: 85
   };
@@ -164,23 +164,20 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     const isIndustrial = projectInfo?.projectType === 'industrial';
     
     // Realistic calculation factors based on project type (per sq ft)
-    let bricksPerSqFt, cementBagsPerSqFt, steelKgPerSqFt, sandCubicFeetPerSqFt;
+    let bricksPerSqFt, cementBagsPerSqFt, steelKgPerSqFt;
     
     if (isIndustrial) {
       bricksPerSqFt = 14;          // 1400 bricks per 100 sq ft for heavy construction
       cementBagsPerSqFt = 0.12;    // 12 bags per 100 sq ft for industrial
       steelKgPerSqFt = 0.55;       // 55 kg per 100 sq ft for industrial
-      sandCubicFeetPerSqFt = 0.28; // 28 cubic feet per 100 sq ft
     } else if (isCommercial) {
       bricksPerSqFt = 12;          // 1200 bricks per 100 sq ft for commercial
       cementBagsPerSqFt = 0.10;    // 10 bags per 100 sq ft for commercial  
       steelKgPerSqFt = 0.45;       // 45 kg per 100 sq ft for commercial
-      sandCubicFeetPerSqFt = 0.25; // 25 cubic feet per 100 sq ft
     } else {
       bricksPerSqFt = 10;          // 1000 bricks per 100 sq ft for residential
       cementBagsPerSqFt = 0.08;    // 8 bags per 100 sq ft for residential
       steelKgPerSqFt = 0.35;       // 35 kg per 100 sq ft for residential
-      sandCubicFeetPerSqFt = 0.22; // 22 cubic feet per 100 sq ft
     }
     
     const totalArea = area * floors;
@@ -230,7 +227,39 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
       });
     }
 
-    // 2. Red Clay Bricks (Second priority)
+    // 2. TMT Steel Bars (Second priority)
+    const steelProduct = findProduct(['steel', 'tmt', 'bar', 'fe500']);
+    const steelQty = Math.round(totalArea * steelKgPerSqFt);
+    if (steelProduct) {
+      const pricing = getProductPricing(steelProduct, steelQty);
+      materials.push({
+        material: steelProduct.name,
+        category: "Steel",
+        quantity: steelQty,
+        unit: "kg",
+        estimatedPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        finalPrice: pricing.finalPrice,
+        discount: pricing.discount,
+        productId: steelProduct.id,
+        description: steelProduct.description || "High-strength TMT bars for structural reinforcement",
+        priority: 'essential',
+        selected: true
+      });
+    } else {
+      materials.push({
+        material: "TMT Steel Bars (Fe500D)",
+        category: "Steel",
+        quantity: steelQty,
+        unit: "kg",
+        estimatedPrice: Math.round(steelQty * 65),
+        description: "High-strength TMT bars for structural reinforcement",
+        priority: 'essential',
+        selected: true
+      });
+    }
+
+    // 3. Red Clay Bricks (Third priority)
     const bricksProduct = findProduct(['brick', 'clay', 'red']);
     const bricksQty = Math.round(totalArea * bricksPerSqFt);
     if (bricksProduct) {
@@ -262,46 +291,14 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
       });
     }
 
-    // 3. TMT Steel Bars/Iron (Third priority)
-    const steelProduct = findProduct(['steel', 'tmt', 'bar', 'fe500']);
-    const steelQty = Math.round(totalArea * steelKgPerSqFt);
-    if (steelProduct) {
-      const pricing = getProductPricing(steelProduct, steelQty);
-      materials.push({
-        material: steelProduct.name,
-        category: "Iron/Steel",
-        quantity: steelQty,
-        unit: "kg",
-        estimatedPrice: pricing.totalPrice,
-        basePrice: pricing.basePrice,
-        finalPrice: pricing.finalPrice,
-        discount: pricing.discount,
-        productId: steelProduct.id,
-        description: steelProduct.description || "High-strength TMT bars for structural reinforcement",
-        priority: 'essential',
-        selected: true
-      });
-    } else {
-      materials.push({
-        material: "TMT Steel Bars (Fe500D)",
-        category: "Iron/Steel",
-        quantity: steelQty,
-        unit: "kg",
-        estimatedPrice: Math.round(steelQty * 65),
-        description: "High-strength TMT bars for structural reinforcement",
-        priority: 'essential',
-        selected: true
-      });
-    }
-
-    // 4. Stone Aggregate/Gravel (Fourth priority)
+    // 4. Stone Aggregate/Metal (Fourth priority)
     const aggregateProduct = findProduct(['aggregate', 'stone', '20mm']);
     const aggregateQty = Math.round(totalArea * 0.23);
     if (aggregateProduct) {
       const pricing = getProductPricing(aggregateProduct, aggregateQty);
       materials.push({
         material: aggregateProduct.name,
-        category: "Gravel/Metal",
+        category: "Metal",
         quantity: aggregateQty,
         unit: "cubic feet",
         estimatedPrice: pricing.totalPrice,
@@ -316,43 +313,11 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     } else {
       materials.push({
         material: "Stone Aggregate (20mm)",
-        category: "Gravel/Metal",
+        category: "Metal",
         quantity: aggregateQty,
         unit: "cubic feet",
         estimatedPrice: Math.round(aggregateQty * 50),
         description: "Coarse aggregate for concrete work",
-        priority: 'essential',
-        selected: true
-      });
-    }
-
-    // 5. River Sand (Fifth priority - other important material)
-    const sandProduct = findProduct(['sand', 'm-sand', 'manufactured']);
-    const sandQty = Math.round(totalArea * sandCubicFeetPerSqFt);
-    if (sandProduct) {
-      const pricing = getProductPricing(sandProduct, sandQty);
-      materials.push({
-        material: sandProduct.name,
-        category: "Sand/Aggregate",
-        quantity: sandQty,
-        unit: "cubic feet",
-        estimatedPrice: pricing.totalPrice,
-        basePrice: pricing.basePrice,
-        finalPrice: pricing.finalPrice,
-        discount: pricing.discount,
-        productId: sandProduct.id,
-        description: sandProduct.description || "Fine aggregate for concrete, mortar and plastering",
-        priority: 'essential',
-        selected: true
-      });
-    } else {
-      materials.push({
-        material: "River Sand",
-        category: "Sand/Aggregate", 
-        quantity: sandQty,
-        unit: "cubic feet",
-        estimatedPrice: Math.round(sandQty * 45),
-        description: "Fine aggregate for concrete, mortar and plastering",
         priority: 'essential',
         selected: true
       });
