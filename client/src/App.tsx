@@ -159,7 +159,7 @@ function Router() {
       
       <Route path="/voice-demo">
         <ProtectedRoute>
-          <Route component={lazy(() => import("@/pages/voice-demo"))} />
+          <div>Voice Demo Coming Soon</div>
         </ProtectedRoute>
       </Route>
       

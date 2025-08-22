@@ -76,27 +76,27 @@ export function VoiceSearchInput({
           data-testid={testId}
         />
         {/* Enhanced microphone button with better visibility */}
+        {/* ALWAYS VISIBLE MICROPHONE BUTTON */}
         <Button
           type="button"
-          variant="ghost"
+          variant="default"
           size="sm"
           className={cn(
-            "absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 border",
-            !isSupported ? "text-gray-400 cursor-not-allowed bg-gray-100" :
-            isListening ? "text-white bg-red-500 hover:bg-red-600 animate-pulse" : "text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200"
+            "absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 border-2",
+            isListening ? "bg-red-500 text-white border-red-600 animate-pulse shadow-lg" : 
+            "bg-blue-500 text-white border-blue-600 hover:bg-blue-600 shadow-md"
           )}
           onClick={handleMicClick}
-          disabled={!isSupported}
           title={
-            !isSupported ? "Voice search not supported - check browser compatibility" :
+            !isSupported ? "🎤 Voice search (Browser not supported)" :
             isListening ? "🎤 Recording... Click to stop" : "🎤 Click to start voice search"
           }
           data-testid={`${testId}-voice-button`}
         >
           {isListening ? (
-            <MicOff className="h-4 w-4" />
+            <MicOff className="h-4 w-4 drop-shadow-sm" />
           ) : (
-            <Mic className={cn("h-4 w-4", !isSupported && "opacity-50")} />
+            <Mic className="h-4 w-4 drop-shadow-sm" />
           )}
         </Button>
       </div>
