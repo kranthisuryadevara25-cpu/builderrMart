@@ -111,14 +111,18 @@ export function useVoiceSearch({ onResult, language = 'en-US', onLanguageDetecte
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const { toast } = useToast();
 
-  // Use callbacks to prevent re-renders
+  // Memoize callbacks to prevent infinite re-renders
   const stableOnResult = useCallback((text: string) => {
-    onResult?.(text);
-  }, [onResult]);
+    if (onResult) {
+      onResult(text);
+    }
+  }, []); // Empty dependency array to prevent infinite loop
 
   const stableOnLanguageDetected = useCallback((lang: string) => {
-    onLanguageDetected?.(lang);
-  }, [onLanguageDetected]);
+    if (onLanguageDetected) {
+      onLanguageDetected(lang);
+    }
+  }, []); // Empty dependency array to prevent infinite loop
 
   // Check if Speech Recognition is supported
   const isSupported = typeof window !== 'undefined' && 
@@ -228,7 +232,7 @@ export function useVoiceSearch({ onResult, language = 'en-US', onLanguageDetecte
     return () => {
       recognitionInstance.stop();
     };
-  }, [isSupported, language, onResult, toast]);
+  }, [isSupported, language, stableOnResult, toast]);
 
   const startListening = useCallback(() => {
     if (!recognition || isListening) return;

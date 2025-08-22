@@ -1220,7 +1220,11 @@ export default function CustomerEcommerce() {
                   value={searchTerm}
                   onChange={(value) => {
                     setSearchTerm(value);
-                    performAdvancedSearch(value);
+                    // Trigger search with the new value
+                    if (value.trim()) {
+                      setIsSearching(true);
+                      performAdvancedSearch(value);
+                    }
                   }}
                   placeholder="Search for cement, steel, bricks, or any material... 🎤"
                   className="w-full text-lg h-14"
@@ -1242,6 +1246,7 @@ export default function CustomerEcommerce() {
                         size="sm"
                         onClick={() => {
                           setSearchTerm(term);
+                          setIsSearching(true);
                           performAdvancedSearch(term);
                         }}
                         className="text-xs hover:bg-blue-50"
