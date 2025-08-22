@@ -1576,7 +1576,7 @@ export default function CustomerEcommerce() {
             {(() => {
               // Get products from same category or complementary categories
               const currentCategory = categories.find(cat => cat.id === selectedProduct.categoryId);
-              let recommendedProducts = [];
+              let recommendedProducts: Product[] = [];
               
               if (currentCategory) {
                 // Get 2-3 products from same category (excluding current product)
@@ -1585,7 +1585,7 @@ export default function CustomerEcommerce() {
                   .slice(0, 3);
                 
                 // Get complementary products based on construction logic
-                let complementaryProducts = [];
+                let complementaryProducts: Product[] = [];
                 if (currentCategory.name.toLowerCase().includes('cement') || currentCategory.name.toLowerCase().includes('concrete')) {
                   // If viewing cement, recommend steel and bricks
                   complementaryProducts = products.filter(p => 
@@ -2632,25 +2632,12 @@ export default function CustomerEcommerce() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantity</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          placeholder="1" 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <FormLabel>Products & Quantities</FormLabel>
+                  <p className="text-sm text-gray-500 mb-2">
+                    Select products from the main page and they'll appear in your quote
+                  </p>
+                </div>
               </div>
               
               <FormField
@@ -2725,7 +2712,8 @@ export default function CustomerEcommerce() {
                 deliveryDiscountSlabs: null,
                 company: null,
                 gstRate: null,
-                isTrending: null
+                isTrending: null,
+                isFeatured: null
               };
               addToCart(product, material.adjustedQuantity || material.quantity);
             });
