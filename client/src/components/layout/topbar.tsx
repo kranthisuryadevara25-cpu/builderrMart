@@ -3,6 +3,7 @@ import { useAuth } from "@/components/auth/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { VoiceSearchInput } from "@/components/ui/voice-search-input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,17 +42,14 @@ export function Topbar({ title, subtitle }: TopbarProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Search products, categories..."
-              className="w-80 pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          {/* Search with Voice */}
+          <VoiceSearchInput
+            placeholder="Search products, categories..."
+            className="w-80"
+            value={searchQuery}
+            onChange={setSearchQuery}
+            testId="topbar-search"
+          />
 
           {/* Notifications */}
           <div className="relative">
