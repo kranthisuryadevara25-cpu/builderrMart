@@ -47,9 +47,37 @@ interface SpeechRecognitionConstructor {
   prototype: SpeechRecognition;
 }
 
+export interface Language {
+  code: string;
+  name: string;
+  flag: string;
+  region: string;
+}
+
+export const SUPPORTED_LANGUAGES: Language[] = [
+  { code: 'en-US', name: 'English (US)', flag: '🇺🇸', region: 'US' },
+  { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧', region: 'UK' },
+  { code: 'en-IN', name: 'English (India)', flag: '🇮🇳', region: 'India' },
+  { code: 'hi-IN', name: 'हिन्दी (Hindi)', flag: '🇮🇳', region: 'India' },
+  { code: 'te-IN', name: 'తెలుగు (Telugu)', flag: '🇮🇳', region: 'India' },
+  { code: 'ta-IN', name: 'தமிழ் (Tamil)', flag: '🇮🇳', region: 'India' },
+  { code: 'bn-IN', name: 'বাংলা (Bengali)', flag: '🇮🇳', region: 'India' },
+  { code: 'mr-IN', name: 'मराठी (Marathi)', flag: '🇮🇳', region: 'India' },
+  { code: 'gu-IN', name: 'ગુજરાતી (Gujarati)', flag: '🇮🇳', region: 'India' },
+  { code: 'kn-IN', name: 'ಕನ್ನಡ (Kannada)', flag: '🇮🇳', region: 'India' },
+  { code: 'es-ES', name: 'Español (Spanish)', flag: '🇪🇸', region: 'Spain' },
+  { code: 'fr-FR', name: 'Français (French)', flag: '🇫🇷', region: 'France' },
+  { code: 'de-DE', name: 'Deutsch (German)', flag: '🇩🇪', region: 'Germany' },
+  { code: 'ar-SA', name: 'العربية (Arabic)', flag: '🇸🇦', region: 'Saudi Arabia' },
+  { code: 'zh-CN', name: '中文 (Chinese)', flag: '🇨🇳', region: 'China' },
+  { code: 'ja-JP', name: '日本語 (Japanese)', flag: '🇯🇵', region: 'Japan' },
+  { code: 'ko-KR', name: '한국어 (Korean)', flag: '🇰🇷', region: 'Korea' },
+];
+
 interface UseVoiceSearchProps {
   onResult: (transcript: string) => void;
   language?: string;
+  onLanguageDetected?: (detectedLanguage: string) => void;
 }
 
 interface BrowserCompatibility {
@@ -66,19 +94,20 @@ interface UseVoiceSearchReturn {
   isListening: boolean;
   isSupported: boolean;
   transcript: string;
+  currentLanguage: string;
   startListening: () => void;
   stopListening: () => void;
   toggleListening: () => void;
+  changeLanguage: (languageCode: string) => void;
+  getSupportedLanguages: () => Language[];
   getBrowserCompatibility: () => BrowserCompatibility;
   getDebugInfo: () => object;
 }
 
-export function useVoiceSearch({ onResult, language = 'en-US' }: UseVoiceSearchProps): UseVoiceSearchReturn & { 
-  getBrowserCompatibility: () => object;
-  getDebugInfo: () => object;
-} {
+export function useVoiceSearch({ onResult, language = 'en-US', onLanguageDetected }: UseVoiceSearchProps): UseVoiceSearchReturn {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [currentLanguage, setCurrentLanguage] = useState(language);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const { toast } = useToast();
 
@@ -114,7 +143,7 @@ export function useVoiceSearch({ onResult, language = 'en-US' }: UseVoiceSearchP
 
     recognitionInstance.continuous = false;
     recognitionInstance.interimResults = true;
-    recognitionInstance.lang = language;
+    recognitionInstance.lang = currentLanguage;
     recognitionInstance.maxAlternatives = 1;
 
     recognitionInstance.onstart = () => {
@@ -218,6 +247,21 @@ export function useVoiceSearch({ onResult, language = 'en-US' }: UseVoiceSearchP
     recognition.stop();
   }, [recognition, isListening]);
 
+  // Language change handler
+  const changeLanguage = useCallback((languageCode: string) => {
+    setCurrentLanguage(languageCode);
+    if (recognition) {
+      recognition.lang = languageCode;
+    }
+    console.log(`🎤 Language changed to: ${languageCode}`);
+    onLanguageDetected?.(languageCode);
+  }, [recognition, onLanguageDetected]);
+
+  // Get supported languages
+  const getSupportedLanguages = useCallback(() => {
+    return SUPPORTED_LANGUAGES;
+  }, []);
+
   const toggleListening = useCallback(() => {
     if (isListening) {
       stopListening();
@@ -245,19 +289,23 @@ export function useVoiceSearch({ onResult, language = 'en-US' }: UseVoiceSearchP
       isListening,
       isSupported,
       transcript,
-      language,
+      currentLanguage,
+      supportedLanguages: SUPPORTED_LANGUAGES.length,
       compatibility: getBrowserCompatibility(),
       timestamp: new Date().toISOString()
     };
-  }, [isListening, isSupported, transcript, language, getBrowserCompatibility]);
+  }, [isListening, isSupported, transcript, currentLanguage, getBrowserCompatibility]);
 
   return {
     isListening,
     isSupported,
     transcript,
+    currentLanguage,
     startListening,
     stopListening,
     toggleListening,
+    changeLanguage,
+    getSupportedLanguages,
     getBrowserCompatibility,
     getDebugInfo,
   };

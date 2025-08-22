@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "@/components/auth/auth-context";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VoiceSearchInput } from "@/components/ui/voice-search-input";
+import { QuickLanguageSwitcher } from "@/components/ui/language-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ interface TopbarProps {
 export function Topbar({ title, subtitle }: TopbarProps) {
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [voiceLanguage, setVoiceLanguage] = useState("en-US");
 
   if (!user) return null;
 
@@ -41,30 +42,26 @@ export function Topbar({ title, subtitle }: TopbarProps) {
           )}
         </div>
 
-        <div className="flex items-center space-x-4">
-          {/* Search with VISIBLE Microphone Button */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
-            <Input
-              type="text"
+        <div className="flex items-center space-x-3">
+          {/* Multilingual Voice Search */}
+          <div className="flex items-center gap-2">
+            <VoiceSearchInput
               placeholder="Search products, categories..."
-              className="w-80 pl-10 pr-12"
+              className="w-80"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={setSearchQuery}
+              testId="topbar-search"
+              language={voiceLanguage}
+              onLanguageChange={setVoiceLanguage}
+              showLanguageSelector={false}
             />
-            {/* BRIGHT BLUE MICROPHONE BUTTON - ALWAYS VISIBLE */}
-            <Button
-              type="button"
-              size="sm"
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 text-white border-2 border-blue-600 shadow-lg"
-              onClick={() => {
-                console.log('🎤 Microphone clicked in header!');
-                alert('🎤 Voice search clicked! Feature working.');
-              }}
-              title="🎤 Click for voice search"
-            >
-              <Mic className="h-4 w-4 drop-shadow-sm" />
-            </Button>
+            
+            {/* Quick Language Switcher */}
+            <QuickLanguageSwitcher
+              currentLanguage={voiceLanguage}
+              onLanguageChange={setVoiceLanguage}
+              className="border-l pl-2"
+            />
           </div>
 
           {/* Notifications */}

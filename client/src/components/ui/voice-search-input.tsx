@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mic, MicOff, Search, AlertTriangle } from 'lucide-react';
-import { useVoiceSearch } from '@/hooks/useVoiceSearch';
+import { useVoiceSearch, SUPPORTED_LANGUAGES } from '@/hooks/useVoiceSearch';
+import { LanguageSelector } from '@/components/ui/language-selector';
 import { cn } from '@/lib/utils';
 
 interface VoiceSearchInputProps {
@@ -14,6 +15,9 @@ interface VoiceSearchInputProps {
   testId?: string;
   language?: string;
   showDebugInfo?: boolean;
+  showLanguageSelector?: boolean;
+  languageSelectorVariant?: 'default' | 'compact' | 'minimal';
+  onLanguageChange?: (language: string) => void;
 }
 
 export function VoiceSearchInput({
@@ -23,13 +27,18 @@ export function VoiceSearchInput({
   className,
   testId,
   language = 'en-US',
-  showDebugInfo = false
+  showDebugInfo = false,
+  showLanguageSelector = false,
+  languageSelectorVariant = 'compact',
+  onLanguageChange
 }: VoiceSearchInputProps) {
   const { 
     isListening, 
     isSupported, 
     transcript, 
+    currentLanguage,
     toggleListening, 
+    changeLanguage,
     getBrowserCompatibility, 
     getDebugInfo 
   } = useVoiceSearch({
@@ -37,7 +46,11 @@ export function VoiceSearchInput({
       console.log('🎤 Voice search result:', transcript);
       onChange(transcript);
     },
-    language
+    language,
+    onLanguageDetected: (detectedLang) => {
+      console.log('🎤 Language detected:', detectedLang);
+      onLanguageChange?.(detectedLang);
+    }
   });
   
   // Enhanced debugging information
@@ -62,6 +75,39 @@ export function VoiceSearchInput({
     }
     
     toggleListening();
+  };
+
+  // Helper functions for multilingual support
+  const getListeningMessage = () => {
+    const messages: Record<string, string> = {
+      'hi': 'सुन रहा है',
+      'te': 'వिನಡం',
+      'ta': 'கேட்கிறது',
+      'bn': 'শুনছি',
+      'mr': 'ऍकत आहे',
+      'gu': 'સાંભળે છે',
+      'kn': 'ಕೇಳುತ್ತಿದ್ದೇ',
+      'es': 'Escuchando',
+      'fr': 'Écoute',
+      'de': 'Hört zu',
+      'ar': 'يستمع',
+      'zh': '在听',
+      'ja': '聞いています',
+      'ko': '듣고 있습니다',
+    };
+    const langPrefix = currentLanguage.split('-')[0];
+    return messages[langPrefix] || 'Listening';
+  };
+
+  const getVoiceButtonTitle = () => {
+    if (!isSupported) return '🎤 Voice search (Browser not supported)';
+    if (isListening) return `🎤 ${getListeningMessage()}... Click to stop`;
+    return `🎤 Click to start voice search (${getCurrentLanguageName()})`;
+  };
+
+  const getCurrentLanguageName = () => {
+    const lang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage);
+    return lang ? lang.name : currentLanguage;
   };
   
   return (
