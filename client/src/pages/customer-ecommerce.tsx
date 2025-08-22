@@ -1192,78 +1192,24 @@ export default function CustomerEcommerce() {
     
     return (
       <>
-        {/* Hero Search Section - Always visible on homepage */}
+        {/* Subtle Search Bar - Always visible on homepage */}
         {!hasSearchResults && !hasSearchButNoResults && (
-          <section className="bg-gradient-to-br from-blue-50 to-white py-12 px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Find Construction Materials with AI Voice Search
-              </h1>
-              <p className="text-xl text-gray-600 mb-8">
-                Search in Hindi, Tamil, Telugu, Bengali, and 13+ other languages
-              </p>
-              
-              {/* Main Search Interface */}
-              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <section className="bg-white border-b py-3 px-4">
+            <div className="max-w-7xl mx-auto">
+              <div className="max-w-xl mx-auto">
                 <VoiceSearchInput
                   value={searchTerm}
                   onChange={(value) => {
                     handleSearchChange(value);
                   }}
-                  placeholder="Search for cement, steel, bricks, or any material... 🎤"
-                  className="w-full text-lg h-14"
+                  placeholder="Search materials... 🎤"
+                  className="w-full"
                   showLanguageSelector={true}
                   language={voiceLanguage}
                   onLanguageChange={setVoiceLanguage}
-                  languageSelectorVariant="compact"
+                  languageSelectorVariant="minimal"
                   showDebugInfo={false}
                 />
-                
-                {/* Popular searches */}
-                <div className="mt-4">
-                  <p className="text-sm text-gray-500 mb-3">Popular searches:</p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {['Cement bags', 'Steel rods', 'Red bricks', 'Electrical wire', 'PVC pipes', 'Paint'].map((term) => (
-                      <Button
-                        key={term}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          handleSearchChange(term);
-                        }}
-                        className="text-xs hover:bg-blue-50"
-                      >
-                        {term}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Language Support Info */}
-              <div className="text-sm text-gray-600">
-                <p className="mb-2">🌐 Supported Languages:</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {[
-                    { code: 'hi-IN', name: '🇮🇳 हिंदी' },
-                    { code: 'ta-IN', name: '🇮🇳 தமிழ்' },
-                    { code: 'te-IN', name: '🇮🇳 తెలుగు' },
-                    { code: 'bn-IN', name: '🇮🇳 বাংলা' },
-                    { code: 'mr-IN', name: '🇮🇳 मराठी' },
-                    { code: 'gu-IN', name: '🇮🇳 ગુજરાતી' },
-                    { code: 'kn-IN', name: '🇮🇳 ಕನ್ನಡ' },
-                    { code: 'en-US', name: '🇺🇸 English' }
-                  ].map((lang) => (
-                    <Badge 
-                      key={lang.code} 
-                      variant={voiceLanguage === lang.code ? 'default' : 'outline'}
-                      className="text-xs cursor-pointer hover:bg-blue-100"
-                      onClick={() => setVoiceLanguage(lang.code)}
-                    >
-                      {lang.name}
-                    </Badge>
-                  ))}
-                </div>
               </div>
             </div>
           </section>
