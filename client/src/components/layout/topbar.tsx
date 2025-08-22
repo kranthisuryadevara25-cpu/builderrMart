@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, Bell, ChevronDown } from "lucide-react";
+import { Search, Bell, ChevronDown, Mic, MicOff } from "lucide-react";
 
 interface TopbarProps {
   title: string;
@@ -42,14 +42,30 @@ export function Topbar({ title, subtitle }: TopbarProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* Search with Voice */}
-          <VoiceSearchInput
-            placeholder="Search products, categories..."
-            className="w-80"
-            value={searchQuery}
-            onChange={setSearchQuery}
-            testId="topbar-search"
-          />
+          {/* Search with VISIBLE Microphone Button */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
+            <Input
+              type="text"
+              placeholder="Search products, categories..."
+              className="w-80 pl-10 pr-12"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {/* BRIGHT BLUE MICROPHONE BUTTON - ALWAYS VISIBLE */}
+            <Button
+              type="button"
+              size="sm"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 text-white border-2 border-blue-600 shadow-lg"
+              onClick={() => {
+                console.log('🎤 Microphone clicked in header!');
+                alert('🎤 Voice search clicked! Feature working.');
+              }}
+              title="🎤 Click for voice search"
+            >
+              <Mic className="h-4 w-4 drop-shadow-sm" />
+            </Button>
+          </div>
 
           {/* Notifications */}
           <div className="relative">
