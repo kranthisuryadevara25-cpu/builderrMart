@@ -360,11 +360,11 @@ export default function CustomerEcommerce() {
     'पोलाद': 'steel',
     'लोखंड': 'iron',
     'वीट': 'brick',
-    'तार': 'wire',
+    'मराठी तार': 'wire',
     'पाईप': 'pipe',
     'वाळू': 'sand',
     'दगड': 'stone',
-    'रंग': 'paint',
+    'मराठी रंग': 'paint',
     
     // Gujarati
     'સિમેન્ટ': 'cement',
@@ -392,7 +392,11 @@ export default function CustomerEcommerce() {
   // Function to translate regional language terms to English
   const translateToEnglish = (term: string): string => {
     const lowerTerm = term.trim();
-    return constructionMaterialTranslations[lowerTerm] || lowerTerm;
+    const translated = constructionMaterialTranslations[lowerTerm] || lowerTerm;
+    if (translated !== lowerTerm) {
+      console.log(`🔄 Translation: "${lowerTerm}" → "${translated}"`);
+    }
+    return translated;
   };
 
   // Search Handler - Fixed to allow multiple letters/words with translation
@@ -412,6 +416,8 @@ export default function CustomerEcommerce() {
     const translatedValue = value.split(/\s+/)
       .map(word => translateToEnglish(word))
       .join(' ');
+    
+    console.log(`🔍 Search: "${value}" → Translated: "${translatedValue}"`);
     
     const searchTerms = translatedValue.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
     
@@ -1286,24 +1292,73 @@ export default function CustomerEcommerce() {
     
     return (
       <>
-        {/* Subtle Search Bar - Always visible on homepage */}
+        {/* Voice Search Section with Language Support */}
         {!hasSearchResults && !hasSearchButNoResults && (
-          <section className="bg-white border-b py-3 px-4">
-            <div className="max-w-7xl mx-auto">
-              <div className="max-w-xl mx-auto">
+          <section className="bg-gradient-to-br from-blue-50 to-white py-8 px-4">
+            <div className="max-w-4xl mx-auto text-center">
+              <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                🎤 Multilingual Voice Search
+              </h1>
+              <p className="text-lg text-gray-600 mb-6">
+                Search in your language - We'll translate and find products for you
+              </p>
+              
+              {/* Main Search Interface */}
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <VoiceSearchInput
                   value={searchTerm}
                   onChange={(value) => {
                     handleSearchChange(value);
                   }}
-                  placeholder="Search materials... 🎤"
-                  className="w-full"
-                  showLanguageSelector={true}
+                  placeholder="Search: cement, steel, bricks... or say সিমেন্ট, సిమెంట్, सीमेंट 🎤"
+                  className="w-full text-lg h-14"
+                  showLanguageSelector={false}
                   language={voiceLanguage}
                   onLanguageChange={setVoiceLanguage}
-                  languageSelectorVariant="minimal"
                   showDebugInfo={false}
                 />
+              </div>
+              
+              {/* Language Support Display */}
+              <div className="text-sm text-gray-600 mb-4">
+                <p className="mb-3 font-medium">🌐 Speak in any of these languages:</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
+                  {[
+                    { code: 'en-US', name: 'English', flag: '🇺🇸', example: 'cement' },
+                    { code: 'hi-IN', name: 'हिंदी', flag: '🇮🇳', example: 'सीमेंट' },
+                    { code: 'te-IN', name: 'తెలుగు', flag: '🇮🇳', example: 'సిమెంట్' },
+                    { code: 'ta-IN', name: 'தமிழ்', flag: '🇮🇳', example: 'சிமெண்ட்' },
+                    { code: 'bn-IN', name: 'বাংলা', flag: '🇮🇳', example: 'সিমেন্ট' },
+                    { code: 'mr-IN', name: 'मराठी', flag: '🇮🇳', example: 'सिमेंट' },
+                    { code: 'gu-IN', name: 'ગુજરાતી', flag: '🇮🇳', example: 'સિમેન્ટ' },
+                    { code: 'kn-IN', name: 'ಕನ್ನಡ', flag: '🇮🇳', example: 'ಸಿಮೆಂಟ್' }
+                  ].map((lang) => (
+                    <Button
+                      key={lang.code}
+                      variant={voiceLanguage === lang.code ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setVoiceLanguage(lang.code)}
+                      className="p-3 h-auto flex flex-col items-center hover:bg-blue-50 transition-colors"
+                      title={`Switch to ${lang.name} voice search`}
+                    >
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-base">{lang.flag}</span>
+                        <span className="font-medium text-xs">{lang.name}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 italic">"{lang.example}"</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Translation Help */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
+                <p className="text-green-800 font-medium mb-2">
+                  ✨ How it works:
+                </p>
+                <p className="text-green-700">
+                  1. Click a language button above  •  2. Click the microphone 🎤  •  3. Say the material name in your language  •  4. We'll translate and search for products!
+                </p>
               </div>
             </div>
           </section>
