@@ -93,7 +93,7 @@ const navigation = [
     icon: BarChart3,
     roles: ["owner_admin", "vendor_manager", "vendor"],
     badge: "12 Tools",
-    badgeVariant: "default",
+    badgeVariant: "default" as const,
   },
   {
     name: "Inventory",
