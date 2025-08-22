@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { VoiceSearchInput } from '@/components/ui/voice-search-input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -184,10 +185,11 @@ export default function MaterialComparisonDashboard() {
           <div className="space-y-4">
             <div className="flex gap-4">
               <div className="flex-1">
-                <Input
+                <VoiceSearchInput
                   placeholder="Search materials to compare..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={setSearchTerm}
+                  testId="input-search-comparison-products"
                 />
                 {searchTerm && (
                   <div className="mt-2 max-h-40 overflow-y-auto border rounded-md">

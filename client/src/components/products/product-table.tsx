@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { VoiceSearchInput } from "@/components/ui/voice-search-input";
 import {
   Dialog,
   DialogContent,
@@ -129,16 +130,13 @@ export function ProductTable({ vendorId }: ProductTableProps) {
       {/* Action Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search products by name, description, category, vendor, or price..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
-              data-testid="input-search-products"
-            />
-          </div>
+          <VoiceSearchInput
+            placeholder="Search products by name, description, category, vendor, or price..."
+            value={searchTerm}
+            onChange={setSearchTerm}
+            className="w-64"
+            testId="input-search-products"
+          />
           
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-48">

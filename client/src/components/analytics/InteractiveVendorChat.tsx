@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { VoiceSearchInput } from '@/components/ui/voice-search-input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -354,15 +355,12 @@ export default function InteractiveVendorChat() {
             {/* Chat List */}
             <div className="w-1/3 border-r bg-gray-50 dark:bg-gray-800">
               <div className="p-4 border-b space-y-3">
-                <div className="relative">
-                  <Input
-                    placeholder="Search vendors by name, location, or specialty..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-4"
-                    data-testid="input-search-vendors"
-                  />
-                </div>
+                <VoiceSearchInput
+                  placeholder="Search vendors by name, location, or specialty..."
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  testId="input-search-chat-vendors"
+                />
                 <Select value={chatFilter} onValueChange={setChatFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter chats" />

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { VoiceSearchInput } from "@/components/ui/voice-search-input";
 import {
   Dialog,
   DialogContent,
@@ -204,14 +205,12 @@ export default function Vendors() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
+                  <div className="flex-1">
+                    <VoiceSearchInput
                       placeholder="Search vendors by name, email, status, products count, or join date..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                      data-testid="input-search-vendors"
+                      onChange={setSearchTerm}
+                      testId="input-search-vendors"
                     />
                   </div>
                 </div>

@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VoiceSearchInput } from "@/components/ui/voice-search-input";
 import {
   Dialog,
   DialogContent,
@@ -132,16 +133,12 @@ export default function Categories() {
             {/* Search and Filters */}
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search categories by name, description, or parent..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                    data-testid="input-search-categories"
-                  />
-                </div>
+                <VoiceSearchInput
+                  placeholder="Search categories by name, description, or parent..."
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  testId="input-search-categories"
+                />
               </div>
               
               <Select value={parentFilter} onValueChange={setParentFilter}>
