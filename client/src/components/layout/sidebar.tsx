@@ -15,6 +15,7 @@ import {
   BarChart3,
   Warehouse,
   LogOut,
+  TrendingUp,
 } from "lucide-react";
 
 const navigation = [
@@ -85,6 +86,14 @@ const navigation = [
     href: "/analytics",
     icon: BarChart3,
     roles: ["owner_admin", "vendor_manager", "vendor"],
+  },
+  {
+    name: "Advanced Analytics",
+    href: "/advanced-analytics",
+    icon: BarChart3,
+    roles: ["owner_admin", "vendor_manager", "vendor"],
+    badge: "12 Tools",
+    badgeVariant: "default",
   },
   {
     name: "Inventory",
