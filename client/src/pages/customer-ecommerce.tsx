@@ -981,7 +981,7 @@ export default function CustomerEcommerce() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    openBookingDialog(product);
+                    viewInAR(product);
                   }}
                   className="flex-1 text-xs"
                 >

@@ -949,7 +949,16 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
                     Add Selected to Cart ({getSelectedMaterials().length})
                   </Button>
                   
-                  <Button variant="outline" size="lg">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={() => {
+                      toast({
+                        title: "AR View Coming Soon!",
+                        description: "AR functionality will be available for material visualization",
+                      });
+                    }}
+                  >
                     <Eye className="w-4 h-4 mr-2" />
                     AR View
                   </Button>
