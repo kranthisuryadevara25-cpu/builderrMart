@@ -283,33 +283,71 @@ export default function CustomerEcommerce() {
       return;
     }
 
-    // Enhanced search - allow multiple words with flexible matching
+    // Advanced search with multiple strategies
+    if (!value || value.trim().length === 0) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
     const searchTerms = value.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
     
-    // Add timeout to prevent too frequent searches
-    setTimeout(() => {
+    // Immediate search with debouncing
+    const searchTimeout = setTimeout(() => {
       const results = products.filter(product => {
         const productName = product.name?.toLowerCase() || '';
         const productDesc = product.description?.toLowerCase() || '';
         const categoryName = categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase() || '';
         const specs = product.specs ? Object.values(product.specs).join(' ').toLowerCase() : '';
         
-        // Check if ANY search term is found in ANY field (OR logic)
-        return searchTerms.some(term => 
+        // Multiple search strategies:
+        // 1. Exact phrase match (highest priority)
+        const searchPhrase = value.toLowerCase();
+        if (productName.includes(searchPhrase) || productDesc.includes(searchPhrase) || 
+            categoryName.includes(searchPhrase) || specs.includes(searchPhrase)) {
+          return true;
+        }
+        
+        // 2. All terms must be found somewhere (AND logic)
+        const allTermsFound = searchTerms.every(term => 
           productName.includes(term) ||
           productDesc.includes(term) ||
           categoryName.includes(term) ||
           specs.includes(term)
         );
+        
+        if (allTermsFound) return true;
+        
+        // 3. At least half of the terms found (flexible matching)
+        const foundTerms = searchTerms.filter(term => 
+          productName.includes(term) ||
+          productDesc.includes(term) ||
+          categoryName.includes(term) ||
+          specs.includes(term)
+        );
+        
+        return foundTerms.length >= Math.ceil(searchTerms.length / 2);
       });
       
-      setSearchResults(results);
+      // Sort results by relevance
+      const sortedResults = results.sort((a, b) => {
+        const aName = a.name?.toLowerCase() || '';
+        const bName = b.name?.toLowerCase() || '';
+        const searchPhrase = value.toLowerCase();
+        
+        // Prioritize exact name matches
+        if (aName.includes(searchPhrase) && !bName.includes(searchPhrase)) return -1;
+        if (!aName.includes(searchPhrase) && bName.includes(searchPhrase)) return 1;
+        
+        // Then by name similarity
+        return aName.localeCompare(bName);
+      });
+      
+      setSearchResults(sortedResults);
       setIsSearching(false);
     }, 300);
     
-    setSearchResults(results);
-    setIsSearching(false);
-    setCurrentSection('home'); // Show search results
+    return () => clearTimeout(searchTimeout);
   };
 
   // Helper functions for quote and booking
@@ -643,7 +681,7 @@ export default function CustomerEcommerce() {
               type="text"
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => handleSearch(e)}
               className="pl-10 pr-4 py-2 w-full"
             />
             {searchTerm && (
@@ -1062,7 +1100,11 @@ export default function CustomerEcommerce() {
               <p className="text-gray-600 mb-6">
                 We couldn't find any products matching "{searchTerm}". Try different keywords or browse our categories.
               </p>
-              <Button onClick={() => handleSearchChange('')}>
+              <Button onClick={() => {
+                setSearchTerm('');
+                setSearchResults([]);
+                setCurrentSection('home');
+              }}>
                 Clear Search
               </Button>
             </div>
