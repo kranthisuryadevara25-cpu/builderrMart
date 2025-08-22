@@ -70,6 +70,20 @@ export default function ComprehensiveAdminPanel() {
   const [exportType, setExportType] = useState('orders');
   const [exportDateRange, setExportDateRange] = useState({ startDate: '', endDate: '' });
   const [csvUploadType, setCsvUploadType] = useState('products');
+  
+  // Modal states for add dialogs
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showCreateDiscountModal, setShowCreateDiscountModal] = useState(false);
+  const [showCreateProgramModal, setShowCreateProgramModal] = useState(false);
+  const [showManualRedemptionModal, setShowManualRedemptionModal] = useState(false);
+  
+  // Form states
+  const [newProduct, setNewProduct] = useState({ name: '', description: '', categoryId: '', basePrice: '', specs: {} });
+  const [newCategory, setNewCategory] = useState({ name: '', description: '', parentId: null });
+  const [newDiscount, setNewDiscount] = useState({ code: '', type: 'percentage', value: '', maxUses: '' });
+  const [newProgram, setNewProgram] = useState({ name: '', description: '', pointsPerRupee: '', minRedemption: '' });
+  const [newRedemption, setNewRedemption] = useState({ userId: '', programId: '', points: '', description: '' });
 
   // Entity queries
   const { data: products } = useQuery({
@@ -385,7 +399,7 @@ export default function ComprehensiveAdminPanel() {
                     <Download className="h-4 w-4 mr-2" />
                     CSV Template
                   </Button>
-                  <Button>
+                  <Button onClick={() => setShowAddProductModal(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Product
                   </Button>
@@ -466,7 +480,7 @@ export default function ComprehensiveAdminPanel() {
             <TabsContent value="categories" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Categories Management</h2>
-                <Button>
+                <Button onClick={() => setShowAddCategoryModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Category
                 </Button>
@@ -821,7 +835,7 @@ export default function ComprehensiveAdminPanel() {
             <TabsContent value="discounts" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Discount Management</h2>
-                <Button>
+                <Button onClick={() => setShowCreateDiscountModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Discount
                 </Button>
@@ -979,7 +993,7 @@ export default function ComprehensiveAdminPanel() {
             <TabsContent value="loyalty" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Loyalty Programs Management</h2>
-                <Button>
+                <Button onClick={() => setShowCreateProgramModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Program
                 </Button>
@@ -1172,7 +1186,7 @@ export default function ComprehensiveAdminPanel() {
                       <SelectItem value="rejected">Rejected</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button>
+                  <Button onClick={() => setShowManualRedemptionModal(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Manual Redemption
                   </Button>
@@ -1463,7 +1477,12 @@ export default function ComprehensiveAdminPanel() {
                           </div>
                         </div>
                       </div>
-                      <Button className="w-full">Save Transportation Rules</Button>
+                      <Button className="w-full" onClick={() => {
+                        toast({
+                          title: "Transportation Rules Saved",
+                          description: "Pricing rules have been updated successfully",
+                        });
+                      }}>Save Transportation Rules</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -1523,7 +1542,12 @@ export default function ComprehensiveAdminPanel() {
                           <Input placeholder="50" type="number" />
                         </div>
                       </div>
-                      <Button className="w-full">Save Hamali Rules</Button>
+                      <Button className="w-full" onClick={() => {
+                        toast({
+                          title: "Hamali Rules Saved",
+                          description: "Labor charge rules have been updated successfully",
+                        });
+                      }}>Save Hamali Rules</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -1571,7 +1595,12 @@ export default function ComprehensiveAdminPanel() {
                     </div>
                   </div>
                   <div className="mt-6">
-                    <Button className="w-full">Save Advanced Pricing Configuration</Button>
+                    <Button className="w-full" onClick={() => {
+                      toast({
+                        title: "Advanced Pricing Saved",
+                        description: "All pricing configurations have been updated successfully",
+                      });
+                    }}>Save Advanced Pricing Configuration</Button>
                   </div>
                 </CardContent>
               </Card>

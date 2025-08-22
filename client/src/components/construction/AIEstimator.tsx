@@ -811,93 +811,145 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
             </CardContent>
           </Card>
 
-          {/* Materials List */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Material Requirements
+          {/* Enhanced Materials List with Better UI */}
+          <Card className="shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <Package className="w-6 h-6 text-blue-600" />
+                Material Requirements Breakdown
               </CardTitle>
-              <CardDescription>
-                Select materials to include in your order. Adjust quantities as needed.
+              <CardDescription className="text-base">
+                Professional material estimates with intelligent pricing calculations
               </CardDescription>
+              
+              {/* Summary Headers */}
+              <div className="grid grid-cols-4 gap-4 mt-6 p-4 bg-white rounded-lg border">
+                <div className="text-center">
+                  <h3 className="font-semibold text-blue-600">Material Needed</h3>
+                  <p className="text-sm text-gray-500">Selected items for project</p>
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-green-600">Quantity Required</h3>
+                  <p className="text-sm text-gray-500">Total amount needed</p>
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-orange-600">Unit Price</h3>
+                  <p className="text-sm text-gray-500">Per unit cost</p>
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-purple-600">Total Cost</h3>
+                  <p className="text-sm text-gray-500">Final calculation</p>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-6">
+              <div className="space-y-6">
                 {analysis.materials.map((material, index) => (
-                  <div key={index} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={materialSelections[index]?.selected || material.priority === 'essential'}
-                          onCheckedChange={(checked) => handleMaterialToggle(index, checked as boolean)}
-                          disabled={material.priority === 'essential'}
-                        />
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">{material.material}</h4>
-                            <Badge className={getPriorityColor(material.priority)}>
-                              {material.priority}
-                            </Badge>
-                            {material.discount && material.discount > 0 && (
-                              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                {material.discount}% off
+                  <Card key={index} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start gap-4">
+                          <Checkbox
+                            checked={materialSelections[index]?.selected || material.priority === 'essential'}
+                            onCheckedChange={(checked) => handleMaterialToggle(index, checked as boolean)}
+                            disabled={material.priority === 'essential'}
+                            className="mt-1"
+                          />
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <h4 className="text-lg font-bold text-gray-900">{material.material}</h4>
+                              <Badge className={getPriorityColor(material.priority)}>
+                                {material.priority}
                               </Badge>
-                            )}
+                              {material.discount && material.discount > 0 && (
+                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                  {material.discount}% off
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-gray-600">{material.description}</p>
+                            <Badge variant="outline" className="text-xs">
+                              Category: {material.category}
+                            </Badge>
                           </div>
-                          <p className="text-sm text-gray-600">{material.description}</p>
-                          <p className="text-xs text-gray-500">Category: {material.category}</p>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Input
+                              type="number"
+                              value={materialSelections[index]?.quantity || material.quantity}
+                              onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                              className="w-24 text-right font-semibold"
+                              min="1"
+                            />
+                            <span className="text-sm font-medium text-gray-600">{material.unit}</span>
+                          </div>
                         </div>
                       </div>
                       
-                      <div className="text-right space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            value={materialSelections[index]?.quantity || material.quantity}
-                            onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
-                            className="w-20 text-right"
-                            min="1"
-                          />
-                          <span className="text-sm text-gray-600">{material.unit}</span>
-                        </div>
-                        
-                        {/* Clear Pricing Breakdown */}
-                        <div className="bg-gray-50 p-3 rounded border text-xs space-y-1">
-                          <div className="flex justify-between text-gray-600">
-                            <span>Material Needed:</span>
-                            <span>{materialSelections[index]?.quantity || material.quantity} {material.unit}</span>
+                      {/* Professional Pricing Breakdown */}
+                      <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-lg border">
+                        <div className="grid grid-cols-4 gap-4 items-center">
+                          {/* Material Column */}
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                              <Package className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <p className="font-semibold text-blue-800">Selected</p>
                           </div>
                           
-                          <div className="flex justify-between text-gray-600">
-                            <span>Product Price:</span>
-                            <div className="text-right">
+                          {/* Quantity Column */}
+                          <div className="text-center">
+                            <div className="bg-green-100 px-3 py-2 rounded-lg">
+                              <p className="text-2xl font-bold text-green-800">
+                                {materialSelections[index]?.quantity || material.quantity}
+                              </p>
+                              <p className="text-sm text-green-600">{material.unit}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Unit Price Column */}
+                          <div className="text-center">
+                            <div className="space-y-1">
                               {material.basePrice && material.finalPrice && material.basePrice !== material.finalPrice ? (
                                 <>
-                                  <span className="line-through text-gray-400">₹{material.basePrice}</span>
-                                  <br />
-                                  <span className="text-green-600 font-semibold">₹{material.finalPrice}/unit</span>
-                                  {material.discount && <span className="text-green-600 ml-1">({material.discount}% off)</span>}
+                                  <p className="text-xs line-through text-gray-400">₹{material.basePrice}</p>
+                                  <p className="text-lg font-bold text-orange-600">₹{material.finalPrice}</p>
+                                  <Badge className="bg-green-100 text-green-800 text-xs">{material.discount}% off</Badge>
                                 </>
                               ) : (
-                                <span>₹{material.finalPrice || (material.estimatedPrice / material.quantity)}/unit</span>
+                                <p className="text-lg font-bold text-orange-600">
+                                  ₹{material.finalPrice || (material.estimatedPrice / material.quantity)}
+                                </p>
                               )}
+                              <p className="text-xs text-gray-500">per {material.unit}</p>
                             </div>
                           </div>
                           
-                          <div className="border-t border-gray-200 pt-1 mt-1">
-                            <div className="flex justify-between font-semibold text-blue-600">
-                              <span>Total Price:</span>
-                              <span>₹{material.estimatedPrice.toLocaleString()}</span>
-                            </div>
-                            <div className="text-xs text-gray-500 text-right mt-0.5">
-                              {materialSelections[index]?.quantity || material.quantity} × ₹{material.finalPrice || (material.estimatedPrice / material.quantity)} = ₹{material.estimatedPrice.toLocaleString()}
+                          {/* Total Price Column */}
+                          <div className="text-center">
+                            <div className="bg-purple-100 px-4 py-3 rounded-lg">
+                              <p className="text-xl font-bold text-purple-800">
+                                ₹{material.estimatedPrice.toLocaleString()}
+                              </p>
+                              <p className="text-xs text-purple-600 mt-1">
+                                {materialSelections[index]?.quantity || material.quantity} × ₹{material.finalPrice || (material.estimatedPrice / material.quantity)}
+                              </p>
                             </div>
                           </div>
                         </div>
+                        
+                        {/* Calculation Formula Display */}
+                        <div className="mt-3 p-2 bg-white rounded border-l-4 border-l-indigo-500">
+                          <p className="text-sm text-indigo-700 font-medium">
+                            <Calculator className="w-4 h-4 inline mr-2" />
+                            <strong>Calculation:</strong> {materialSelections[index]?.quantity || material.quantity} {material.unit} × ₹{material.finalPrice || (material.estimatedPrice / material.quantity)}/{material.unit} = ₹{material.estimatedPrice.toLocaleString()}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </CardContent>

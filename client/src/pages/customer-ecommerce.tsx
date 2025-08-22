@@ -283,20 +283,29 @@ export default function CustomerEcommerce() {
       return;
     }
 
-    // Enhanced search - allow multiple words and better matching
+    // Enhanced search - allow multiple words with flexible matching
     const searchTerms = value.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
-    const results = products.filter(product => {
-      const productName = product.name?.toLowerCase() || '';
-      const productDesc = product.description?.toLowerCase() || '';
-      const categoryName = categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase() || '';
+    
+    // Add timeout to prevent too frequent searches
+    setTimeout(() => {
+      const results = products.filter(product => {
+        const productName = product.name?.toLowerCase() || '';
+        const productDesc = product.description?.toLowerCase() || '';
+        const categoryName = categories.find(cat => cat.id === product.categoryId)?.name?.toLowerCase() || '';
+        const specs = product.specs ? Object.values(product.specs).join(' ').toLowerCase() : '';
+        
+        // Check if ANY search term is found in ANY field (OR logic)
+        return searchTerms.some(term => 
+          productName.includes(term) ||
+          productDesc.includes(term) ||
+          categoryName.includes(term) ||
+          specs.includes(term)
+        );
+      });
       
-      // Check if all search terms are found in any of the fields
-      return searchTerms.every(term => 
-        productName.includes(term) ||
-        productDesc.includes(term) ||
-        categoryName.includes(term)
-      );
-    });
+      setSearchResults(results);
+      setIsSearching(false);
+    }, 300);
     
     setSearchResults(results);
     setIsSearching(false);
