@@ -69,10 +69,10 @@ const generateMockAnalysis = (): ConstructionAnalysis => {
     materials: [
       {
         material: "Portland Cement (53 Grade)",
-        category: "Cement",
-        quantity: 100,
+        category: "Cement", 
+        quantity: 120,
         unit: "bags",
-        estimatedPrice: 38000,
+        estimatedPrice: 45600,
         description: "Premium 53-grade cement for strong construction",
         priority: 'essential',
         selected: true
@@ -80,9 +80,9 @@ const generateMockAnalysis = (): ConstructionAnalysis => {
       {
         material: "TMT Steel Bars (Fe500D)",
         category: "Steel",
-        quantity: 800,
-        unit: "kg",
-        estimatedPrice: 52000,
+        quantity: 525,
+        unit: "kg", 
+        estimatedPrice: 34125,
         description: "High-strength TMT bars for structural reinforcement",
         priority: 'essential',
         selected: true
@@ -90,25 +90,25 @@ const generateMockAnalysis = (): ConstructionAnalysis => {
       {
         material: "Red Clay Bricks",
         category: "Bricks",
-        quantity: 5000,
+        quantity: 15000,
         unit: "pieces",
-        estimatedPrice: 40000,
+        estimatedPrice: 120000,
         description: "High-quality red clay bricks for construction",
         priority: 'essential',
         selected: true
       },
       {
         material: "Stone Aggregate (20mm)",
-        category: "Metal",
-        quantity: 25,
+        category: "Metal", 
+        quantity: 345,
         unit: "cubic feet",
-        estimatedPrice: 12500,
+        estimatedPrice: 17250,
         description: "Coarse aggregate for concrete work",
         priority: 'essential',
         selected: true
       }
     ],
-    totalEstimatedCost: 139500,
+    totalEstimatedCost: 216975,
     constructionDuration: "4-6 months",
     confidence: 85
   };
