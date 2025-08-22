@@ -307,7 +307,95 @@ export default function CustomerEcommerce() {
     queryKey: ['/api/products/trending'],
   });
 
-  // Search Handler - Fixed to allow multiple letters/words
+  // Translation mapping for regional languages to English
+  const constructionMaterialTranslations = {
+    // Hindi
+    'सीमेंट': 'cement',
+    'स्टील': 'steel',
+    'ईंट': 'brick',
+    'लोहा': 'iron',
+    'तार': 'wire',
+    'पाइप': 'pipe',
+    'रेत': 'sand',
+    'बजरी': 'gravel',
+    'पत्थर': 'stone',
+    'रंग': 'paint',
+    
+    // Telugu
+    'సిమెంట్': 'cement',
+    'ఉక్కు': 'steel',
+    'ఇనుము': 'iron',
+    'ఇటుక': 'brick',
+    'వైర్': 'wire',
+    'పైపు': 'pipe',
+    'ఇసుక': 'sand',
+    'రాయిముక్కలు': 'gravel',
+    'రాయి': 'stone',
+    'రంగు': 'paint',
+    
+    // Tamil
+    'சிமெண்ட்': 'cement',
+    'எஃகு': 'steel',
+    'இரும்பு': 'iron',
+    'செங்கல்': 'brick',
+    'கம்பி': 'wire',
+    'குழாய்': 'pipe',
+    'மணல்': 'sand',
+    'கல்': 'stone',
+    'வண்ணம்': 'paint',
+    
+    // Bengali
+    'সিমেন্ট': 'cement',
+    'ইস্পাত': 'steel',
+    'লোহা': 'iron',
+    'ইট': 'brick',
+    'তার': 'wire',
+    'পাইপ': 'pipe',
+    'বালি': 'sand',
+    'পাথর': 'stone',
+    'রং': 'paint',
+    
+    // Marathi
+    'सिमेंट': 'cement',
+    'पोलाद': 'steel',
+    'लोखंड': 'iron',
+    'वीट': 'brick',
+    'तार': 'wire',
+    'पाईप': 'pipe',
+    'वाळू': 'sand',
+    'दगड': 'stone',
+    'रंग': 'paint',
+    
+    // Gujarati
+    'સિમેન્ટ': 'cement',
+    'સ્ટીલ': 'steel',
+    'લોખંડ': 'iron',
+    'ઈંટ': 'brick',
+    'વાયર': 'wire',
+    'પાઈપ': 'pipe',
+    'રેતી': 'sand',
+    'પથ્થર': 'stone',
+    'રંગ': 'paint',
+    
+    // Kannada
+    'ಸಿಮೆಂಟ್': 'cement',
+    'ಉಕ್ಕು': 'steel',
+    'ಕಬ್ಬಿಣ': 'iron',
+    'ಇಟ್ಟಿಗೆ': 'brick',
+    'ವಾಯರ್': 'wire',
+    'ಪೈಪ್': 'pipe',
+    'ಮರಳು': 'sand',
+    'ಕಲ್ಲು': 'stone',
+    'ಬಣ್ಣ': 'paint'
+  };
+
+  // Function to translate regional language terms to English
+  const translateToEnglish = (term: string): string => {
+    const lowerTerm = term.trim();
+    return constructionMaterialTranslations[lowerTerm] || lowerTerm;
+  };
+
+  // Search Handler - Fixed to allow multiple letters/words with translation
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
     
@@ -319,7 +407,13 @@ export default function CustomerEcommerce() {
     }
 
     setIsSearching(true);
-    const searchTerms = value.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
+    
+    // Translate regional language terms to English
+    const translatedValue = value.split(/\s+/)
+      .map(word => translateToEnglish(word))
+      .join(' ');
+    
+    const searchTerms = translatedValue.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
     
     const results = products.filter(product => {
       const productName = product.name?.toLowerCase() || '';
