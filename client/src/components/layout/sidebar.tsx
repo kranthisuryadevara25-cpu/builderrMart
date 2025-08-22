@@ -16,6 +16,7 @@ import {
   Warehouse,
   LogOut,
   TrendingUp,
+  Mic,
 } from "lucide-react";
 
 const navigation = [
@@ -94,6 +95,14 @@ const navigation = [
     roles: ["owner_admin", "vendor_manager", "vendor", "user", "customer"],
     badge: "17 Tools",
     badgeVariant: "default" as const,
+  },
+  {
+    name: "🎤 Voice Demo",
+    href: "/voice-demo",
+    icon: Mic,
+    roles: ["owner_admin", "vendor_manager", "vendor"],
+    badge: "New",
+    badgeVariant: "secondary" as const,
   },
   {
     name: "Inventory",

@@ -24,6 +24,7 @@ import UserProfile from "@/pages/user-profile";
 import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 import VendorDashboard from "@/pages/VendorDashboard";
 import ManagerDashboard from "@/pages/ManagerDashboard";
+import { lazy } from 'react';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -153,6 +154,12 @@ function Router() {
       <Route path="/manager-dashboard">
         <ProtectedRoute>
           <ManagerDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/voice-demo">
+        <ProtectedRoute>
+          <Route component={lazy(() => import("@/pages/voice-demo"))} />
         </ProtectedRoute>
       </Route>
       
