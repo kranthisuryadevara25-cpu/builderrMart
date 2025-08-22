@@ -126,34 +126,48 @@ export default function InteractiveVendorChat() {
     },
   });
 
-  // Generate realistic vendor chats from real users
+  // Generate realistic vendor chats from real users with immediate fallback
   useEffect(() => {
+    // Always ensure we have chat data available
+    let chatsToSet: VendorChat[] = [];
+    
     if (Array.isArray(users) && users.length > 0 && Array.isArray(products)) {
       const vendorUsers = (users as any[]).filter(user => user.role === 'vendor');
       
       if (vendorUsers.length > 0) {
-        const realVendorChats = generateRealVendorChats(vendorUsers, products as any[]);
-        setVendorChats(prev => {
-          // Only update if the data has actually changed
-          if (JSON.stringify(prev.map(c => c.id)) !== JSON.stringify(realVendorChats.map(c => c.id))) {
-            return realVendorChats;
-          }
-          return prev;
-        });
-        
-        if (realVendorChats.length > 0 && !selectedChat) {
-          setSelectedChat(realVendorChats[0].id);
-        }
-      } else {
-        // Fallback mock data only if no vendor users
-        const mockChats = generateMockVendorChats();
-        setVendorChats(prev => prev.length === 0 ? mockChats : prev);
-        if (!selectedChat) {
-          setSelectedChat(mockChats[0].id);
-        }
+        chatsToSet = generateRealVendorChats(vendorUsers, products as any[]);
       }
     }
+    
+    // Always fallback to mock data if no real vendor data available
+    if (chatsToSet.length === 0) {
+      chatsToSet = generateMockVendorChats();
+    }
+    
+    // Update state only if data has changed
+    setVendorChats(prev => {
+      if (JSON.stringify(prev.map(c => c.id)) !== JSON.stringify(chatsToSet.map(c => c.id))) {
+        return chatsToSet;
+      }
+      return prev;
+    });
+    
+    // Auto-select first chat if none selected
+    if (chatsToSet.length > 0 && !selectedChat) {
+      setSelectedChat(chatsToSet[0].id);
+    }
   }, [Array.isArray(users) ? users.length : 0, Array.isArray(products) ? products.length : 0]); // Only depend on array lengths to avoid infinite loops
+
+  // Initialize with mock data immediately on component mount
+  useEffect(() => {
+    if (vendorChats.length === 0) {
+      const initialMockChats = generateMockVendorChats();
+      setVendorChats(initialMockChats);
+      if (!selectedChat && initialMockChats.length > 0) {
+        setSelectedChat(initialMockChats[0].id);
+      }
+    }
+  }, []);
 
   const generateRealVendorChats = (vendors: any[], products: any[]): VendorChat[] => {
     return vendors.map((vendor, index) => {
@@ -490,8 +504,21 @@ export default function InteractiveVendorChat() {
                   </div>
                 </>
               ) : (
-                <div className="flex-1 flex items-center justify-center text-gray-500">
-                  Select a chat to start messaging
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8">
+                  <MessageCircle className="h-16 w-16 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Select a Vendor to Start Chatting
+                  </h3>
+                  <p className="text-sm text-gray-500 text-center max-w-sm">
+                    Choose a vendor from the list on the left to start a conversation, negotiate prices, and get instant support.
+                  </p>
+                  {filteredChats.length === 0 && (
+                    <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200">
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                        Loading vendor chats... If this persists, we'll connect you with our support team.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
