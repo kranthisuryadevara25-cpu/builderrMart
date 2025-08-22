@@ -681,14 +681,18 @@ export default function CustomerEcommerce() {
               type="text"
               placeholder="Search for cement, steel, bricks, plumbing materials..."
               value={searchTerm}
-              onChange={(e) => handleSearch(e)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 pr-4 py-2 w-full"
             />
             {searchTerm && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleSearchChange('')}
+                onClick={() => {
+                  setSearchTerm('');
+                  setSearchResults([]);
+                  setCurrentSection('home');
+                }}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
               >
                 <X className="w-4 h-4" />

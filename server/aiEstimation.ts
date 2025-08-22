@@ -58,12 +58,29 @@ For each material, provide:
 - Brief description/specification
 - Priority level (essential, recommended, optional)
 
-Consider standard construction practices in India and current market rates. Base calculations on:
-- Cement: 6-8 bags per 100 sq ft
-- Steel: 40-50 kg per 100 sq ft for residential
-- Bricks: 1600-1800 bricks per 100 sq ft
-- Sand: 2-3 cubic feet per 100 sq ft
-- Aggregate: 1.5-2 cubic feet per 100 sq ft
+Consider accurate construction practices in India with precise material calculations:
+
+For 100 sq ft construction area:
+- Cement: 7-8 bags (50kg each) for RCC work, 4-5 bags for plastering
+- Steel (TMT bars): 45-55 kg for residential, 60-70 kg for commercial
+- Bricks: 1400-1600 standard bricks (9"x4"x3")
+- Sand: 12-15 cubic feet for concrete + 8-10 cubic feet for plastering = 20-25 cubic feet total
+- Coarse Aggregate: 18-22 cubic feet for concrete work
+- Water: 200-250 liters
+- Labor cost: 40-50% of material cost
+
+Precise Sand Calculations:
+- For concrete (1:2:4 ratio): 1.5 cubic feet sand per 100 sq ft
+- For mortar/plastering: 1 cubic feet sand per 100 sq ft
+- For brick laying: 0.8 cubic feet sand per 100 sq ft
+- Total sand requirement: 3.3 cubic feet per 100 sq ft minimum
+
+Current Market Rates (2024-25):
+- Cement: ₹350-400 per bag
+- Steel: ₹55-65 per kg
+- Bricks: ₹8-12 per brick
+- Sand: ₹35-50 per cubic feet
+- Aggregate: ₹40-60 per cubic feet
 
 Provide response in JSON format with the following structure:
 {
@@ -154,19 +171,19 @@ Provide response in JSON format with the following structure:
       {
         material: "Portland Cement (OPC 43 Grade)",
         category: "cement",
-        quantity: 80,
+        quantity: 100,
         unit: "bags",
-        estimatedPrice: 400,
-        description: "High-quality cement for structural construction",
+        estimatedPrice: 380,
+        description: "High-quality cement for structural construction (10 bags per 100 sq ft)",
         priority: "essential"
       },
       {
         material: "TMT Steel Bars (Fe 500)",
         category: "steel",
-        quantity: 500,
+        quantity: 550,
         unit: "kg",
-        estimatedPrice: 65,
-        description: "Thermo-mechanically treated steel bars for reinforcement",
+        estimatedPrice: 60,
+        description: "Thermo-mechanically treated steel bars for reinforcement (55 kg per 100 sq ft)",
         priority: "essential"
       },
       {
@@ -174,26 +191,26 @@ Provide response in JSON format with the following structure:
         category: "bricks",
         quantity: 15000,
         unit: "pieces",
-        estimatedPrice: 6,
-        description: "Standard burnt clay bricks for walls",
+        estimatedPrice: 10,
+        description: "Standard burnt clay bricks for walls (1500 per 100 sq ft)",
         priority: "essential"
       },
       {
         material: "River Sand",
         category: "aggregates",
-        quantity: 25,
+        quantity: 250,
         unit: "cubic feet",
-        estimatedPrice: 50,
-        description: "Fine aggregate for concrete and mortar",
+        estimatedPrice: 45,
+        description: "Fine aggregate for concrete, mortar and plastering (25 cubic feet per 100 sq ft)",
         priority: "essential"
       },
       {
         material: "20mm Stone Aggregate",
         category: "aggregates",
-        quantity: 20,
+        quantity: 200,
         unit: "cubic feet",
-        estimatedPrice: 45,
-        description: "Coarse aggregate for concrete",
+        estimatedPrice: 50,
+        description: "Coarse aggregate for concrete (20 cubic feet per 100 sq ft)",
         priority: "essential"
       }
     ];
