@@ -2,12 +2,17 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Scale, Building2, Leaf, Sparkles, BarChart3 } from 'lucide-react';
+import { TrendingUp, Scale, Building2, Leaf, Sparkles, BarChart3, MapPin, Zap, Brain, Users } from 'lucide-react';
 import MaterialTrendsVisualizer from '@/components/analytics/MaterialTrendsVisualizer';
 import MaterialComparisonDashboard from '@/components/analytics/MaterialComparisonDashboard';
 import ProjectJourneyTracker from '@/components/analytics/ProjectJourneyTracker';
 import SustainabilityScorer from '@/components/analytics/SustainabilityScorer';
 import PersonalizedRecommendations from '@/components/analytics/PersonalizedRecommendations';
+import InteractivePriceHeatMap from '@/components/analytics/InteractivePriceHeatMap';
+import SustainabilityComparisonWizard from '@/components/analytics/SustainabilityComparisonWizard';
+import AIPersonalityMatcher from '@/components/analytics/AIPersonalityMatcher';
+import VendorPerformanceStorytellingDashboard from '@/components/analytics/VendorPerformanceStorytellingDashboard';
+import PlayfulProjectJourneyAnimator from '@/components/analytics/PlayfulProjectJourneyAnimator';
 
 export default function AnalyticsDashboard() {
   const [activeTab, setActiveTab] = useState('trends');
@@ -22,6 +27,14 @@ export default function AnalyticsDashboard() {
       color: 'bg-blue-100 text-blue-600'
     },
     {
+      id: 'heatmap',
+      name: 'Interactive Price Heat Map',
+      icon: MapPin,
+      description: 'Real-time regional price visualization with market insights',
+      component: InteractivePriceHeatMap,
+      color: 'bg-red-100 text-red-600'
+    },
+    {
       id: 'comparison',
       name: 'Material Comparison',
       icon: Scale,
@@ -30,12 +43,28 @@ export default function AnalyticsDashboard() {
       color: 'bg-purple-100 text-purple-600'
     },
     {
+      id: 'sustainability-wizard',
+      name: 'Sustainability Comparison Wizard',
+      icon: Leaf,
+      description: 'One-click sustainability comparison with weighted scoring',
+      component: SustainabilityComparisonWizard,
+      color: 'bg-green-100 text-green-600'
+    },
+    {
       id: 'projects',
       name: 'Project Journey',
       icon: Building2,
       description: 'Interactive construction project journey tracker',
       component: ProjectJourneyTracker,
-      color: 'bg-green-100 text-green-600'
+      color: 'bg-cyan-100 text-cyan-600'
+    },
+    {
+      id: 'playful-projects',
+      name: 'Playful Project Journey Animator',
+      icon: Zap,
+      description: 'Fun animated project tracking with celebrations and milestones',
+      component: PlayfulProjectJourneyAnimator,
+      color: 'bg-yellow-100 text-yellow-600'
     },
     {
       id: 'sustainability',
@@ -44,6 +73,22 @@ export default function AnalyticsDashboard() {
       description: 'AI-powered material sustainability assessment',
       component: SustainabilityScorer,
       color: 'bg-emerald-100 text-emerald-600'
+    },
+    {
+      id: 'ai-matcher',
+      name: 'AI Material Matchmaker',
+      icon: Brain,
+      description: 'Personality-based material recommendations with AI insights',
+      component: AIPersonalityMatcher,
+      color: 'bg-indigo-100 text-indigo-600'
+    },
+    {
+      id: 'vendor-performance',
+      name: 'Vendor Performance Stories',
+      icon: Users,
+      description: 'Interactive vendor analytics with storytelling insights',
+      component: VendorPerformanceStorytellingDashboard,
+      color: 'bg-pink-100 text-pink-600'
     },
     {
       id: 'recommendations',
@@ -75,7 +120,7 @@ export default function AnalyticsDashboard() {
         </div>
         <Badge variant="outline" className="px-3 py-1">
           <BarChart3 className="w-4 h-4 mr-2" />
-          5 Analytics Tools
+          10 Analytics Tools
         </Badge>
       </div>
 

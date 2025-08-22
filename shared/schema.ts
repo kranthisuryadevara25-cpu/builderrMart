@@ -456,6 +456,77 @@ export const insertPricingRuleSchema = createInsertSchema(pricingRules).omit({
   updatedAt: true,
 });
 
+// Vendor Performance Analytics
+export const vendorPerformance = pgTable("vendor_performance", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: uuid("vendor_id").notNull().references(() => users.id),
+  totalSales: numeric("total_sales").default(sql`0`),
+  averageRating: numeric("average_rating").default(sql`0`),
+  totalOrders: integer("total_orders").default(0),
+  onTimeDeliveries: integer("on_time_deliveries").default(0),
+  totalDeliveries: integer("total_deliveries").default(0),
+  customerSatisfactionScore: numeric("customer_satisfaction_score").default(sql`0`),
+  responsiveTime: numeric("responsive_time").default(sql`0`), // in hours
+  qualityScore: numeric("quality_score").default(sql`0`),
+  performanceGrade: text("performance_grade").default("B"), // A+, A, B+, B, C+, C, D
+  improvementAreas: jsonb("improvement_areas"), // Areas for improvement
+  strengths: jsonb("strengths"), // Vendor strengths
+  monthlyPerformance: jsonb("monthly_performance"), // Month-wise performance data
+  lastUpdated: timestamp("last_updated").default(sql`now()`),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// AI Personality Profiles for Material Matching
+export const aiPersonalityProfiles = pgTable("ai_personality_profiles", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  personalityType: text("personality_type").notNull(), // analytical, creative, practical, environmentalist, budget_conscious
+  preferences: jsonb("preferences").notNull(), // Detailed preference data
+  buyingBehavior: jsonb("buying_behavior"), // Purchase patterns and behavior
+  projectStyle: text("project_style"), // modern, traditional, industrial, eco_friendly
+  riskTolerance: text("risk_tolerance").default("medium"), // low, medium, high
+  decisionFactors: jsonb("decision_factors"), // price, quality, speed, sustainability
+  communicationStyle: text("communication_style").default("professional"), // casual, professional, technical
+  aiPersonality: text("ai_personality").default("helpful"), // helpful, enthusiastic, analytical, friendly
+  lastInteraction: timestamp("last_interaction").default(sql`now()`),
+  profileAccuracy: numeric("profile_accuracy").default(sql`85`), // AI confidence in profile
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+// Heat Map Data for Interactive Price Visualization
+export const priceHeatMapData = pgTable("price_heat_map_data", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  materialType: text("material_type").notNull(), // cement, steel, bricks, etc.
+  region: text("region").notNull(),
+  state: text("state").notNull(),
+  city: text("city"),
+  currentPrice: numeric("current_price").notNull(),
+  priceChange: numeric("price_change").default(sql`0`), // percentage change
+  marketDemand: text("market_demand").default("medium"), // low, medium, high
+  supplyStatus: text("supply_status").default("adequate"), // shortage, adequate, surplus
+  priceVolatility: numeric("price_volatility").default(sql`0`), // volatility index
+  competitorCount: integer("competitor_count").default(0),
+  coordinates: jsonb("coordinates"), // lat, lng for map visualization
+  lastUpdated: timestamp("last_updated").default(sql`now()`),
+  recordDate: timestamp("record_date").default(sql`now()`),
+});
+
+// Sustainability Comparison Wizard Data
+export const sustainabilityComparisons = pgTable("sustainability_comparisons", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  comparisonId: text("comparison_id").notNull().unique(),
+  userId: text("user_id"),
+  productIds: jsonb("product_ids").notNull(), // Array of product IDs being compared
+  comparisonResults: jsonb("comparison_results").notNull(), // Detailed comparison data
+  sustainabilityScores: jsonb("sustainability_scores").notNull(), // Individual scores
+  recommendations: jsonb("recommendations"), // AI recommendations based on comparison
+  userWeights: jsonb("user_weights"), // User-defined importance weights
+  finalScore: numeric("final_score"), // Weighted final score
+  comparisonType: text("comparison_type").default("sustainability"), // sustainability, cost, quality
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Additional Types
 export type MarketingMaterial = typeof marketingMaterials.$inferSelect;
 export type InsertMarketingMaterial = z.infer<typeof insertMarketingMaterialSchema>;
@@ -471,3 +542,8 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 export type PricingRule = typeof pricingRules.$inferSelect;
 export type InsertPricingRule = z.infer<typeof insertPricingRuleSchema>;
+
+export type VendorPerformance = typeof vendorPerformance.$inferSelect;
+export type AIPersonalityProfile = typeof aiPersonalityProfiles.$inferSelect;
+export type PriceHeatMapData = typeof priceHeatMapData.$inferSelect;
+export type SustainabilityComparison = typeof sustainabilityComparisons.$inferSelect;
