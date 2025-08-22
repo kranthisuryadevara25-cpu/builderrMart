@@ -20,7 +20,7 @@ import EcoImpactCalculator from '@/components/analytics/EcoImpactCalculator';
 import PredictiveMaterialForecast from '@/components/analytics/PredictiveMaterialForecast';
 
 export default function AnalyticsDashboard() {
-  const [activeTab, setActiveTab] = useState('trends');
+  const [activeTab, setActiveTab] = useState('heatmap');
 
   const analyticsFeatures = [
     {

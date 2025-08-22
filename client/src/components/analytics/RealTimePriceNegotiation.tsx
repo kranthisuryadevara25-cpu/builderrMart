@@ -130,19 +130,21 @@ export default function RealTimePriceNegotiation() {
 
   // Generate realistic negotiations from real data
   useEffect(() => {
-    if (Array.isArray(products) && Array.isArray(users) && products.length > 0 && users.length > 0) {
-      const vendors = (users as any[]).filter(user => user.role === 'vendor');
-      const realNegotiations = generateRealNegotiations(products as any[], vendors);
-      setNegotiations(realNegotiations);
-      if (realNegotiations.length > 0) {
-        setSelectedNegotiation(realNegotiations[0].id);
+    if (negotiations.length === 0) { // Only initialize once
+      if (Array.isArray(products) && Array.isArray(users) && products.length > 0 && users.length > 0) {
+        const vendors = (users as any[]).filter(user => user.role === 'vendor');
+        const realNegotiations = generateRealNegotiations(products as any[], vendors);
+        setNegotiations(realNegotiations);
+        if (realNegotiations.length > 0) {
+          setSelectedNegotiation(realNegotiations[0].id);
+        }
+      } else if (Array.isArray(products) || Array.isArray(users)) {
+        const mockNegotiations = generateMockNegotiations();
+        setNegotiations(mockNegotiations);
+        setSelectedNegotiation(mockNegotiations[0]?.id);
       }
-    } else {
-      const mockNegotiations = generateMockNegotiations();
-      setNegotiations(mockNegotiations);
-      setSelectedNegotiation(mockNegotiations[0]?.id);
     }
-  }, [products, users]);
+  }, [products, users, negotiations.length]);
 
   const generateRealNegotiations = (products: any[], vendors: any[]): NegotiationSession[] => {
     return products.slice(0, 5).map((product, index) => {
