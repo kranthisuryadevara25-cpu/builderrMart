@@ -71,11 +71,11 @@ export default function InteractivePriceHeatMap() {
   });
 
   useEffect(() => {
-    if (products.length > 0) {
+    if (Array.isArray(products) && products.length > 0) {
       // Generate dynamic data based on real products
-      const materialProducts = products.filter((p: any) => 
-        p.name.toLowerCase().includes(selectedMaterial.toLowerCase()) ||
-        p.category?.toLowerCase().includes(selectedMaterial.toLowerCase())
+      const materialProducts = (products as any[]).filter((p: any) => 
+        p.name?.toLowerCase().includes(selectedMaterial.toLowerCase()) ||
+        p.categoryName?.toLowerCase().includes(selectedMaterial.toLowerCase())
       );
       
       const dynamicData = states.map((state, index) => {

@@ -151,9 +151,9 @@ export default function SustainabilityComparisonWizard() {
   });
 
   useEffect(() => {
-    if (products.length > 0) {
+    if (Array.isArray(products) && products.length > 0) {
       // Generate sustainability data based on real products
-      const realSustainabilityData = products.map((product: any, index: number) => ({
+      const realSustainabilityData = (products as any[]).map((product: any, index: number) => ({
         id: product.id,
         productId: product.id,
         productName: product.name,
@@ -348,8 +348,8 @@ export default function SustainabilityComparisonWizard() {
                       </div>
                       <Checkbox
                         checked={selectedProducts.includes(product.id)}
-                        readOnly
-                        className="ml-2"
+                        onChange={() => {}} // Read-only behavior handled by parent click
+                        className="ml-2 pointer-events-none"
                       />
                     </div>
 
