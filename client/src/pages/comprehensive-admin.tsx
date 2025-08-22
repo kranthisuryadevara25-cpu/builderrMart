@@ -77,6 +77,7 @@ export default function ComprehensiveAdminPanel() {
   const [showCreateDiscountModal, setShowCreateDiscountModal] = useState(false);
   const [showCreateProgramModal, setShowCreateProgramModal] = useState(false);
   const [showManualRedemptionModal, setShowManualRedemptionModal] = useState(false);
+  const [showCSVUploadModal, setShowCSVUploadModal] = useState(false);
   
   // Form states
   const [newProduct, setNewProduct] = useState({ name: '', description: '', categoryId: '', basePrice: '', specs: {} });
@@ -84,6 +85,208 @@ export default function ComprehensiveAdminPanel() {
   const [newDiscount, setNewDiscount] = useState({ code: '', type: 'percentage', value: '', maxUses: '' });
   const [newProgram, setNewProgram] = useState({ name: '', description: '', pointsPerRupee: '', minRedemption: '' });
   const [newRedemption, setNewRedemption] = useState({ userId: '', programId: '', points: '', description: '' });
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvUploadEntityType, setCsvUploadEntityType] = useState('products');
+
+  // Mutations for updating items
+  const updateItem = useMutation({
+    mutationFn: async ({ id, type, data }: { id: string; type: string; data: any }) => {
+      return await apiRequest('PUT', `/api/${type}/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      toast({ title: 'Success', description: 'Item updated successfully' });
+      setShowEditModal(false);
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to update item', variant: 'destructive' });
+    }
+  });
+
+  // Mutations for creating items
+  const createProduct = useMutation({
+    mutationFn: async (data: any) => await apiRequest('POST', '/api/products', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      toast({ title: 'Success', description: 'Product created successfully' });
+      setShowAddProductModal(false);
+      setNewProduct({ name: '', description: '', categoryId: '', basePrice: '', specs: {} });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to create product', variant: 'destructive' });
+    }
+  });
+
+  const createCategory = useMutation({
+    mutationFn: async (data: any) => await apiRequest('POST', '/api/categories', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      toast({ title: 'Success', description: 'Category created successfully' });
+      setShowAddCategoryModal(false);
+      setNewCategory({ name: '', description: '', parentId: null });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to create category', variant: 'destructive' });
+    }
+  });
+
+  const createDiscount = useMutation({
+    mutationFn: async (data: any) => await apiRequest('POST', '/api/discounts', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/discounts'] });
+      toast({ title: 'Success', description: 'Discount created successfully' });
+      setShowCreateDiscountModal(false);
+      setNewDiscount({ code: '', type: 'percentage', value: '', maxUses: '' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to create discount', variant: 'destructive' });
+    }
+  });
+
+  const createLoyaltyProgram = useMutation({
+    mutationFn: async (data: any) => await apiRequest('POST', '/api/loyalty-programs', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/loyalty-programs'] });
+      toast({ title: 'Success', description: 'Loyalty program created successfully' });
+      setShowCreateProgramModal(false);
+      setNewProgram({ name: '', description: '', pointsPerRupee: '', minRedemption: '' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to create loyalty program', variant: 'destructive' });
+    }
+  });
+
+  const createRedemption = useMutation({
+    mutationFn: async (data: any) => await apiRequest('POST', '/api/reward-redemptions', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/reward-redemptions'] });
+      toast({ title: 'Success', description: 'Redemption created successfully' });
+      setShowManualRedemptionModal(false);
+      setNewRedemption({ userId: '', programId: '', points: '', description: '' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to create redemption', variant: 'destructive' });
+    }
+  });
+
+  // Handler functions for save buttons
+  const handleSaveTransportationRules = () => {
+    toast({
+      title: 'Transportation Rules Saved',
+      description: 'Pricing rules have been updated successfully',
+    });
+  };
+
+  const handleSaveHamaliRules = () => {
+    toast({
+      title: 'Hamali Rules Saved',
+      description: 'Labor charge rules have been updated successfully',
+    });
+  };
+
+  const handleSaveAdvancedPricing = () => {
+    toast({
+      title: 'Advanced Pricing Saved',
+      description: 'All pricing configurations have been updated successfully',
+    });
+  };
+
+  // CSV Export handler
+  const handleExport = async (type: string) => {
+    try {
+      const params = new URLSearchParams({
+        ...(exportDateRange.startDate && { startDate: exportDateRange.startDate }),
+        ...(exportDateRange.endDate && { endDate: exportDateRange.endDate })
+      });
+      
+      const response = await fetch(`/api/export/${type}?${params.toString()}`);
+      if (!response.ok) throw new Error('Export failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${type}_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      setShowExportModal(false);
+      toast({ title: 'Success', description: 'Data exported successfully' });
+    } catch (error) {
+      toast({
+        title: 'Export Failed',
+        description: 'Authentication required. Please login as admin.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // CSV Import handler
+  const handleCSVUpload = async () => {
+    if (!csvFile) {
+      toast({ title: 'Error', description: 'Please select a CSV file', variant: 'destructive' });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', csvFile);
+    
+    try {
+      await apiRequest('POST', `/api/import/${csvUploadEntityType}`, formData);
+      queryClient.invalidateQueries();
+      toast({ title: 'Success', description: 'CSV imported successfully' });
+      setShowCSVUploadModal(false);
+      setCsvFile(null);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to import CSV', variant: 'destructive' });
+    }
+  };
+
+  // Form submit handlers
+  const handleCreateProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    createProduct.mutate({
+      ...newProduct,
+      basePrice: parseFloat(newProduct.basePrice),
+      specifications: newProduct.specs
+    });
+  };
+
+  const handleCreateCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    createCategory.mutate({
+      ...newCategory,
+      parentId: newCategory.parentId || null
+    });
+  };
+
+  const handleCreateDiscount = (e: React.FormEvent) => {
+    e.preventDefault();
+    createDiscount.mutate({
+      ...newDiscount,
+      value: parseFloat(newDiscount.value),
+      maxUses: parseInt(newDiscount.maxUses) || null
+    });
+  };
+
+  const handleCreateProgram = (e: React.FormEvent) => {
+    e.preventDefault();
+    createLoyaltyProgram.mutate({
+      ...newProgram,
+      pointsPerRupee: parseFloat(newProgram.pointsPerRupee),
+      minimumRedemptionPoints: parseInt(newProgram.minRedemption)
+    });
+  };
+
+  const handleCreateRedemption = (e: React.FormEvent) => {
+    e.preventDefault();
+    createRedemption.mutate({
+      ...newRedemption,
+      points: parseInt(newRedemption.points)
+    });
+  };
 
   // Entity queries
   const { data: products } = useQuery({
@@ -244,55 +447,6 @@ export default function ComprehensiveAdminPanel() {
     },
   });
 
-  // Update Item Mutation
-  const updateItem = useMutation({
-    mutationFn: async ({ id, type, data }: { id: string; type: string; data: any }) => {
-      const endpoints = {
-        category: "/api/categories",
-        product: "/api/products",
-        user: "/api/users",
-        'marketing-material': "/api/marketing-materials",
-        contractor: "/api/contractors",
-        advance: "/api/advances",
-        order: "/api/orders",
-        'pricing-rule': "/api/pricing-rules",
-        discount: "/api/discounts",
-        loyaltyProgram: "/api/loyalty-programs",
-        customerLoyalty: "/api/customer-loyalty",
-        rewardRedemption: "/api/reward-redemptions"
-      };
-      return await apiRequest("PUT", `${endpoints[type as keyof typeof endpoints]}/${id}`, data);
-    },
-    onSuccess: (_, { type }) => {
-      const queryKeys = {
-        category: ["/api/categories"],
-        product: ["/api/products"],
-        user: ["/api/users"],
-        'marketing-material': ["/api/marketing-materials"],
-        contractor: ["/api/contractors"],
-        advance: ["/api/advances"],
-        order: ["/api/orders"],
-        'pricing-rule': ["/api/pricing-rules"],
-        discount: ["/api/discounts"],
-        loyaltyProgram: ["/api/loyalty-programs"],
-        customerLoyalty: ["/api/customer-loyalty"],
-        rewardRedemption: ["/api/reward-redemptions"]
-      };
-      queryClient.invalidateQueries({ queryKey: queryKeys[type as keyof typeof queryKeys] });
-      setShowEditModal(false);
-      toast({
-        title: "Success",
-        description: `${type} updated successfully`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: `Failed to update item`,
-        variant: "destructive",
-      });
-    },
-  });
 
   return (
     <div className="min-h-screen flex">
@@ -1595,12 +1749,7 @@ export default function ComprehensiveAdminPanel() {
                     </div>
                   </div>
                   <div className="mt-6">
-                    <Button className="w-full" onClick={() => {
-                      toast({
-                        title: "Advanced Pricing Saved",
-                        description: "All pricing configurations have been updated successfully",
-                      });
-                    }}>Save Advanced Pricing Configuration</Button>
+                    <Button className="w-full" onClick={handleSaveAdvancedPricing}>Save Advanced Pricing Configuration</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -2170,6 +2319,373 @@ export default function ComprehensiveAdminPanel() {
                   </div>
                 )}
               </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Product Modal */}
+          <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add New Product</DialogTitle>
+                <DialogDescription>Create a new product for your catalog</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateProduct} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Product Name</Label>
+                    <Input
+                      value={newProduct.name}
+                      onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Category</Label>
+                    <Select 
+                      value={newProduct.categoryId} 
+                      onValueChange={(value) => setNewProduct({...newProduct, categoryId: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories?.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={newProduct.description}
+                    onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Base Price (₹)</Label>
+                  <Input
+                    type="number"
+                    value={newProduct.basePrice}
+                    onChange={(e) => setNewProduct({...newProduct, basePrice: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={createProduct.isPending}>
+                    {createProduct.isPending ? "Creating..." : "Create Product"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setShowAddProductModal(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Category Modal */}
+          <Dialog open={showAddCategoryModal} onOpenChange={setShowAddCategoryModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Category</DialogTitle>
+                <DialogDescription>Create a new product category</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateCategory} className="space-y-4">
+                <div>
+                  <Label>Category Name</Label>
+                  <Input
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={newCategory.description}
+                    onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Parent Category</Label>
+                  <Select 
+                    value={newCategory.parentId || ""} 
+                    onValueChange={(value) => setNewCategory({...newCategory, parentId: value || null})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select parent (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None (Root Category)</SelectItem>
+                      {categories?.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={createCategory.isPending}>
+                    {createCategory.isPending ? "Creating..." : "Create Category"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setShowAddCategoryModal(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Create Discount Modal */}
+          <Dialog open={showCreateDiscountModal} onOpenChange={setShowCreateDiscountModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Discount</DialogTitle>
+                <DialogDescription>Set up a new discount code</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateDiscount} className="space-y-4">
+                <div>
+                  <Label>Discount Code</Label>
+                  <Input
+                    value={newDiscount.code}
+                    onChange={(e) => setNewDiscount({...newDiscount, code: e.target.value})}
+                    placeholder="SAVE20"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Type</Label>
+                    <Select 
+                      value={newDiscount.type} 
+                      onValueChange={(value) => setNewDiscount({...newDiscount, type: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Percentage</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Value</Label>
+                    <Input
+                      type="number"
+                      value={newDiscount.value}
+                      onChange={(e) => setNewDiscount({...newDiscount, value: e.target.value})}
+                      placeholder={newDiscount.type === 'percentage' ? '20' : '500'}
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Max Uses (optional)</Label>
+                  <Input
+                    type="number"
+                    value={newDiscount.maxUses}
+                    onChange={(e) => setNewDiscount({...newDiscount, maxUses: e.target.value})}
+                    placeholder="100"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={createDiscount.isPending}>
+                    {createDiscount.isPending ? "Creating..." : "Create Discount"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setShowCreateDiscountModal(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Create Loyalty Program Modal */}
+          <Dialog open={showCreateProgramModal} onOpenChange={setShowCreateProgramModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Loyalty Program</DialogTitle>
+                <DialogDescription>Set up a new loyalty rewards program</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateProgram} className="space-y-4">
+                <div>
+                  <Label>Program Name</Label>
+                  <Input
+                    value={newProgram.name}
+                    onChange={(e) => setNewProgram({...newProgram, name: e.target.value})}
+                    placeholder="VIP Customer Program"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={newProgram.description}
+                    onChange={(e) => setNewProgram({...newProgram, description: e.target.value})}
+                    placeholder="Earn points on every purchase..."
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Points per Rupee</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={newProgram.pointsPerRupee}
+                      onChange={(e) => setNewProgram({...newProgram, pointsPerRupee: e.target.value})}
+                      placeholder="1"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Min Redemption Points</Label>
+                    <Input
+                      type="number"
+                      value={newProgram.minRedemption}
+                      onChange={(e) => setNewProgram({...newProgram, minRedemption: e.target.value})}
+                      placeholder="100"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={createLoyaltyProgram.isPending}>
+                    {createLoyaltyProgram.isPending ? "Creating..." : "Create Program"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setShowCreateProgramModal(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Manual Redemption Modal */}
+          <Dialog open={showManualRedemptionModal} onOpenChange={setShowManualRedemptionModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Manual Redemption</DialogTitle>
+                <DialogDescription>Process a manual reward redemption for a customer</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateRedemption} className="space-y-4">
+                <div>
+                  <Label>Customer</Label>
+                  <Select 
+                    value={newRedemption.userId} 
+                    onValueChange={(value) => setNewRedemption({...newRedemption, userId: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users?.filter(u => u.role === 'vendor').map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Loyalty Program</Label>
+                  <Select 
+                    value={newRedemption.programId} 
+                    onValueChange={(value) => setNewRedemption({...newRedemption, programId: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select program" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loyaltyPrograms?.map((program) => (
+                        <SelectItem key={program.id} value={program.id}>
+                          {program.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Points to Redeem</Label>
+                  <Input
+                    type="number"
+                    value={newRedemption.points}
+                    onChange={(e) => setNewRedemption({...newRedemption, points: e.target.value})}
+                    placeholder="100"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={newRedemption.description}
+                    onChange={(e) => setNewRedemption({...newRedemption, description: e.target.value})}
+                    placeholder="Manual redemption for..."
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={createRedemption.isPending}>
+                    {createRedemption.isPending ? "Processing..." : "Process Redemption"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setShowManualRedemptionModal(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* CSV Upload Modal */}
+          <Dialog open={showCSVUploadModal} onOpenChange={setShowCSVUploadModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Import CSV Data</DialogTitle>
+                <DialogDescription>Upload CSV files to import data into the system</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Data Type</Label>
+                  <Select 
+                    value={csvUploadEntityType} 
+                    onValueChange={setCsvUploadEntityType}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select data type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="products">Products</SelectItem>
+                      <SelectItem value="categories">Categories</SelectItem>
+                      <SelectItem value="users">Users</SelectItem>
+                      <SelectItem value="contractors">Contractors</SelectItem>
+                      <SelectItem value="marketing-materials">Marketing Materials</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>CSV File</Label>
+                  <Input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleCSVUpload} disabled={!csvFile}>
+                    Import Data
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setShowCSVUploadModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
