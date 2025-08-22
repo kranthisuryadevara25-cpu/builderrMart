@@ -18,7 +18,6 @@ import {
   FileImage, 
   Calculator, 
   ShoppingCart, 
-  Construction, 
   Truck, 
   DollarSign,
   Package,
@@ -27,7 +26,8 @@ import {
   Star,
   TrendingUp,
   Clock,
-  Building2
+  Building2,
+  Eye
 } from "lucide-react";
 
 interface MaterialEstimate {
@@ -163,24 +163,24 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     const isCommercial = projectInfo?.projectType === 'commercial';
     const isIndustrial = projectInfo?.projectType === 'industrial';
     
-    // Accurate calculation factors based on project type (per sq ft)
+    // Realistic calculation factors based on project type (per sq ft)
     let bricksPerSqFt, cementBagsPerSqFt, steelKgPerSqFt, sandCubicFeetPerSqFt;
     
     if (isIndustrial) {
-      bricksPerSqFt = 18;          // 1800 bricks per 100 sq ft for heavy construction
-      cementBagsPerSqFt = 0.16;    // 16 bags per 100 sq ft for industrial
-      steelKgPerSqFt = 0.8;        // 80 kg per 100 sq ft for industrial
-      sandCubicFeetPerSqFt = 0.5;  // 50 cubic feet per 100 sq ft
+      bricksPerSqFt = 14;          // 1400 bricks per 100 sq ft for heavy construction
+      cementBagsPerSqFt = 0.12;    // 12 bags per 100 sq ft for industrial
+      steelKgPerSqFt = 0.55;       // 55 kg per 100 sq ft for industrial
+      sandCubicFeetPerSqFt = 0.28; // 28 cubic feet per 100 sq ft
     } else if (isCommercial) {
-      bricksPerSqFt = 16;          // 1600 bricks per 100 sq ft for commercial
-      cementBagsPerSqFt = 0.14;    // 14 bags per 100 sq ft for commercial  
-      steelKgPerSqFt = 0.7;        // 70 kg per 100 sq ft for commercial
-      sandCubicFeetPerSqFt = 0.42; // 42 cubic feet per 100 sq ft
+      bricksPerSqFt = 12;          // 1200 bricks per 100 sq ft for commercial
+      cementBagsPerSqFt = 0.10;    // 10 bags per 100 sq ft for commercial  
+      steelKgPerSqFt = 0.45;       // 45 kg per 100 sq ft for commercial
+      sandCubicFeetPerSqFt = 0.25; // 25 cubic feet per 100 sq ft
     } else {
-      bricksPerSqFt = 15;          // 1500 bricks per 100 sq ft for residential
-      cementBagsPerSqFt = 0.13;    // 13 bags per 100 sq ft for residential
-      steelKgPerSqFt = 0.6;        // 60 kg per 100 sq ft for residential
-      sandCubicFeetPerSqFt = 0.39; // 39 cubic feet per 100 sq ft
+      bricksPerSqFt = 10;          // 1000 bricks per 100 sq ft for residential
+      cementBagsPerSqFt = 0.08;    // 8 bags per 100 sq ft for residential
+      steelKgPerSqFt = 0.35;       // 35 kg per 100 sq ft for residential
+      sandCubicFeetPerSqFt = 0.22; // 22 cubic feet per 100 sq ft
     }
     
     const totalArea = area * floors;
@@ -198,46 +198,14 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
 
     const materials: MaterialEstimate[] = [];
     
-    // Red Clay Bricks
-    const bricksProduct = findProduct(['brick', 'clay', 'red']);
-    const bricksQty = Math.round(totalArea * bricksPerSqFt);
-    if (bricksProduct) {
-      const pricing = getProductPricing(bricksProduct, bricksQty);
-      materials.push({
-        material: bricksProduct.name,
-        category: "Masonry",
-        quantity: bricksQty,
-        unit: "pieces",
-        estimatedPrice: pricing.totalPrice,
-        basePrice: pricing.basePrice,
-        finalPrice: pricing.finalPrice,
-        discount: pricing.discount,
-        productId: bricksProduct.id,
-        description: bricksProduct.description || "High-quality red clay bricks for construction",
-        priority: 'essential',
-        selected: true
-      });
-    } else {
-      materials.push({
-        material: "Red Clay Bricks",
-        category: "Masonry",
-        quantity: bricksQty,
-        unit: "pieces",
-        estimatedPrice: Math.round(bricksQty * 6.5),
-        description: "High-quality red clay bricks for construction",
-        priority: 'essential',
-        selected: true
-      });
-    }
-
-    // Portland Cement
+    // 1. Portland Cement (First priority)
     const cementProduct = findProduct(['cement', 'portland', '53']);
     const cementQty = Math.round(totalArea * cementBagsPerSqFt);
     if (cementProduct) {
       const pricing = getProductPricing(cementProduct, cementQty);
       materials.push({
         material: cementProduct.name,
-        category: "Binding",
+        category: "Cement",
         quantity: cementQty,
         unit: "bags",
         estimatedPrice: pricing.totalPrice,
@@ -252,24 +220,56 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     } else {
       materials.push({
         material: "Portland Cement (53 Grade)",
-        category: "Binding",
+        category: "Cement",
         quantity: cementQty,
         unit: "bags",
-        estimatedPrice: Math.round(cementQty * 425),
+        estimatedPrice: Math.round(cementQty * 380),
         description: "Premium 53-grade cement for strong construction",
         priority: 'essential',
         selected: true
       });
     }
 
-    // TMT Steel Bars
+    // 2. Red Clay Bricks (Second priority)
+    const bricksProduct = findProduct(['brick', 'clay', 'red']);
+    const bricksQty = Math.round(totalArea * bricksPerSqFt);
+    if (bricksProduct) {
+      const pricing = getProductPricing(bricksProduct, bricksQty);
+      materials.push({
+        material: bricksProduct.name,
+        category: "Bricks",
+        quantity: bricksQty,
+        unit: "pieces",
+        estimatedPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        finalPrice: pricing.finalPrice,
+        discount: pricing.discount,
+        productId: bricksProduct.id,
+        description: bricksProduct.description || "High-quality red clay bricks for construction",
+        priority: 'essential',
+        selected: true
+      });
+    } else {
+      materials.push({
+        material: "Red Clay Bricks",
+        category: "Bricks",
+        quantity: bricksQty,
+        unit: "pieces",
+        estimatedPrice: Math.round(bricksQty * 8),
+        description: "High-quality red clay bricks for construction",
+        priority: 'essential',
+        selected: true
+      });
+    }
+
+    // 3. TMT Steel Bars/Iron (Third priority)
     const steelProduct = findProduct(['steel', 'tmt', 'bar', 'fe500']);
     const steelQty = Math.round(totalArea * steelKgPerSqFt);
     if (steelProduct) {
       const pricing = getProductPricing(steelProduct, steelQty);
       materials.push({
         material: steelProduct.name,
-        category: "Reinforcement",
+        category: "Iron/Steel",
         quantity: steelQty,
         unit: "kg",
         estimatedPrice: pricing.totalPrice,
@@ -284,7 +284,7 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     } else {
       materials.push({
         material: "TMT Steel Bars (Fe500D)",
-        category: "Reinforcement",
+        category: "Iron/Steel",
         quantity: steelQty,
         unit: "kg",
         estimatedPrice: Math.round(steelQty * 65),
@@ -294,14 +294,46 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
       });
     }
 
-    // M-Sand
+    // 4. Stone Aggregate/Gravel (Fourth priority)
+    const aggregateProduct = findProduct(['aggregate', 'stone', '20mm']);
+    const aggregateQty = Math.round(totalArea * 0.23);
+    if (aggregateProduct) {
+      const pricing = getProductPricing(aggregateProduct, aggregateQty);
+      materials.push({
+        material: aggregateProduct.name,
+        category: "Gravel/Metal",
+        quantity: aggregateQty,
+        unit: "cubic feet",
+        estimatedPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        finalPrice: pricing.finalPrice,
+        discount: pricing.discount,
+        productId: aggregateProduct.id,
+        description: aggregateProduct.description || "Coarse aggregate for concrete work",
+        priority: 'essential',
+        selected: true
+      });
+    } else {
+      materials.push({
+        material: "Stone Aggregate (20mm)",
+        category: "Gravel/Metal",
+        quantity: aggregateQty,
+        unit: "cubic feet",
+        estimatedPrice: Math.round(aggregateQty * 50),
+        description: "Coarse aggregate for concrete work",
+        priority: 'essential',
+        selected: true
+      });
+    }
+
+    // 5. River Sand (Fifth priority - other important material)
     const sandProduct = findProduct(['sand', 'm-sand', 'manufactured']);
     const sandQty = Math.round(totalArea * sandCubicFeetPerSqFt);
     if (sandProduct) {
       const pricing = getProductPricing(sandProduct, sandQty);
       materials.push({
         material: sandProduct.name,
-        category: "Aggregate",
+        category: "Sand/Aggregate",
         quantity: sandQty,
         unit: "cubic feet",
         estimatedPrice: pricing.totalPrice,
@@ -316,45 +348,13 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
     } else {
       materials.push({
         material: "River Sand",
-        category: "Aggregate", 
+        category: "Sand/Aggregate", 
         quantity: sandQty,
         unit: "cubic feet",
         estimatedPrice: Math.round(sandQty * 45),
         description: "Fine aggregate for concrete, mortar and plastering",
         priority: 'essential',
         selected: true
-      });
-    }
-
-    // Stone Aggregate
-    const aggregateProduct = findProduct(['aggregate', 'stone', '20mm']);
-    const aggregateQty = Math.round(totalArea * 0.23);
-    if (aggregateProduct) {
-      const pricing = getProductPricing(aggregateProduct, aggregateQty);
-      materials.push({
-        material: aggregateProduct.name,
-        category: "Aggregate",
-        quantity: aggregateQty,
-        unit: "cubic feet",
-        estimatedPrice: pricing.totalPrice,
-        basePrice: pricing.basePrice,
-        finalPrice: pricing.finalPrice,
-        discount: pricing.discount,
-        productId: aggregateProduct.id,
-        description: aggregateProduct.description || "Coarse aggregate for concrete work",
-        priority: 'recommended',
-        selected: false
-      });
-    } else {
-      materials.push({
-        material: "Stone Aggregate (20mm)",
-        category: "Aggregate",
-        quantity: aggregateQty,
-        unit: "cubic feet",
-        estimatedPrice: Math.round(aggregateQty * 50),
-        description: "Coarse aggregate for concrete work",
-        priority: 'recommended',
-        selected: false
       });
     }
 
@@ -985,8 +985,8 @@ export default function AIEstimator({ onAddToCart }: AIEstimatorProps) {
                   </Button>
                   
                   <Button variant="outline" size="lg">
-                    <Construction className="w-4 h-4 mr-2" />
-                    Request Quote
+                    <Eye className="w-4 h-4 mr-2" />
+                    AR View
                   </Button>
                 </div>
 

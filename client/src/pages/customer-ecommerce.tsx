@@ -1440,7 +1440,7 @@ export default function CustomerEcommerce() {
         {/* Construction Business Recommended Products */}
         <div className="mt-12">
           <h2 className="text-2xl font-bold mb-6 flex items-center">
-            <Construction className="w-6 h-6 mr-2 text-blue-600" />
+            <Building2 className="w-6 h-6 mr-2 text-blue-600" />
             Recommended for Construction Projects
           </h2>
           <p className="text-gray-600 mb-6">
