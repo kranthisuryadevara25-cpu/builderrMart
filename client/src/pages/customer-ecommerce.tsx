@@ -1219,19 +1219,14 @@ export default function CustomerEcommerce() {
                 <VoiceSearchInput
                   value={searchTerm}
                   onChange={(value) => {
-                    setSearchTerm(value);
-                    // Trigger search with the new value
-                    if (value.trim()) {
-                      setIsSearching(true);
-                      performAdvancedSearch(value);
-                    }
+                    handleSearchChange(value);
                   }}
                   placeholder="Search for cement, steel, bricks, or any material... 🎤"
                   className="w-full text-lg h-14"
                   showLanguageSelector={true}
                   language={voiceLanguage}
                   onLanguageChange={setVoiceLanguage}
-                  languageSelectorVariant="full"
+                  languageSelectorVariant="compact"
                   showDebugInfo={false}
                 />
                 
@@ -1245,9 +1240,7 @@ export default function CustomerEcommerce() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setSearchTerm(term);
-                          setIsSearching(true);
-                          performAdvancedSearch(term);
+                          handleSearchChange(term);
                         }}
                         className="text-xs hover:bg-blue-50"
                       >
