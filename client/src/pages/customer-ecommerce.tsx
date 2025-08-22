@@ -307,8 +307,8 @@ export default function CustomerEcommerce() {
     queryKey: ['/api/products/trending'],
   });
 
-  // Translation mapping for regional languages to English
-  const constructionMaterialTranslations = {
+  // Translation mapping for regional languages to English  
+  const constructionMaterialTranslations: { [key: string]: string } = {
     // Hindi
     'सीमेंट': 'cement',
     'स्टील': 'steel',
@@ -1285,150 +1285,6 @@ export default function CustomerEcommerce() {
     </section>
   );
 
-  // Home Page Component
-  const HomePage = () => {
-    const hasSearchResults = searchTerm && searchResults.length > 0;
-    const hasSearchButNoResults = searchTerm && searchResults.length === 0;
-    
-    return (
-      <>
-              
-              {/* Language Support Display */}
-              <div className="text-sm text-gray-600 mb-4">
-                <p className="mb-3 font-medium">🌐 Speak in any of these languages:</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
-                  {[
-                    { code: 'en-US', name: 'English', flag: '🇺🇸', example: 'cement' },
-                    { code: 'hi-IN', name: 'हिंदी', flag: '🇮🇳', example: 'सीमेंट' },
-                    { code: 'te-IN', name: 'తెలుగు', flag: '🇮🇳', example: 'సిమెంట్' },
-                    { code: 'ta-IN', name: 'தமிழ்', flag: '🇮🇳', example: 'சிமெண்ட்' },
-                    { code: 'bn-IN', name: 'বাংলা', flag: '🇮🇳', example: 'সিমেন্ট' },
-                    { code: 'mr-IN', name: 'मराठी', flag: '🇮🇳', example: 'सिमेंट' },
-                    { code: 'gu-IN', name: 'ગુજરાતી', flag: '🇮🇳', example: 'સિમેન્ટ' },
-                    { code: 'kn-IN', name: 'ಕನ್ನಡ', flag: '🇮🇳', example: 'ಸಿಮೆಂಟ್' }
-                  ].map((lang) => (
-                    <Button
-                      key={lang.code}
-                      variant={voiceLanguage === lang.code ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setVoiceLanguage(lang.code)}
-                      className="p-3 h-auto flex flex-col items-center hover:bg-blue-50 transition-colors"
-                      title={`Switch to ${lang.name} voice search`}
-                    >
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="text-base">{lang.flag}</span>
-                        <span className="font-medium text-xs">{lang.name}</span>
-                      </div>
-                      <span className="text-xs text-gray-500 italic">"{lang.example}"</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Translation Help */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
-                <p className="text-green-800 font-medium mb-2">
-                  ✨ How it works:
-                </p>
-                <p className="text-green-700">
-                  1. Click a language button above  •  2. Click the microphone 🎤  •  3. Say the material name in your language  •  4. We'll translate and search for products!
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
-        
-        {/* New Features Banner - Only show on home page without search */}
-        {!hasSearchResults && !hasSearchButNoResults && <NewFeaturesBanner />}
-        
-        {/* Search Results Section */}
-        {hasSearchResults && (
-          <section className="py-8 px-4">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-2xl font-bold mb-6">
-                Search Results for "{searchTerm}" ({searchResults.length} found)
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {searchResults.slice(0, 12).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-              {searchResults.length > 12 && (
-                <div className="text-center mt-6">
-                  <Button variant="outline" onClick={() => {}}>
-                    View All {searchResults.length} Results
-                  </Button>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-        
-        {/* No Search Results */}
-        {hasSearchButNoResults && (
-          <section className="py-8 px-4">
-            <div className="max-w-7xl mx-auto text-center">
-              <h2 className="text-2xl font-bold mb-4">No Results Found</h2>
-              <p className="text-gray-600 mb-6">
-                We couldn't find any products matching "{searchTerm}". Try different keywords or browse our categories.
-              </p>
-              <Button onClick={() => {
-                setSearchTerm('');
-                setSearchResults([]);
-                setCurrentSection('home');
-              }}>
-                Clear Search
-              </Button>
-            </div>
-          </section>
-        )}
-        
-        {/* Default Homepage Content */}
-        {!searchTerm && (
-          <>
-            <CategoryGrid />
-            <FeaturedSection />
-            <TrendingSection />
-          </>
-        )}
-        
-        {/* AI Tools Section */}
-        <section className="py-8 px-4 bg-blue-50">
-          <div className="max-w-7xl mx-auto text-center">
-            <h2 className="text-2xl font-bold mb-6">AI-Powered Construction Tools</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="p-6 hover:shadow-lg transition-shadow">
-                <Brain className="w-12 h-12 mx-auto text-purple-600 mb-4" />
-                <h3 className="font-semibold mb-2">Material Estimator</h3>
-                <p className="text-sm text-gray-600 mb-4">Upload construction images to get AI-powered material estimates</p>
-                <Button onClick={() => setShowAIEstimator(true)}>
-                  Try Now
-                </Button>
-              </Card>
-              
-              <Card className="p-6 hover:shadow-lg transition-shadow">
-                <Calculator className="w-12 h-12 mx-auto text-green-600 mb-4" />
-                <h3 className="font-semibold mb-2">Smart Quotation</h3>
-                <p className="text-sm text-gray-600 mb-4">Get instant quotes with bulk discounts and delivery options</p>
-                <Button variant="outline" onClick={() => openQuoteDialog()}>
-                  Get Quote
-                </Button>
-              </Card>
-              
-              <Card className="p-6 hover:shadow-lg transition-shadow">
-                <Calendar className="w-12 h-12 mx-auto text-blue-600 mb-4" />
-                <h3 className="font-semibold mb-2">Advance Booking</h3>
-                <p className="text-sm text-gray-600 mb-4">Book materials in advance with flexible payment options</p>
-                <Button variant="outline" onClick={() => openBookingDialog()}>
-                  Book Now
-                </Button>
-              </Card>
-            </div>
-          </div>
-        </section>
-      </>
-    );
-  };
 
   // Category Page Component
   const CategoryPage = () => {
@@ -1933,6 +1789,154 @@ export default function CustomerEcommerce() {
     </div>
   );
 
+  // Home Page rendering logic
+  const renderHomePage = () => {
+    const hasSearchResults = searchTerm && searchResults.length > 0;
+    const hasSearchButNoResults = searchTerm && searchResults.length === 0;
+    
+    return (
+      <>
+        {/* Voice Search Section */}
+        {currentSection === 'home' && (
+          <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+            <div className="max-w-4xl mx-auto text-center">
+              {/* Language Support Display */}
+              <div className="text-sm text-gray-600 mb-4">
+                <p className="mb-3 font-medium">🌐 Speak in any of these languages:</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
+                  {[
+                    { code: 'en-US', name: 'English', flag: '🇺🇸', example: 'cement' },
+                    { code: 'hi-IN', name: 'हिंदी', flag: '🇮🇳', example: 'सीमेंट' },
+                    { code: 'te-IN', name: 'తెలుగు', flag: '🇮🇳', example: 'సిమెంట్' },
+                    { code: 'ta-IN', name: 'தமிழ்', flag: '🇮🇳', example: 'சிமெண்ட்' },
+                    { code: 'bn-IN', name: 'বাংলা', flag: '🇮🇳', example: 'সিমেন্ট' },
+                    { code: 'mr-IN', name: 'मराठी', flag: '🇮🇳', example: 'सिमेंट' },
+                    { code: 'gu-IN', name: 'ગુજરાતી', flag: '🇮🇳', example: 'સિમેન્ટ' },
+                    { code: 'kn-IN', name: 'ಕನ್ನಡ', flag: '🇮🇳', example: 'ಸಿಮೆಂಟ್' }
+                  ].map((lang) => (
+                    <Button
+                      key={lang.code}
+                      variant={voiceLanguage === lang.code ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setVoiceLanguage(lang.code)}
+                      className="p-3 h-auto flex flex-col items-center hover:bg-blue-50 transition-colors"
+                      title={`Switch to ${lang.name} voice search`}
+                    >
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-base">{lang.flag}</span>
+                        <span className="font-medium text-xs">{lang.name}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 italic">"{lang.example}"</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Translation Help */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
+                <p className="text-green-800 font-medium mb-2">
+                  ✨ How it works:
+                </p>
+                <p className="text-green-700">
+                  1. Click a language button above  •  2. Click the microphone 🎤  •  3. Say the material name in your language  •  4. We'll translate and search for products!
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+        
+        {/* New Features Banner - Only show on home page without search */}
+        {!hasSearchResults && !hasSearchButNoResults && <NewFeaturesBanner />}
+        
+        {/* Search Results Section */}
+        {hasSearchResults && (
+          <section className="py-8 px-4">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-2xl font-bold mb-6">
+                Search Results for "{searchTerm}" ({searchResults.length} found)
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {searchResults.slice(0, 12).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              {searchResults.length > 12 && (
+                <div className="text-center mt-6">
+                  <Button variant="outline" onClick={() => {}}>
+                    View All {searchResults.length} Results
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+        
+        {/* No Search Results */}
+        {hasSearchButNoResults && (
+          <section className="py-8 px-4">
+            <div className="max-w-7xl mx-auto text-center">
+              <h2 className="text-2xl font-bold mb-4">No Results Found</h2>
+              <p className="text-gray-600 mb-6">
+                We couldn't find any products matching "{searchTerm}". Try different keywords or browse our categories.
+              </p>
+              <Button onClick={() => {
+                setSearchTerm('');
+                setSearchResults([]);
+                setCurrentSection('home');
+              }}>
+                Clear Search
+              </Button>
+            </div>
+          </section>
+        )}
+        
+        {/* Default Homepage Content */}
+        {!searchTerm && (
+          <>
+            <CategoryGrid />
+            <FeaturedSection />
+            <TrendingSection />
+          </>
+        )}
+        
+        {/* AI Tools Section */}
+        <section className="py-8 px-4 bg-blue-50">
+          <div className="max-w-7xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-6">AI-Powered Construction Tools</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Brain className="w-12 h-12 mx-auto text-purple-600 mb-4" />
+                <h3 className="font-semibold mb-2">Material Estimator</h3>
+                <p className="text-sm text-gray-600 mb-4">Upload construction images to get AI-powered material estimates</p>
+                <Button onClick={() => setShowAIEstimator(true)}>
+                  Try Now
+                </Button>
+              </Card>
+              
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Calculator className="w-12 h-12 mx-auto text-green-600 mb-4" />
+                <h3 className="font-semibold mb-2">Smart Quotation</h3>
+                <p className="text-sm text-gray-600 mb-4">Get instant quotes with bulk discounts and delivery options</p>
+                <Button variant="outline" onClick={() => openQuoteDialog()}>
+                  Get Quote
+                </Button>
+              </Card>
+              
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <Calendar className="w-12 h-12 mx-auto text-blue-600 mb-4" />
+                <h3 className="font-semibold mb-2">Advance Booking</h3>
+                <p className="text-sm text-gray-600 mb-4">Book materials in advance with flexible payment options</p>
+                <Button variant="outline" onClick={() => openBookingDialog()}>
+                  Book Now
+                </Button>
+              </Card>
+            </div>
+          </div>
+        </section>
+      </>
+    );
+  };
+
   // Main render
   const renderCurrentSection = () => {
     switch (currentSection) {
@@ -1943,7 +1947,11 @@ export default function CustomerEcommerce() {
       case 'cart':
         return <CartSection />;
       default:
-        return <HomePage />;
+        return (
+          <div>
+            {renderHomePage()}
+          </div>
+        );
     }
   };
 
