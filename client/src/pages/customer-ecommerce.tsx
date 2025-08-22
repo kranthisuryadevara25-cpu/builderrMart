@@ -19,6 +19,7 @@ import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   Search, 
   ShoppingCart, 
@@ -65,6 +66,7 @@ import {
   ChevronUp,
   CreditCard
 } from "lucide-react";
+import { Languages, Check } from "lucide-react";
 import type { Product, Category } from "@shared/schema";
 import { VoiceSearchInput } from '@/components/ui/voice-search-input';
 import { LanguageSelector } from '@/components/ui/language-selector';
@@ -791,6 +793,45 @@ export default function CustomerEcommerce() {
               </Button>
             )}
           </div>
+          
+          {/* Language Selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <Languages className="w-4 h-4" />
+                {voiceLanguage === 'en-US' ? '🇺🇸' : 
+                 voiceLanguage === 'hi-IN' ? '🇮🇳' :
+                 voiceLanguage === 'te-IN' ? '🇮🇳' :
+                 voiceLanguage === 'ta-IN' ? '🇮🇳' :
+                 voiceLanguage === 'bn-IN' ? '🇮🇳' :
+                 voiceLanguage === 'mr-IN' ? '🇮🇳' :
+                 voiceLanguage === 'gu-IN' ? '🇮🇳' :
+                 voiceLanguage === 'kn-IN' ? '🇮🇳' : '🇺🇸'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {[
+                { code: 'en-US', name: 'English', flag: '🇺🇸' },
+                { code: 'hi-IN', name: 'हिंदी', flag: '🇮🇳' },
+                { code: 'te-IN', name: 'తెలుగు', flag: '🇮🇳' },
+                { code: 'ta-IN', name: 'தமிழ்', flag: '🇮🇳' },
+                { code: 'bn-IN', name: 'বাংলা', flag: '🇮🇳' },
+                { code: 'mr-IN', name: 'मराठी', flag: '🇮🇳' },
+                { code: 'gu-IN', name: 'ગુજરાતી', flag: '🇮🇳' },
+                { code: 'kn-IN', name: 'ಕನ್ನಡ', flag: '🇮🇳' }
+              ].map((lang) => (
+                <DropdownMenuItem
+                  key={lang.code}
+                  onClick={() => setVoiceLanguage(lang.code)}
+                  className={`flex items-center gap-2 cursor-pointer ${voiceLanguage === lang.code ? 'bg-blue-50' : ''}`}
+                >
+                  <span>{lang.flag}</span>
+                  <span>{lang.name}</span>
+                  {voiceLanguage === lang.code && <Check className="w-4 h-4 ml-auto" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" onClick={() => setShowAIAssistant(true)}>
