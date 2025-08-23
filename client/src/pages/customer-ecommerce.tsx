@@ -1827,6 +1827,13 @@ export default function CustomerEcommerce() {
       <>
         {/* Advanced Analytics Features - Always at TOP */}
         <NewFeaturesBanner />
+        {/* Voice Search Section */}
+        {currentSection === 'home' && (
+          <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+            <div className="max-w-4xl mx-auto text-center">
+              {/* Language Support Display */}
+              <div className="text-sm text-gray-600 mb-4">
+                <p className="mb-3 font-medium">🌐 Speak in any of these languages:</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
                   {[
                     { code: 'en-US', name: 'English', flag: '🇺🇸', example: 'cement' },
@@ -1847,6 +1854,27 @@ export default function CustomerEcommerce() {
                       title={`Switch to ${lang.name} voice search`}
                     >
                       <div className="flex items-center gap-1 mb-1">
+                        <span className="text-base">{lang.flag}</span>
+                        <span className="font-medium text-xs">{lang.name}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 italic">"{lang.example}"</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Translation Help */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
+                <p className="text-green-800 font-medium mb-2">
+                  ✨ How it works:
+                </p>
+                <p className="text-green-700">
+                  1. Click a language button above  •  2. Click the microphone 🎤  •  3. Say the material name in your language  •  4. We'll translate and search for products!
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
         
         
         {/* Search Results Section */}
