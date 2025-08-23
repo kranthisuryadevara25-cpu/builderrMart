@@ -52,9 +52,9 @@ function Router() {
       <Route path="/login" component={Login} />
       
       {/* Public e-commerce site - no login required */}
-      <Route path="/" component={CustomerEcommerce} />
-      <Route path="/product/:id" component={CustomerEcommerce} />
-      <Route path="/category/:categoryId" component={CustomerEcommerce} />
+      <Route path="/" component={Shop} />
+      <Route path="/product/:id" component={Shop} />
+      <Route path="/category/:categoryId" component={Shop} />
       <Route path="/profile" component={UserProfile} />
       
       <Route path="/dashboard">
@@ -111,11 +111,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/shop">
-        <ProtectedRoute>
-          <Shop />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/shop" component={Shop} />
       
       <Route path="/customer">
         <ProtectedRoute>
