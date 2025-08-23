@@ -992,23 +992,36 @@ export default function CustomerEcommerce() {
     </section>
   );
 
-  // Category Grid Component
+  // Category Grid Component - Enhanced with Beautiful Gradients
   const CategoryGrid = () => (
-    <section className="py-8 px-4">
+    <section className="py-12 px-4 bg-gradient-to-br from-slate-50 to-gray-100">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-2xl font-bold mb-6 text-center">Shop by Category</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <h2 className="text-3xl font-bold mb-2 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Shop by Category</h2>
+        <p className="text-gray-600 mb-8 text-center">Explore our wide range of construction materials</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-6">
           {categories.slice(0, 8).map((category, index) => {
             const icons = ['🏗️', '🔧', '🧱', '⚙️', '🚰', '⚡', '🏠', '🎨'];
+            const gradients = [
+              'from-blue-500 to-cyan-500',
+              'from-purple-500 to-pink-500', 
+              'from-orange-500 to-red-500',
+              'from-green-500 to-teal-500',
+              'from-indigo-500 to-purple-500',
+              'from-yellow-500 to-orange-500',
+              'from-pink-500 to-rose-500',
+              'from-teal-500 to-green-500'
+            ];
             return (
               <Card 
                 key={category.id} 
-                className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+                className="cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 bg-white border-0 shadow-lg"
                 onClick={() => navigateToCategory(category.id)}
               >
-                <CardContent className="p-4 text-center">
-                  <div className="text-4xl mb-2">{icons[index] || '📦'}</div>
-                  <h3 className="font-semibold text-sm text-center line-clamp-2">
+                <CardContent className="p-6 text-center">
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br ${gradients[index]} flex items-center justify-center shadow-lg`}>
+                    <span className="text-2xl filter drop-shadow-sm">{icons[index] || '📦'}</span>
+                  </div>
+                  <h3 className="font-semibold text-sm text-gray-800 leading-tight line-clamp-2">
                     {category.name}
                   </h3>
                 </CardContent>
@@ -1256,58 +1269,70 @@ export default function CustomerEcommerce() {
     );
   };
 
-  // Featured Products Section
+  // Featured Products Section - Enhanced
   const FeaturedSection = () => (
-    <section className="py-8 px-4 bg-gray-50">
+    <section className="py-12 px-4 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center">
-            <Star className="w-6 h-6 mr-2 text-yellow-500" />
-            Featured Products
-          </h2>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold flex items-center bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+              <Star className="w-8 h-8 mr-3 text-yellow-500 drop-shadow-sm" />
+              Featured Products
+            </h2>
+            <p className="text-gray-600 mt-2">Handpicked premium materials for your projects</p>
+          </div>
           <Button 
             variant="outline" 
-            size="sm"
+            size="lg"
             onClick={() => {
               setCurrentSection('home');
               setSearchTerm('featured');
             }}
+            className="border-amber-600 text-amber-700 hover:bg-amber-600 hover:text-white shadow-lg"
           >
-            View All <ArrowRight className="w-4 h-4 ml-2" />
+            View All <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {featuredProducts.slice(0, 6).map((product) => (
-            <ProductCard key={product.id} product={product} featured />
+            <div key={product.id} className="transform transition-all duration-300 hover:-translate-y-2">
+              <ProductCard product={product} featured />
+            </div>
           ))}
         </div>
       </div>
     </section>
   );
 
-  // Trending Products Section
+  // Trending Products Section - Enhanced  
   const TrendingSection = () => (
-    <section className="py-8 px-4">
+    <section className="py-12 px-4 bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center">
-            <TrendingUp className="w-6 h-6 mr-2 text-red-500" />
-            Trending Now
-          </h2>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold flex items-center bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">
+              <TrendingUp className="w-8 h-8 mr-3 text-red-500 drop-shadow-sm" />
+              Trending Now
+            </h2>
+            <p className="text-gray-600 mt-2">Popular choices among construction professionals</p>
+          </div>
           <Button 
             variant="outline" 
-            size="sm"
+            size="lg"
             onClick={() => {
               setCurrentSection('home');
               setSearchTerm('trending');
             }}
+            className="border-rose-600 text-rose-700 hover:bg-rose-600 hover:text-white shadow-lg"
           >
-            View All <ArrowRight className="w-4 h-4 ml-2" />
+            View All <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {trendingProducts.slice(0, 6).map((product) => (
-            <ProductCard key={product.id} product={product} trending />
+            <div key={product.id} className="transform transition-all duration-300 hover:-translate-y-2">
+              <ProductCard key={product.id} product={product} trending />
+            </div>
           ))}
         </div>
       </div>
@@ -1912,34 +1937,41 @@ export default function CustomerEcommerce() {
           </>
         )}
         
-        {/* AI Tools Section */}
-        <section className="py-8 px-4 bg-blue-50">
+        {/* AI Tools Section - Enhanced with Beautiful Gradients */}
+        <section className="py-12 px-4 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
           <div className="max-w-7xl mx-auto text-center">
-            <h2 className="text-2xl font-bold mb-6">AI-Powered Construction Tools</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="p-6 hover:shadow-lg transition-shadow">
-                <Brain className="w-12 h-12 mx-auto text-purple-600 mb-4" />
-                <h3 className="font-semibold mb-2">Material Estimator</h3>
-                <p className="text-sm text-gray-600 mb-4">Upload construction images to get AI-powered material estimates</p>
-                <Button onClick={() => setShowAIEstimator(true)}>
+            <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">AI-Powered Construction Tools</h2>
+            <p className="text-gray-600 mb-8">Revolutionize your construction workflow with cutting-edge AI technology</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <Card className="p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-purple-50 to-indigo-100 border-purple-200 hover:border-purple-300">
+                <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center shadow-lg">
+                  <Brain className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-bold text-lg mb-3 text-purple-800">Material Estimator</h3>
+                <p className="text-sm text-gray-700 mb-6">Upload construction images to get AI-powered material estimates with 95% accuracy</p>
+                <Button onClick={() => setShowAIEstimator(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg">
                   Try Now
                 </Button>
               </Card>
               
-              <Card className="p-6 hover:shadow-lg transition-shadow">
-                <Calculator className="w-12 h-12 mx-auto text-green-600 mb-4" />
-                <h3 className="font-semibold mb-2">Smart Quotation</h3>
-                <p className="text-sm text-gray-600 mb-4">Get instant quotes with bulk discounts and delivery options</p>
-                <Button variant="outline" onClick={() => openQuoteDialog()}>
+              <Card className="p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-emerald-50 to-teal-100 border-emerald-200 hover:border-emerald-300">
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center shadow-lg">
+                  <Calculator className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-bold text-lg mb-3 text-emerald-800">Smart Quotation</h3>
+                <p className="text-sm text-gray-700 mb-6">Get instant quotes with bulk discounts and delivery options in real-time</p>
+                <Button variant="outline" onClick={() => openQuoteDialog()} className="border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white shadow-lg">
                   Get Quote
                 </Button>
               </Card>
               
-              <Card className="p-6 hover:shadow-lg transition-shadow">
-                <Calendar className="w-12 h-12 mx-auto text-blue-600 mb-4" />
-                <h3 className="font-semibold mb-2">Advance Booking</h3>
-                <p className="text-sm text-gray-600 mb-4">Book materials in advance with flexible payment options</p>
-                <Button variant="outline" onClick={() => openBookingDialog()}>
+              <Card className="p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-amber-50 to-orange-100 border-amber-200 hover:border-amber-300">
+                <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center shadow-lg">
+                  <Calendar className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-bold text-lg mb-3 text-amber-800">Advance Booking</h3>
+                <p className="text-sm text-gray-700 mb-6">Book materials in advance with flexible payment options and priority delivery</p>
+                <Button variant="outline" onClick={() => openBookingDialog()} className="border-amber-600 text-amber-700 hover:bg-amber-600 hover:text-white shadow-lg">
                   Book Now
                 </Button>
               </Card>
