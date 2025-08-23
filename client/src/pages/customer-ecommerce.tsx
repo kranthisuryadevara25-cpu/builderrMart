@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -140,6 +140,8 @@ export default function CustomerEcommerce() {
   const [selectedBookingProducts, setSelectedBookingProducts] = useState<SelectedBookingProduct[]>([]);
   const [quoteProductSearch, setQuoteProductSearch] = useState('');
   const [bookingProductSearch, setBookingProductSearch] = useState('');
+  const quoteSearchRef = useRef<HTMLInputElement>(null);
+  const bookingSearchRef = useRef<HTMLInputElement>(null);
   const [bookingProductSearchTerm, setBookingProductSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [sortBy, setSortBy] = useState<string>("name");
@@ -2011,8 +2013,11 @@ export default function CustomerEcommerce() {
     } else {
       setSelectedQuoteProducts([...selectedQuoteProducts, { product, quantity: 1 }]);
     }
-    // Don't clear search immediately - let user continue searching
-    // setQuoteProductSearch('');
+    // Clear the uncontrolled input
+    if (quoteSearchRef.current) {
+      quoteSearchRef.current.value = '';
+      setQuoteProductSearch('');
+    }
   };
 
   const updateQuoteProductQuantity = (productId: string, quantity: number) => {
@@ -2038,8 +2043,11 @@ export default function CustomerEcommerce() {
     } else {
       setSelectedBookingProducts([...selectedBookingProducts, { product, quantity: 1 }]);
     }
-    // Don't clear search immediately - let user continue searching
-    // setBookingProductSearch('');
+    // Clear the uncontrolled input
+    if (bookingSearchRef.current) {
+      bookingSearchRef.current.value = '';
+      setBookingProductSearch('');
+    }
   };
 
   const updateBookingProductQuantity = (productId: string, quantity: number) => {
@@ -2134,18 +2142,13 @@ export default function CustomerEcommerce() {
             {/* Product Search - OUTSIDE FORM */}
             <div className="space-y-2">
               <input
+                ref={quoteSearchRef}
                 type="text"
                 placeholder="Search products to add to quote..."
-                value={quoteProductSearch}
-                onChange={(e) => {
-                  console.log('Quote search onChange - input value:', e.target.value, 'length:', e.target.value.length);
-                  setQuoteProductSearch(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  console.log('Quote search onKeyDown:', e.key, 'value before:', e.currentTarget.value);
-                }}
                 onInput={(e) => {
-                  console.log('Quote search onInput:', e.currentTarget.value);
+                  const value = e.currentTarget.value;
+                  console.log('Quote search uncontrolled input:', value);
+                  setQuoteProductSearch(value);
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -2454,18 +2457,13 @@ export default function CustomerEcommerce() {
             {/* Product Search - OUTSIDE FORM */}
             <div className="space-y-2">
               <input
+                ref={bookingSearchRef}
                 type="text"
                 placeholder="Search products to add to booking..."
-                value={bookingProductSearch}
-                onChange={(e) => {
-                  console.log('Booking search onChange - input value:', e.target.value, 'length:', e.target.value.length);
-                  setBookingProductSearch(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  console.log('Booking search onKeyDown:', e.key, 'value before:', e.currentTarget.value);
-                }}
                 onInput={(e) => {
-                  console.log('Booking search onInput:', e.currentTarget.value);
+                  const value = e.currentTarget.value;
+                  console.log('Booking search uncontrolled input:', value);
+                  setBookingProductSearch(value);
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
