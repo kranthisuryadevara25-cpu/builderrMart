@@ -2137,7 +2137,16 @@ export default function CustomerEcommerce() {
                 type="text"
                 placeholder="Search products to add to quote..."
                 value={quoteProductSearch}
-                onChange={(e) => setQuoteProductSearch(e.target.value)}
+                onChange={(e) => {
+                  console.log('Quote search onChange - input value:', e.target.value, 'length:', e.target.value.length);
+                  setQuoteProductSearch(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  console.log('Quote search onKeyDown:', e.key, 'value before:', e.currentTarget.value);
+                }}
+                onInput={(e) => {
+                  console.log('Quote search onInput:', e.currentTarget.value);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               
@@ -2448,7 +2457,16 @@ export default function CustomerEcommerce() {
                 type="text"
                 placeholder="Search products to add to booking..."
                 value={bookingProductSearch}
-                onChange={(e) => setBookingProductSearch(e.target.value)}
+                onChange={(e) => {
+                  console.log('Booking search onChange - input value:', e.target.value, 'length:', e.target.value.length);
+                  setBookingProductSearch(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  console.log('Booking search onKeyDown:', e.key, 'value before:', e.currentTarget.value);
+                }}
+                onInput={(e) => {
+                  console.log('Booking search onInput:', e.currentTarget.value);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               
