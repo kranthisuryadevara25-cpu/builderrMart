@@ -2011,7 +2011,8 @@ export default function CustomerEcommerce() {
     } else {
       setSelectedQuoteProducts([...selectedQuoteProducts, { product, quantity: 1 }]);
     }
-    setQuoteProductSearch('');
+    // Don't clear search immediately - let user continue searching
+    // setQuoteProductSearch('');
   };
 
   const updateQuoteProductQuantity = (productId: string, quantity: number) => {
@@ -2037,7 +2038,8 @@ export default function CustomerEcommerce() {
     } else {
       setSelectedBookingProducts([...selectedBookingProducts, { product, quantity: 1 }]);
     }
-    setBookingProductSearch('');
+    // Don't clear search immediately - let user continue searching
+    // setBookingProductSearch('');
   };
 
   const updateBookingProductQuantity = (productId: string, quantity: number) => {
@@ -2132,10 +2134,12 @@ export default function CustomerEcommerce() {
                 
                 {/* Product Search */}
                 <div className="space-y-2">
-                  <Input
+                  <input
+                    type="text"
                     placeholder="Search products to add to quote..."
                     value={quoteProductSearch}
                     onChange={(e) => setQuoteProductSearch(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   
                   {quoteProductSearch && (
@@ -2440,10 +2444,12 @@ export default function CustomerEcommerce() {
                 
                 {/* Product Search */}
                 <div className="space-y-2">
-                  <Input
+                  <input
+                    type="text"
                     placeholder="Search products to add to booking..."
                     value={bookingProductSearch}
                     onChange={(e) => setBookingProductSearch(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   
                   {bookingProductSearch && (
