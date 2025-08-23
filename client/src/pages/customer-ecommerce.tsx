@@ -142,6 +142,8 @@ export default function CustomerEcommerce() {
   const [bookingProductSearch, setBookingProductSearch] = useState('');
   const quoteSearchRef = useRef<HTMLInputElement>(null);
   const bookingSearchRef = useRef<HTMLInputElement>(null);
+  const [quoteSearchResults, setQuoteSearchResults] = useState<Product[]>([]);
+  const [bookingSearchResults, setBookingSearchResults] = useState<Product[]>([]);
   const [bookingProductSearchTerm, setBookingProductSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [sortBy, setSortBy] = useState<string>("name");
@@ -2013,11 +2015,11 @@ export default function CustomerEcommerce() {
     } else {
       setSelectedQuoteProducts([...selectedQuoteProducts, { product, quantity: 1 }]);
     }
-    // Clear the uncontrolled input
+    // Clear the search
     if (quoteSearchRef.current) {
       quoteSearchRef.current.value = '';
-      setQuoteProductSearch('');
     }
+    setQuoteSearchResults([]);
   };
 
   const updateQuoteProductQuantity = (productId: string, quantity: number) => {
@@ -2043,11 +2045,11 @@ export default function CustomerEcommerce() {
     } else {
       setSelectedBookingProducts([...selectedBookingProducts, { product, quantity: 1 }]);
     }
-    // Clear the uncontrolled input
+    // Clear the search
     if (bookingSearchRef.current) {
       bookingSearchRef.current.value = '';
-      setBookingProductSearch('');
     }
+    setBookingSearchResults([]);
   };
 
   const updateBookingProductQuantity = (productId: string, quantity: number) => {
@@ -2145,19 +2147,24 @@ export default function CustomerEcommerce() {
                 ref={quoteSearchRef}
                 type="text"
                 placeholder="Search products to add to quote..."
-                onInput={(e) => {
+                onKeyUp={(e) => {
                   const value = e.currentTarget.value;
-                  console.log('Quote search uncontrolled input:', value);
-                  setQuoteProductSearch(value);
+                  console.log('Quote search keyup:', value, 'length:', value.length);
+                  if (value.length > 0) {
+                    const filtered = products?.filter(product => 
+                      product.name.toLowerCase().includes(value.toLowerCase())
+                    ).slice(0, 5) || [];
+                    setQuoteSearchResults(filtered);
+                  } else {
+                    setQuoteSearchResults([]);
+                  }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               
-              {quoteProductSearch && (
+              {quoteSearchResults.length > 0 && (
                 <div className="border rounded-md max-h-40 overflow-y-auto">
-                  {products?.filter(product => 
-                    product.name.toLowerCase().includes(quoteProductSearch.toLowerCase())
-                  ).slice(0, 5).map(product => (
+                  {quoteSearchResults.map(product => (
                     <div
                       key={product.id}
                       className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
@@ -2460,19 +2467,24 @@ export default function CustomerEcommerce() {
                 ref={bookingSearchRef}
                 type="text"
                 placeholder="Search products to add to booking..."
-                onInput={(e) => {
+                onKeyUp={(e) => {
                   const value = e.currentTarget.value;
-                  console.log('Booking search uncontrolled input:', value);
-                  setBookingProductSearch(value);
+                  console.log('Booking search keyup:', value, 'length:', value.length);
+                  if (value.length > 0) {
+                    const filtered = products?.filter(product => 
+                      product.name.toLowerCase().includes(value.toLowerCase())
+                    ).slice(0, 5) || [];
+                    setBookingSearchResults(filtered);
+                  } else {
+                    setBookingSearchResults([]);
+                  }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               
-              {bookingProductSearch && (
+              {bookingSearchResults.length > 0 && (
                 <div className="border rounded-md max-h-40 overflow-y-auto">
-                  {products?.filter(product => 
-                    product.name.toLowerCase().includes(bookingProductSearch.toLowerCase())
-                  ).slice(0, 5).map(product => (
+                  {bookingSearchResults.map(product => (
                     <div
                       key={product.id}
                       className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
