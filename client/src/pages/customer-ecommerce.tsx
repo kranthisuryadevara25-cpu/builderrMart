@@ -1833,8 +1833,8 @@ export default function CustomerEcommerce() {
             <div className="max-w-4xl mx-auto text-center">
               {/* Language Support Display */}
               <div className="text-sm text-gray-600 mb-4">
-                <p className="mb-3 font-medium">🌐 Speak in any of these languages:</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
+                <p className="mb-3 font-medium text-center">🌐 Voice Search Languages:</p>
+                <div className="flex items-center justify-center gap-1 flex-wrap max-w-4xl mx-auto">
                   {[
                     { code: 'en-US', name: 'English', flag: '🇺🇸', example: 'cement' },
                     { code: 'hi-IN', name: 'हिंदी', flag: '🇮🇳', example: 'सीमेंट' },
@@ -1850,14 +1850,11 @@ export default function CustomerEcommerce() {
                       variant={voiceLanguage === lang.code ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setVoiceLanguage(lang.code)}
-                      className="p-3 h-auto flex flex-col items-center hover:bg-blue-50 transition-colors"
+                      className="h-8 px-2 flex items-center gap-1 hover:bg-blue-50 transition-colors"
                       title={`Switch to ${lang.name} voice search`}
                     >
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="text-base">{lang.flag}</span>
-                        <span className="font-medium text-xs">{lang.name}</span>
-                      </div>
-                      <span className="text-xs text-gray-500 italic">"{lang.example}"</span>
+                      <span>{lang.flag}</span>
+                      <span className="hidden sm:inline text-xs">{lang.name}</span>
                     </Button>
                   ))}
                 </div>
