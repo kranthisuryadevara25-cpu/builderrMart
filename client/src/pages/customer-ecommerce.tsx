@@ -1832,9 +1832,7 @@ export default function CustomerEcommerce() {
           <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
             <div className="max-w-4xl mx-auto text-center">
               {/* Language Support Display */}
-              <div className="text-sm text-gray-600 mb-4">
-                <p className="mb-3 font-medium text-center">🌐 Voice Search Languages:</p>
-                <div className="flex items-center justify-center gap-1 flex-wrap max-w-4xl mx-auto">
+              <div className="flex items-center justify-center gap-1 flex-wrap max-w-4xl mx-auto">
                   {[
                     { code: 'en-US', name: 'English', flag: '🇺🇸', example: 'cement' },
                     { code: 'hi-IN', name: 'हिंदी', flag: '🇮🇳', example: 'सीमेंट' },
@@ -1857,17 +1855,6 @@ export default function CustomerEcommerce() {
                       <span className="hidden sm:inline text-xs">{lang.name}</span>
                     </Button>
                   ))}
-                </div>
-              </div>
-              
-              {/* Translation Help */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
-                <p className="text-green-800 font-medium mb-2">
-                  ✨ How it works:
-                </p>
-                <p className="text-green-700">
-                  1. Click a language button above  •  2. Click the microphone 🎤  •  3. Say the material name in your language  •  4. We'll translate and search for products!
-                </p>
               </div>
             </div>
           </section>
