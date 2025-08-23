@@ -2147,9 +2147,22 @@ export default function CustomerEcommerce() {
                 ref={quoteSearchRef}
                 type="text"
                 placeholder="Search products to add to quote..."
-                onKeyUp={(e) => {
-                  const value = e.currentTarget.value;
-                  console.log('Quote search keyup:', value, 'length:', value.length);
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  outline: 'none',
+                  fontSize: '14px'
+                }}
+                onFocus={() => console.log('Quote search focused')}
+                onBlur={() => console.log('Quote search blurred')}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const value = quoteSearchRef.current?.value || '';
+                  console.log('Manual quote search:', value);
                   if (value.length > 0) {
                     const filtered = products?.filter(product => 
                       product.name.toLowerCase().includes(value.toLowerCase())
@@ -2159,8 +2172,10 @@ export default function CustomerEcommerce() {
                     setQuoteSearchResults([]);
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Search
+              </button>
               
               {quoteSearchResults.length > 0 && (
                 <div className="border rounded-md max-h-40 overflow-y-auto">
@@ -2467,9 +2482,22 @@ export default function CustomerEcommerce() {
                 ref={bookingSearchRef}
                 type="text"
                 placeholder="Search products to add to booking..."
-                onKeyUp={(e) => {
-                  const value = e.currentTarget.value;
-                  console.log('Booking search keyup:', value, 'length:', value.length);
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  outline: 'none',
+                  fontSize: '14px'
+                }}
+                onFocus={() => console.log('Booking search focused')}
+                onBlur={() => console.log('Booking search blurred')}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const value = bookingSearchRef.current?.value || '';
+                  console.log('Manual booking search:', value);
                   if (value.length > 0) {
                     const filtered = products?.filter(product => 
                       product.name.toLowerCase().includes(value.toLowerCase())
@@ -2479,8 +2507,10 @@ export default function CustomerEcommerce() {
                     setBookingSearchResults([]);
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Search
+              </button>
               
               {bookingSearchResults.length > 0 && (
                 <div className="border rounded-md max-h-40 overflow-y-auto">
