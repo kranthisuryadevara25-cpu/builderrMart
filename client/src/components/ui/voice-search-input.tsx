@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -61,8 +61,12 @@ export function VoiceSearchInput({
   const debugInfo = showDebugInfo ? getDebugInfo() : null;
   const compatibility = getBrowserCompatibility();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleManualSearch = () => {
+    const value = searchInputRef.current?.value || '';
+    console.log('Manual main search:', value);
+    onChange(value);
   };
   
   // Enhanced microphone button click with debugging
@@ -118,13 +122,39 @@ export function VoiceSearchInput({
     <div className="space-y-2">
       <div className="relative flex items-center">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
-        <Input
+        <input
+          ref={searchInputRef}
+          type="text"
           placeholder={isListening ? `🎤 Listening... ${transcript}` : placeholder}
-          value={isListening ? transcript || value : value}
-          onChange={handleInputChange}
-          className={cn("pl-10 pr-12", className)}
+          style={{
+            width: '100%',
+            padding: '8px 40px 8px 40px',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            outline: 'none',
+            fontSize: '14px'
+          }}
           data-testid={testId}
         />
+        <button
+          type="button"
+          onClick={handleManualSearch}
+          style={{
+            position: 'absolute',
+            right: '50px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            padding: '4px 8px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px'
+          }}
+        >
+          Search
+        </button>
         {/* Enhanced microphone button with better visibility */}
         {/* ALWAYS VISIBLE MICROPHONE BUTTON */}
         <Button
