@@ -2126,46 +2126,48 @@ export default function CustomerEcommerce() {
               {quoteProduct ? `Get a quote for ${quoteProduct.name}` : 'Get a custom quote for your construction materials'}
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Multiple Products Selection - OUTSIDE FORM */}
+          <div className="space-y-4 mb-4">
+            <Label>Select Products for Quote</Label>
+            
+            {/* Product Search - OUTSIDE FORM */}
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Search products to add to quote..."
+                value={quoteProductSearch}
+                onChange={(e) => setQuoteProductSearch(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              
+              {quoteProductSearch && (
+                <div className="border rounded-md max-h-40 overflow-y-auto">
+                  {products?.filter(product => 
+                    product.name.toLowerCase().includes(quoteProductSearch.toLowerCase())
+                  ).slice(0, 5).map(product => (
+                    <div
+                      key={product.id}
+                      className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      onClick={() => addQuoteProduct(product)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-gray-600">₹{parseFloat(product.basePrice).toLocaleString()}</p>
+                        </div>
+                        <Plus className="w-4 h-4 text-green-600" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Multiple Products Selection */}
-              <div className="space-y-4">
-                <Label>Select Products for Quote</Label>
-                
-                {/* Product Search */}
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Search products to add to quote..."
-                    value={quoteProductSearch}
-                    onChange={(e) => setQuoteProductSearch(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  
-                  {quoteProductSearch && (
-                    <div className="border rounded-md max-h-40 overflow-y-auto">
-                      {products?.filter(product => 
-                        product.name.toLowerCase().includes(quoteProductSearch.toLowerCase())
-                      ).slice(0, 5).map(product => (
-                        <div
-                          key={product.id}
-                          className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                          onClick={() => addQuoteProduct(product)}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-medium">{product.name}</p>
-                              <p className="text-sm text-gray-600">₹{parseFloat(product.basePrice).toLocaleString()}</p>
-                            </div>
-                            <Plus className="w-4 h-4 text-green-600" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Selected Products */}
+              {/* Selected Products */}
                 {selectedQuoteProducts.length > 0 && (
                   <div className="space-y-2">
                     <Label>Selected Products ({selectedQuoteProducts.length})</Label>
@@ -2229,7 +2231,6 @@ export default function CustomerEcommerce() {
                     </Card>
                   </div>
                 )}
-              </div>
 
               {/* Product Summary - Show selected product details */}
               {quoteProduct && (
@@ -2436,46 +2437,48 @@ export default function CustomerEcommerce() {
               Schedule delivery, installation, or consultation for multiple products
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Multiple Products Selection for Booking - OUTSIDE FORM */}
+          <div className="space-y-4 mb-4">
+            <Label>Select Products for Service Booking</Label>
+            
+            {/* Product Search - OUTSIDE FORM */}
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Search products to add to booking..."
+                value={bookingProductSearch}
+                onChange={(e) => setBookingProductSearch(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              
+              {bookingProductSearch && (
+                <div className="border rounded-md max-h-40 overflow-y-auto">
+                  {products?.filter(product => 
+                    product.name.toLowerCase().includes(bookingProductSearch.toLowerCase())
+                  ).slice(0, 5).map(product => (
+                    <div
+                      key={product.id}
+                      className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      onClick={() => addBookingProduct(product)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-gray-600">₹{parseFloat(product.basePrice).toLocaleString()}</p>
+                        </div>
+                        <Plus className="w-4 h-4 text-green-600" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Multiple Products Selection for Booking */}
-              <div className="space-y-4">
-                <Label>Select Products for Service Booking</Label>
-                
-                {/* Product Search */}
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Search products to add to booking..."
-                    value={bookingProductSearch}
-                    onChange={(e) => setBookingProductSearch(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  
-                  {bookingProductSearch && (
-                    <div className="border rounded-md max-h-40 overflow-y-auto">
-                      {products?.filter(product => 
-                        product.name.toLowerCase().includes(bookingProductSearch.toLowerCase())
-                      ).slice(0, 5).map(product => (
-                        <div
-                          key={product.id}
-                          className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                          onClick={() => addBookingProduct(product)}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-medium">{product.name}</p>
-                              <p className="text-sm text-gray-600">₹{parseFloat(product.basePrice).toLocaleString()}</p>
-                            </div>
-                            <Plus className="w-4 h-4 text-green-600" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Selected Products for Booking */}
+              {/* Selected Products for Booking */}
                 {selectedBookingProducts.length > 0 && (
                   <div className="space-y-2">
                     <Label>Selected Products ({selectedBookingProducts.length})</Label>
@@ -2539,7 +2542,6 @@ export default function CustomerEcommerce() {
                     </Card>
                   </div>
                 )}
-              </div>
 
               {/* Product Summary - Show selected product details */}
               {bookingProduct && (
