@@ -124,21 +124,19 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
-      {/* Admin routes - protected */}
+      {/* Admin dashboard – only owner_admin and vendor_manager; others redirected */}
       <Route path="/admin-dashboard">
-        {user ? (
-          user.role === "user" ? <Redirect to="/" /> : <Redirect to="/dashboard" />
-        ) : <Redirect to="/login" />}
+        {!user ? <Redirect to="/login" /> :
+          user.role === "user" ? <Redirect to="/" /> :
+          (user.role === "owner_admin" || user.role === "vendor_manager") ? (
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          ) : <Redirect to="/dashboard" />}
       </Route>
       
       {/* Admin panel - accessible without authentication for development */}
       <Route path="/admin" component={AdminPanel} />
-      
-      <Route path="/admin-dashboard">
-        <ProtectedRoute>
-          <AdminDashboard />
-        </ProtectedRoute>
-      </Route>
       
       <Route path="/vendor-panel">
         <ProtectedRoute>

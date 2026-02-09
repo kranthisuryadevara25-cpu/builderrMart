@@ -8,6 +8,7 @@ import { Topbar } from '@/components/layout/topbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -234,6 +235,18 @@ export default function AdminPanel() {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { isActive?: boolean; role?: string } }) =>
+      firebaseApi.updateUser(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'users'] });
+      toast({ title: 'Success', description: 'User updated successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   // Form handlers
   const handleCategorySubmit = (data: any) => {
     if (editingItem) {
@@ -318,10 +331,14 @@ export default function AdminPanel() {
           </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11">
+          <TabsList className="grid w-full grid-cols-12">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              Users
+            </TabsTrigger>
             <TabsTrigger value="discounts">Discounts</TabsTrigger>
             <TabsTrigger value="quotes">Quotes</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
@@ -748,6 +765,59 @@ export default function AdminPanel() {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-6">
+            <h2 className="text-2xl font-bold">Users & Vendors</h2>
+            <p className="text-sm text-gray-600">Approve or suspend vendors. Only active users appear in the storefront shop list.</p>
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>City</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u: any) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium">{u.username}</TableCell>
+                      <TableCell>{u.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={u.role === 'owner_admin' ? 'default' : u.role === 'vendor' ? 'secondary' : 'outline'}>
+                          {u.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{u.city || '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant={u.isActive !== false ? 'default' : 'destructive'}>
+                          {u.isActive !== false ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {u.role === 'vendor' && (
+                          <Button
+                            size="sm"
+                            variant={u.isActive !== false ? 'outline' : 'default'}
+                            onClick={() => updateUserMutation.mutate({ id: u.id, data: { isActive: u.isActive === false } })}
+                            disabled={updateUserMutation.isPending}
+                          >
+                            {u.isActive !== false ? 'Suspend' : 'Approve'}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {users.length === 0 && (
+              <p className="text-gray-500 text-center py-8">No users yet. Sign up or create users in Firebase Auth and they will appear here.</p>
+            )}
           </TabsContent>
 
           <TabsContent value="discounts" className="space-y-6">

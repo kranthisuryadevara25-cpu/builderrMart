@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
 import { firebaseApi, type User as AppUser } from "@/lib/firebase-api";
@@ -985,20 +986,20 @@ export default function CustomerEcommerce() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="w-full justify-start">
-                        <Languages className="w-4 h-4 mr-2" />
-                        Language
+                        <Languages className="w-4 h-4 mr-2 shrink-0" />
+                        <span className="truncate">{({ 'en-US': 'English', 'hi-IN': 'हिंदी', 'te-IN': 'తెలుగు', 'ta-IN': 'தமிழ்', 'bn-IN': 'বাংলা', 'mr-IN': 'मराठी', 'gu-IN': 'ગુજરાતી', 'kn-IN': 'ಕನ್ನಡ' } as Record<string, string>)[voiceLanguage] || 'English'}</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-56">
                       {[
                         { code: 'en-US', name: 'English' },
-                        { code: 'hi-IN', name: 'हिंदी' },
-                        { code: 'te-IN', name: 'తెలుగు' },
-                        { code: 'ta-IN', name: 'தமிழ்' },
-                        { code: 'bn-IN', name: 'বাংলা' },
-                        { code: 'mr-IN', name: 'मराठी' },
-                        { code: 'gu-IN', name: 'ગુજરાતી' },
-                        { code: 'kn-IN', name: 'ಕನ್ನಡ' }
+                        { code: 'hi-IN', name: 'हिंदी (Hindi)' },
+                        { code: 'te-IN', name: 'తెలుగు (Telugu)' },
+                        { code: 'ta-IN', name: 'தமிழ் (Tamil)' },
+                        { code: 'bn-IN', name: 'বাংলা (Bengali)' },
+                        { code: 'mr-IN', name: 'मराठी (Marathi)' },
+                        { code: 'gu-IN', name: 'ગુજરાતી (Gujarati)' },
+                        { code: 'kn-IN', name: 'ಕನ್ನಡ (Kannada)' }
                       ].map((lang) => (
                         <DropdownMenuItem key={lang.code} onClick={() => setVoiceLanguage(lang.code)}>
                           {lang.name}
@@ -1081,24 +1082,24 @@ export default function CustomerEcommerce() {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-1">
-                <Languages className="w-4 h-4" />
-                {voiceLanguage === 'en-US' ? '🇺🇸' : voiceLanguage === 'hi-IN' ? '🇮🇳' : voiceLanguage === 'te-IN' ? '🇮🇳' : voiceLanguage === 'ta-IN' ? '🇮🇳' : voiceLanguage === 'bn-IN' ? '🇮🇳' : voiceLanguage === 'mr-IN' ? '🇮🇳' : voiceLanguage === 'gu-IN' ? '🇮🇳' : voiceLanguage === 'kn-IN' ? '🇮🇳' : '🇺🇸'}
+              <Button variant="outline" size="sm" className="flex items-center gap-1 min-w-[2.5rem]">
+                <Languages className="w-4 h-4 shrink-0" />
+                <span className="truncate max-w-[100px]">{({ 'en-US': 'English', 'hi-IN': 'हिंदी', 'te-IN': 'తెలుగు', 'ta-IN': 'தமிழ்', 'bn-IN': 'বাংলা', 'mr-IN': 'मराठी', 'gu-IN': 'ગુજરાતી', 'kn-IN': 'ಕನ್ನಡ' } as Record<string, string>)[voiceLanguage] || 'English'}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-52">
               {[
                 { code: 'en-US', name: 'English', flag: '🇺🇸' },
-                { code: 'hi-IN', name: 'हिंदी', flag: '🇮🇳' },
-                { code: 'te-IN', name: 'తెలుగు', flag: '🇮🇳' },
-                { code: 'ta-IN', name: 'தமிழ்', flag: '🇮🇳' },
-                { code: 'bn-IN', name: 'বাংলা', flag: '🇮🇳' },
-                { code: 'mr-IN', name: 'मराठी', flag: '🇮🇳' },
-                { code: 'gu-IN', name: 'ગુજરાતી', flag: '🇮🇳' },
-                { code: 'kn-IN', name: 'ಕನ್ನಡ', flag: '🇮🇳' }
+                { code: 'hi-IN', name: 'हिंदी (Hindi)', flag: '🇮🇳' },
+                { code: 'te-IN', name: 'తెలుగు (Telugu)', flag: '🇮🇳' },
+                { code: 'ta-IN', name: 'தமிழ் (Tamil)', flag: '🇮🇳' },
+                { code: 'bn-IN', name: 'বাংলা (Bengali)', flag: '🇮🇳' },
+                { code: 'mr-IN', name: 'मराठी (Marathi)', flag: '🇮🇳' },
+                { code: 'gu-IN', name: 'ગુજરાતી (Gujarati)', flag: '🇮🇳' },
+                { code: 'kn-IN', name: 'ಕನ್ನಡ (Kannada)', flag: '🇮🇳' }
               ].map((lang) => (
                 <DropdownMenuItem key={lang.code} onClick={() => setVoiceLanguage(lang.code)} className={voiceLanguage === lang.code ? 'bg-blue-50' : ''}>
-                  <span>{lang.flag}</span>
+                  <span className="mr-2">{lang.flag}</span>
                   <span>{lang.name}</span>
                   {voiceLanguage === lang.code && <Check className="w-4 h-4 ml-auto" />}
                 </DropdownMenuItem>
@@ -2300,11 +2301,11 @@ export default function CustomerEcommerce() {
                       variant={voiceLanguage === lang.code ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setVoiceLanguage(lang.code)}
-                      className="h-8 px-2 flex items-center gap-1 hover:bg-blue-50 transition-colors"
+                      className="h-8 px-2 flex items-center gap-1.5 hover:bg-blue-50 transition-colors min-w-0"
                       title={`Switch to ${lang.name} voice search`}
                     >
-                      <span>{lang.flag}</span>
-                      <span className="hidden sm:inline text-xs">{lang.name}</span>
+                      <span className="shrink-0">{lang.flag}</span>
+                      <span className="text-xs truncate max-w-[4.5rem] sm:max-w-none">{lang.name}</span>
                     </Button>
                   ))}
               </div>
@@ -3305,66 +3306,40 @@ export default function CustomerEcommerce() {
       </main>
       <Footer />
 
-      {/* Quick features FAB – + toggle for mobile */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2 pb-[env(safe-area-inset-bottom,0)]">
-        {quickFeaturesOpen && (
-          <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
-            <Button
-              size="icon"
-              className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700"
-              onClick={() => { openQuoteDialog(); setQuickFeaturesOpen(false); }}
-              title="Get Quote"
-            >
-              <Quote className="w-5 h-5" />
-            </Button>
-            <Button
-              size="icon"
-              className="h-12 w-12 rounded-full shadow-lg bg-amber-600 hover:bg-amber-700"
-              onClick={() => { openBookingDialog(); setQuickFeaturesOpen(false); }}
-              title="Book Now"
-            >
-              <Calendar className="w-5 h-5" />
-            </Button>
-            <Button
-              size="icon"
-              className="h-12 w-12 rounded-full shadow-lg bg-purple-600 hover:bg-purple-700"
-              onClick={() => { setShowAIAssistant(true); setQuickFeaturesOpen(false); }}
-              title="AI Assistant"
-            >
-              <Bot className="w-5 h-5" />
-            </Button>
-            <Button
-              size="icon"
-              className="h-12 w-12 rounded-full shadow-lg bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => { setShowAIEstimator(true); setQuickFeaturesOpen(false); }}
-              title="Material Estimator"
-            >
-              <Calculator className="w-5 h-5" />
-            </Button>
-            <Button
-              size="icon"
-              className="h-12 w-12 rounded-full shadow-lg bg-gray-600 hover:bg-gray-700"
-              onClick={() => { setShowLocationDialog(true); setQuickFeaturesOpen(false); }}
-              title="Set location"
-            >
-              <MapPin className="w-5 h-5" />
-            </Button>
-          </div>
-        )}
-        <Button
-          size="icon"
-          className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 transition-transform"
-          onClick={() => setQuickFeaturesOpen((o) => !o)}
-          title={quickFeaturesOpen ? "Close" : "Quick actions"}
-          aria-expanded={quickFeaturesOpen}
-        >
-          {quickFeaturesOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Plus className="w-6 h-6" />
+      {/* Quick features FAB – rendered in body so it’s always visible (mobile + desktop) */}
+      {typeof document !== "undefined" && createPortal(
+        <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[9999] flex flex-col items-end gap-2 pb-[env(safe-area-inset-bottom,0)] pointer-events-none [&>*]:pointer-events-auto">
+          {quickFeaturesOpen && (
+            <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
+              <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { openQuoteDialog(); setQuickFeaturesOpen(false); }} title="Get Quote">
+                <Quote className="w-5 h-5" />
+              </Button>
+              <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { openBookingDialog(); setQuickFeaturesOpen(false); }} title="Book Now">
+                <Calendar className="w-5 h-5" />
+              </Button>
+              <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-purple-600 hover:bg-purple-700 text-white" onClick={() => { setShowAIAssistant(true); setQuickFeaturesOpen(false); }} title="AI Assistant">
+                <Bot className="w-5 h-5" />
+              </Button>
+              <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setShowAIEstimator(true); setQuickFeaturesOpen(false); }} title="Material Estimator">
+                <Calculator className="w-5 h-5" />
+              </Button>
+              <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-gray-600 hover:bg-gray-700 text-white" onClick={() => { setShowLocationDialog(true); setQuickFeaturesOpen(false); }} title="Set location">
+                <MapPin className="w-5 h-5" />
+              </Button>
+            </div>
           )}
-        </Button>
-      </div>
+          <Button
+            size="icon"
+            className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 text-white transition-transform border-2 border-white"
+            onClick={() => setQuickFeaturesOpen((o) => !o)}
+            title={quickFeaturesOpen ? "Close" : "Quick actions"}
+            aria-expanded={quickFeaturesOpen}
+          >
+            {quickFeaturesOpen ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+          </Button>
+        </div>,
+        document.body
+      )}
 
       {/* AI Estimator Dialog */}
       <Dialog open={showAIEstimator} onOpenChange={setShowAIEstimator}>

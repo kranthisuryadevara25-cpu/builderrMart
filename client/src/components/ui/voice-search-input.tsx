@@ -192,12 +192,12 @@ export function VoiceSearchInput({
         </div>
       )}
       
-      {/* Browser compatibility warning */}
+      {/* Browser compatibility – friendly message; typing always works */}
       {!isSupported && (
-        <Alert>
-          <AlertTriangle className="w-4 h-4" />
-          <AlertDescription className="text-sm">
-            Voice search not supported in your browser. Try Chrome or Edge for best experience.
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertTriangle className="w-4 h-4 text-amber-600" />
+          <AlertDescription className="text-sm text-amber-800">
+            Voice search works best in Chrome or Edge (desktop or Android). You can type your search above anytime.
           </AlertDescription>
         </Alert>
       )}
