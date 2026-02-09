@@ -31,11 +31,16 @@ interface UserProfile {
   id: string;
   username: string;
   email: string;
+  role?: string;
   phone?: string;
   address?: string;
   city?: string;
   state?: string;
   pincode?: string;
+  sameDayDelivery?: boolean;
+  deliverySlots?: string[];
+  latitude?: number;
+  longitude?: number;
   loyaltyPoints?: number;
   totalOrders?: number;
   totalSpent?: number;
@@ -303,6 +308,45 @@ export default function UserProfile() {
                       placeholder="PIN Code"
                     />
                   </div>
+                  {profile?.role === 'vendor' && (
+                    <>
+                      <div className="flex items-center gap-2 pt-2 border-t">
+                        <input
+                          type="checkbox"
+                          id="sameDayDelivery"
+                          checked={editedProfile.sameDayDelivery ?? false}
+                          onChange={(e) => setEditedProfile(prev => ({ ...prev, sameDayDelivery: e.target.checked }))}
+                          disabled={!isEditing}
+                          className="rounded border-gray-300"
+                        />
+                        <Label htmlFor="sameDayDelivery">Offer same-day delivery</Label>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Latitude (for distance)</Label>
+                          <Input
+                            type="number"
+                            step="any"
+                            value={editedProfile.latitude ?? ''}
+                            onChange={(e) => setEditedProfile(prev => ({ ...prev, latitude: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                            disabled={!isEditing}
+                            placeholder="e.g. 17.3850"
+                          />
+                        </div>
+                        <div>
+                          <Label>Longitude (for distance)</Label>
+                          <Input
+                            type="number"
+                            step="any"
+                            value={editedProfile.longitude ?? ''}
+                            onChange={(e) => setEditedProfile(prev => ({ ...prev, longitude: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                            disabled={!isEditing}
+                            placeholder="e.g. 78.4867"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>

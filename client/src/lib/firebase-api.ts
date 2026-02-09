@@ -9,6 +9,7 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  seedIndiaCategories,
   getProducts,
   getProduct,
   getFeaturedProducts,
@@ -20,6 +21,8 @@ import {
   getUsers,
   getUser,
   updateUser,
+  getVendorRatings,
+  submitVendorRating,
   getOrder,
   getOrders,
   createOrder,
@@ -76,6 +79,7 @@ export const firebaseApi = {
   createCategory,
   updateCategory,
   deleteCategory,
+  seedIndiaCategories,
 
   // Products
   getProducts,
@@ -91,6 +95,8 @@ export const firebaseApi = {
   getUsers,
   getUser,
   updateUser,
+  getVendorRatings,
+  submitVendorRating,
 
   // Current user profile (by uid)
   async getUserProfile(uid: string) {

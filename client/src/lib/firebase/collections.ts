@@ -29,6 +29,7 @@ export const COLLECTIONS = {
   contractors: "contractors",
   advances: "advances",
   pricingRules: "pricing_rules",
+  vendorRatings: "vendor_ratings",
 } as const;
 
 function docToObject<T extends { id?: string }>(id: string, data: DocumentData): T {

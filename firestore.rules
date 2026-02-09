@@ -67,5 +67,12 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update, delete: if isSignedIn();
     }
+
+    // Vendor ratings: anyone can read; authenticated users can create/update own
+    match /vendor_ratings/{id} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == uid();
+      allow update, delete: if isSignedIn() && resource.data.userId == uid();
+    }
   }
 }

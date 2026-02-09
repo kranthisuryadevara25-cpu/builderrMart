@@ -15,11 +15,33 @@ export interface FirestoreUser {
   city?: string;
   state?: string;
   pincode?: string;
+  /** Vendor rating (1-5) average; denormalized for display */
+  rating?: number;
+  /** Number of ratings received (for vendors) */
+  ratingCount?: number;
+  /** Vendor: offers same-day delivery */
+  sameDayDelivery?: boolean;
+  /** Vendor: e.g. ["9-12", "14-18"] */
+  deliverySlots?: string[];
+  /** Vendor/service location for distance (within X km) */
+  latitude?: number;
+  longitude?: number;
   loyaltyPoints?: number;
   totalOrders?: number;
   totalSpent?: number;
   lastOrderDate?: string;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Single rating of a vendor by a user */
+export interface FirestoreVendorRating {
+  id: string;
+  vendorId: string;
+  userId: string;
+  rating: number;
+  comment?: string;
   createdAt: string;
   updatedAt: string;
 }

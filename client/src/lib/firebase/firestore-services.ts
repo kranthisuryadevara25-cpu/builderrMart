@@ -35,6 +35,7 @@ import type {
   FirestoreContractor,
   FirestoreAdvance,
   FirestorePricingRule,
+  FirestoreVendorRating,
 } from "./types";
 
 const db = () => getFirebaseDb();
@@ -53,6 +54,39 @@ export async function getCategory(id: string): Promise<FirestoreCategory | null>
 
 export async function getCategoriesHierarchy(): Promise<FirestoreCategory[]> {
   return getCategories();
+}
+
+/** Seed India-ready categories (idempotent: skips existing by name/parent). */
+export async function seedIndiaCategories(): Promise<{ created: number; skipped: number }> {
+  const { INDIA_SEED_CATEGORIES } = await import("./seed-india-categories");
+  const existing = await getCategories();
+  const byName = new Map<string, FirestoreCategory>();
+  const byParentAndName = new Map<string, FirestoreCategory>();
+  for (const c of existing) {
+    byName.set(c.name, c);
+    const key = (c.parentId || "") + "\0" + c.name;
+    byParentAndName.set(key, c);
+  }
+  let created = 0;
+  let skipped = 0;
+  for (const seed of INDIA_SEED_CATEGORIES) {
+    const parentId = seed.parentName ? byName.get(seed.parentName)?.id : null;
+    const key = (parentId || "") + "\0" + seed.name;
+    if (byParentAndName.has(key)) {
+      skipped++;
+      continue;
+    }
+    const newCat = await createCategory({
+      name: seed.name,
+      description: seed.description,
+      parentId: parentId ?? null,
+      isActive: true,
+    });
+    byName.set(newCat.name, newCat);
+    byParentAndName.set(key, newCat);
+    created++;
+  }
+  return { created, skipped };
 }
 
 export async function createCategory(data: Omit<FirestoreCategory, "id" | "createdAt" | "updatedAt">): Promise<FirestoreCategory> {
@@ -164,6 +198,72 @@ export async function getUser(id: string): Promise<FirestoreUser | null> {
 
 export async function updateUser(id: string, data: Partial<FirestoreUser>): Promise<void> {
   await updateDocument(COLLECTIONS.users, id, data);
+}
+
+// ---------- Vendor ratings ----------
+export async function getVendorRatings(vendorId: string): Promise<FirestoreVendorRating[]> {
+  const ref = collection(db(), COLLECTIONS.vendorRatings);
+  const q = query(
+    ref,
+    where("vendorId", "==", vendorId),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => docToObject<FirestoreVendorRating>(d.id, d.data()));
+}
+
+export async function submitVendorRating(
+  vendorId: string,
+  userId: string,
+  rating: number,
+  comment?: string
+): Promise<FirestoreVendorRating> {
+  const ref = collection(db(), COLLECTIONS.vendorRatings);
+  const q = query(
+    ref,
+    where("vendorId", "==", vendorId),
+    where("userId", "==", userId)
+  );
+  const snap = await getDocs(q);
+  const existing = snap.docs[0];
+  const payload = {
+    vendorId,
+    userId,
+    rating: Math.min(5, Math.max(1, rating)),
+    comment: comment || null,
+    updatedAt: new Date().toISOString(),
+  };
+  if (existing) {
+    await updateDocument(COLLECTIONS.vendorRatings, existing.id, payload);
+    const updated = await getDocById<FirestoreVendorRating>(COLLECTIONS.vendorRatings, existing.id);
+    if (!updated) throw new Error("Failed to load updated rating");
+    await recalcVendorRating(vendorId);
+    return updated;
+  }
+  const id = await addDocument(COLLECTIONS.vendorRatings, {
+    vendorId,
+    userId,
+    rating: Math.min(5, Math.max(1, rating)),
+    comment: comment ?? null,
+  });
+  const created = await getDocById<FirestoreVendorRating>(COLLECTIONS.vendorRatings, id);
+  if (!created) throw new Error("Failed to load created rating");
+  await recalcVendorRating(vendorId);
+  return created;
+}
+
+async function recalcVendorRating(vendorId: string): Promise<void> {
+  const ratings = await getVendorRatings(vendorId);
+  if (ratings.length === 0) {
+    await updateDocument(COLLECTIONS.users, vendorId, { rating: 0, ratingCount: 0 });
+    return;
+  }
+  const sum = ratings.reduce((a, r) => a + r.rating, 0);
+  const avg = Math.round((sum / ratings.length) * 10) / 10;
+  await updateDocument(COLLECTIONS.users, vendorId, {
+    rating: avg,
+    ratingCount: ratings.length,
+  });
 }
 
 // ---------- Orders ----------

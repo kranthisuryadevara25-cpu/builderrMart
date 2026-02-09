@@ -28,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, FolderTree, Search, Filter } from "lucide-react";
+import { Plus, Edit, Trash2, FolderTree, Search, Filter, Globe } from "lucide-react";
 
 export default function Categories() {
   const { user, isAdmin } = useAuth();
@@ -60,6 +60,24 @@ export default function Categories() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const seedIndiaMutation = useMutation({
+    mutationFn: () => firebaseApi.seedIndiaCategories(),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["firebase", "categories"] });
+      toast({
+        title: "India categories seeded",
+        description: `Created ${result.created}, skipped ${result.skipped} (already exist).`,
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: (error as Error).message || "Failed to seed categories",
         variant: "destructive",
       });
     },
@@ -124,10 +142,20 @@ export default function Categories() {
               </div>
               
               {canEditCategories && (
-                <Button onClick={() => setShowCreateModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Category
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => seedIndiaMutation.mutate()}
+                    disabled={seedIndiaMutation.isPending}
+                  >
+                    <Globe className="h-4 w-4 mr-2" />
+                    Seed India categories
+                  </Button>
+                  <Button onClick={() => setShowCreateModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Category
+                  </Button>
+                </div>
               )}
             </div>
 

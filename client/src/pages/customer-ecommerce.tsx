@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
-import { firebaseApi } from "@/lib/firebase-api";
+import { firebaseApi, type User as AppUser } from "@/lib/firebase-api";
+import { distanceKm } from "@/lib/utils";
 import { useAuth } from "@/components/auth/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,8 @@ import {
   FileText,
   Trash2,
   ChevronUp,
-  CreditCard
+  CreditCard,
+  MapPin
 } from "lucide-react";
 import { Languages, Check } from "lucide-react";
 import type { Product, Category } from "@shared/schema";
@@ -198,6 +200,11 @@ export default function CustomerEcommerce() {
   // Quote and Booking features
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [ratingVendorId, setRatingVendorId] = useState<string | null>(null);
+  const [ratingStars, setRatingStars] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
   const [quoteProduct, setQuoteProduct] = useState<Product | null>(null);
   const [bookingProduct, setBookingProduct] = useState<Product | null>(null);
 
@@ -303,6 +310,113 @@ export default function CustomerEcommerce() {
   const { data: trendingProducts = [] } = useQuery<Product[]>({
     queryKey: ['firebase', 'products', 'trending'],
     queryFn: () => firebaseApi.getTrendingProducts(),
+  });
+
+  const { data: vendors = [] } = useQuery<AppUser[]>({
+    queryKey: ['firebase', 'users'],
+    queryFn: () => firebaseApi.getUsers(),
+  });
+  const vendorList = vendors.filter((u) => u.role === 'vendor');
+  const areas = Array.from(new Set(vendorList.map((v) => v.city).filter(Boolean))) as string[];
+
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
+  const [filterSameDayDelivery, setFilterSameDayDelivery] = useState(false);
+  const [maxDistanceKm, setMaxDistanceKm] = useState<number | null>(null);
+
+  const [deliveryLocation, setDeliveryLocation] = useState<{ city: string; pincode: string; latitude?: number; longitude?: number }>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('buildmart-delivery-location');
+      if (saved) try { return JSON.parse(saved); } catch (_) {}
+    }
+    return { city: '', pincode: '' };
+  });
+
+  const vendorDistances = (() => {
+    const clat = deliveryLocation.latitude;
+    const clon = deliveryLocation.longitude;
+    if (clat == null || clon == null) return new Map<string, number>();
+    const map = new Map<string, number>();
+    for (const v of vendorList) {
+      if (v.latitude != null && v.longitude != null) {
+        map.set(v.id, Math.round(distanceKm(clat, clon, v.latitude, v.longitude) * 10) / 10);
+      }
+    }
+    return map;
+  })();
+  const vendorIdsWithinMaxKm = maxDistanceKm != null && maxDistanceKm > 0 && vendorDistances.size > 0
+    ? new Set([...vendorDistances].filter(([, d]) => d <= maxDistanceKm).map(([id]) => id))
+    : null;
+
+  const saveDeliveryLocation = (city: string, pincode: string, latitude?: number, longitude?: number) => {
+    const loc = { city, pincode, ...(latitude != null && longitude != null ? { latitude, longitude } : {}) };
+    setDeliveryLocation(loc);
+    if (typeof window !== 'undefined') localStorage.setItem('buildmart-delivery-location', JSON.stringify(loc));
+    if (city && areas.includes(city)) setSelectedArea(city);
+    setShowLocationDialog(false);
+  };
+
+  const placeOrderMutation = useMutation({
+    mutationFn: async () => {
+      const orderTotal = cartItems.reduce((total, item) => {
+        const pricing = getProductPricing(item.product, item.quantity);
+        return total + pricing.totalPrice;
+      }, 0);
+      const items = cartItems.map((item) => {
+        const pricing = getProductPricing(item.product, item.quantity);
+        return {
+          productId: item.product.id,
+          productName: item.product.name,
+          quantity: item.quantity,
+          unitPrice: pricing.finalPrice,
+          totalPrice: pricing.totalPrice,
+        };
+      });
+      return firebaseApi.createOrder({
+        customerName: user?.username || 'Guest',
+        customerEmail: user?.email || 'guest@buildmart.com',
+        items,
+        subtotal: orderTotal,
+        totalAmount: orderTotal,
+        balanceAmount: orderTotal,
+        status: 'pending',
+        createdBy: user?.id,
+      });
+    },
+    onSuccess: (order) => {
+      setCartItems([]);
+      localStorage.removeItem('buildmart-cart');
+      setCurrentSection('home');
+      toast({
+        title: 'Order placed',
+        description: `Order #${order.orderNumber} – ₹${order.totalAmount.toLocaleString()}. You will receive confirmation shortly.`,
+        duration: 5000,
+      });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'orders'] });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Order failed', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const submitRatingMutation = useMutation({
+    mutationFn: async () => {
+      if (!ratingVendorId || !user?.id || ratingStars < 1) throw new Error('Select a shop and give 1–5 stars');
+      return firebaseApi.submitVendorRating(ratingVendorId, user.id, ratingStars, ratingComment.trim() || undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'users'] });
+      setShowRatingDialog(false);
+      setRatingVendorId(null);
+      setRatingStars(0);
+      setRatingComment('');
+      toast({ title: 'Thanks!', description: 'Your rating was submitted.' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Rating failed', description: err.message, variant: 'destructive' });
+    },
   });
 
   // Translation mapping for regional languages to English  
@@ -717,11 +831,26 @@ export default function CustomerEcommerce() {
   // Simplified product filtering for category/price filters
   const getCategoryFilteredProducts = () => {
     let filtered = products;
-    
+
     if (selectedCategoryId) {
-      filtered = filtered.filter(p => p.categoryId === selectedCategoryId);
+      filtered = filtered.filter((p) => p.categoryId === selectedCategoryId);
     }
-    
+    if (selectedVendorId) {
+      filtered = filtered.filter((p) => p.vendorId === selectedVendorId);
+    }
+    if (selectedArea) {
+      const vendorIdsInArea = vendorList.filter((v) => v.city === selectedArea).map((v) => v.id);
+      filtered = filtered.filter((p) => vendorIdsInArea.includes(p.vendorId));
+    }
+    if (selectedBrand) filtered = filtered.filter((p) => (p as Product & { brand?: string }).brand === selectedBrand);
+    if (selectedGrade) {
+      filtered = filtered.filter((p) => {
+        const specs = p.specs && typeof p.specs === 'object' ? p.specs as Record<string, unknown> : {};
+        const g = specs.grade ?? specs.Grade;
+        return g != null && String(g) === selectedGrade;
+      });
+    }
+
     filtered = filtered.filter(p => {
       const price = parseFloat(p.basePrice);
       return price >= priceRange[0] && price <= priceRange[1];
@@ -745,6 +874,41 @@ export default function CustomerEcommerce() {
     
     return filtered;
   };
+
+  const applyShopAndAreaFilter = <T extends { vendorId: string }>(list: T[]): T[] => {
+    let out = list;
+    if (selectedVendorId) out = out.filter((p) => p.vendorId === selectedVendorId);
+    if (selectedArea) {
+      const vendorIdsInArea = vendorList.filter((v) => v.city === selectedArea).map((v) => v.id);
+      out = out.filter((p) => vendorIdsInArea.includes(p.vendorId));
+    }
+    if (filterSameDayDelivery) {
+      const sameDayVendorIds = new Set(vendorList.filter((v) => v.sameDayDelivery).map((v) => v.id));
+      out = out.filter((p) => sameDayVendorIds.has(p.vendorId));
+    }
+    if (vendorIdsWithinMaxKm) {
+      out = out.filter((p) => vendorIdsWithinMaxKm.has(p.vendorId));
+    }
+    return out;
+  };
+
+  const filteredFeaturedForHome = applyShopAndAreaFilter(featuredProducts);
+  const filteredTrendingForHome = applyShopAndAreaFilter(trendingProducts);
+
+  const productsForFilterOptions = selectedCategoryId
+    ? products.filter((p) => p.categoryId === selectedCategoryId)
+    : products;
+  const brandsList = Array.from(new Set(productsForFilterOptions.map((p) => (p as Product & { brand?: string }).brand).filter(Boolean))).sort() as string[];
+  const gradesList = Array.from(
+    new Set(
+      productsForFilterOptions.flatMap((p) => {
+        const s = p.specs as Record<string, unknown> | undefined;
+        if (!s || typeof s !== 'object') return [];
+        const g = s.grade ?? s.Grade;
+        return g != null ? [String(g)] : [];
+      })
+    )
+  ).sort();
 
   // Header Component
   const Header = () => (
@@ -815,6 +979,15 @@ export default function CustomerEcommerce() {
           </DropdownMenu>
           
           <div className="flex items-center space-x-2">
+            <Button
+              variant={deliveryLocation.city ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowLocationDialog(true)}
+              className="flex items-center gap-1"
+            >
+              <MapPin className="w-4 h-4" />
+              {deliveryLocation.city ? `${deliveryLocation.city}${deliveryLocation.pincode ? ` ${deliveryLocation.pincode}` : ''}` : "Set location"}
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setShowAIAssistant(true)}>
               <Bot className="w-4 h-4 mr-1" />
               AI Assistant
@@ -1287,7 +1460,7 @@ export default function CustomerEcommerce() {
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredProducts.slice(0, 6).map((product) => (
+          {filteredFeaturedForHome.slice(0, 6).map((product) => (
             <div key={product.id} className="transform transition-all duration-300 hover:-translate-y-2">
               <ProductCard product={product} featured />
             </div>
@@ -1322,7 +1495,7 @@ export default function CustomerEcommerce() {
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {trendingProducts.slice(0, 6).map((product) => (
+          {filteredTrendingForHome.slice(0, 6).map((product) => (
             <div key={product.id} className="transform transition-all duration-300 hover:-translate-y-2">
               <ProductCard key={product.id} product={product} trending />
             </div>
@@ -1388,6 +1561,108 @@ export default function CustomerEcommerce() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Shop (Vendor) */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Shop</Label>
+                  <Select
+                    value={selectedVendorId ?? 'all'}
+                    onValueChange={(v) => setSelectedVendorId(v === 'all' ? null : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All shops" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All shops</SelectItem>
+                      {vendorList.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          <span className="flex items-center gap-2">
+                            {v.username}{v.city ? ` (${v.city})` : ''}
+                            {v.rating != null && <span className="text-amber-600 text-xs flex items-center"><Star className="w-3.5 h-3.5 fill-current mr-0.5" />{v.rating}</span>}
+                            {v.sameDayDelivery && <Badge variant="secondary" className="text-xs">Same-day</Badge>}
+                            {vendorDistances.has(v.id) && <span className="text-gray-500 text-xs">{vendorDistances.get(v.id)} km</span>}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Area (City) */}
+                {areas.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Area</Label>
+                    <Select
+                      value={selectedArea ?? 'all'}
+                      onValueChange={(v) => setSelectedArea(v === 'all' ? null : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All areas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All areas</SelectItem>
+                        {areas.map((city) => (
+                          <SelectItem key={city} value={city}>
+                            {city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Within distance</Label>
+                  <Select value={maxDistanceKm == null ? 'any' : String(maxDistanceKm)} onValueChange={(v) => setMaxDistanceKm(v === 'any' ? null : parseInt(v, 10))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Any distance" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any distance</SelectItem>
+                      <SelectItem value="5">Within 5 km</SelectItem>
+                      <SelectItem value="10">Within 10 km</SelectItem>
+                      <SelectItem value="25">Within 25 km</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="cat-same-day" checked={filterSameDayDelivery} onCheckedChange={(c) => setFilterSameDayDelivery(!!c)} />
+                  <Label htmlFor="cat-same-day" className="text-sm cursor-pointer">Same-day delivery</Label>
+                </div>
+
+                {brandsList.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Brand</Label>
+                    <Select value={selectedBrand ?? 'all'} onValueChange={(v) => setSelectedBrand(v === 'all' ? null : v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All brands" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All brands</SelectItem>
+                        {brandsList.map((b) => (
+                          <SelectItem key={b} value={b}>{b}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {gradesList.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Grade</Label>
+                    <Select value={selectedGrade ?? 'all'} onValueChange={(v) => setSelectedGrade(v === 'all' ? null : v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All grades" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All grades</SelectItem>
+                        {gradesList.map((g) => (
+                          <SelectItem key={g} value={g}>{g}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Bulk Quantity */}
                 <div>
@@ -1793,42 +2068,17 @@ export default function CustomerEcommerce() {
             </div>
             <Button 
               className="w-full"
-              onClick={() => {
-                // Create a proper checkout flow
-                const orderTotal = cartItems.reduce((total, item) => {
-                  const pricing = getProductPricing(item.product, item.quantity);
-                  return total + pricing.totalPrice;
-                }, 0);
-                
-                const orderDetails = {
-                  items: cartItems.map(item => ({
-                    productId: item.product.id,
-                    productName: item.product.name,
-                    quantity: item.quantity,
-                    price: parseFloat(item.product.basePrice),
-                    total: parseFloat(item.product.basePrice) * item.quantity
-                  })),
-                  totalAmount: orderTotal,
-                  customerEmail: user?.email || 'guest@buildmart.com',
-                  orderDate: new Date().toISOString()
-                };
-                
-                toast({
-                  title: "Order Placed Successfully!",
-                  description: `Order #BM${Date.now().toString().slice(-6)} - Total: ₹${orderTotal.toLocaleString()}. You will receive confirmation shortly.`,
-                  duration: 5000
-                });
-                
-                // Clear cart after successful order
-                setCartItems([]);
-                localStorage.removeItem('buildmart-cart');
-                
-                // Navigate back to home
-                setCurrentSection('home');
-              }}
+              disabled={placeOrderMutation.isPending}
+              onClick={() => placeOrderMutation.mutate()}
             >
-              <CreditCard className="w-4 h-4 mr-2" />
-              Proceed to Checkout
+              {placeOrderMutation.isPending ? (
+                "Placing order..."
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Proceed to Checkout
+                </>
+              )}
             </Button>
           </Card>
         </div>
@@ -1924,6 +2174,82 @@ export default function CustomerEcommerce() {
         {/* Default Homepage Content */}
         {!searchTerm && (
           <>
+            {/* Shop & Area filters - visible on home */}
+            {(vendorList.length > 0 || areas.length > 0) && (
+              <section className="py-4 px-4 bg-white/80 border-b">
+                <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-4">
+                  <span className="text-sm font-medium text-gray-600">Filter by:</span>
+                  <Select value={selectedVendorId ?? 'all'} onValueChange={(v) => setSelectedVendorId(v === 'all' ? null : v)}>
+                    <SelectTrigger className="w-[240px]">
+                      <SelectValue placeholder="All shops" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All shops</SelectItem>
+                      {vendorList.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          <span className="flex items-center gap-2">
+                            {v.username}
+                            {v.city ? ` (${v.city})` : ''}
+                            {v.rating != null && (
+                              <span className="flex items-center text-amber-600 text-xs">
+                                <Star className="w-3.5 h-3.5 fill-current" /> {v.rating}
+                              </span>
+                            )}
+                            {v.sameDayDelivery && (
+                              <Badge variant="secondary" className="text-xs">Same-day</Badge>
+                            )}
+                            {vendorDistances.has(v.id) && (
+                              <span className="text-gray-500 text-xs">{vendorDistances.get(v.id)} km</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {areas.length > 0 && (
+                    <Select value={selectedArea ?? 'all'} onValueChange={(v) => setSelectedArea(v === 'all' ? null : v)}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="All areas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All areas</SelectItem>
+                        {areas.map((city) => (
+                          <SelectItem key={city} value={city}>{city}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Select value={maxDistanceKm == null ? 'any' : String(maxDistanceKm)} onValueChange={(v) => setMaxDistanceKm(v === 'any' ? null : parseInt(v, 10))}>
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue placeholder="Within km" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Any distance</SelectItem>
+                        <SelectItem value="5">Within 5 km</SelectItem>
+                        <SelectItem value="10">Within 10 km</SelectItem>
+                        <SelectItem value="25">Within 25 km</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox checked={filterSameDayDelivery} onCheckedChange={(c) => setFilterSameDayDelivery(!!c)} />
+                      Same-day delivery
+                    </label>
+                  </div>
+                  {(selectedVendorId || selectedArea || filterSameDayDelivery || maxDistanceKm != null) && (
+                    <Button variant="ghost" size="sm" onClick={() => { setSelectedVendorId(null); setSelectedArea(null); setFilterSameDayDelivery(false); setMaxDistanceKm(null); }}>
+                      Clear filters
+                    </Button>
+                  )}
+                  {user && vendorList.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setShowRatingDialog(true)}>
+                      <Star className="w-4 h-4 mr-1" />
+                      Rate a shop
+                    </Button>
+                  )}
+                </div>
+              </section>
+            )}
             <CategoryGrid />
             <FeaturedSection />
             <TrendingSection />
@@ -1992,6 +2318,20 @@ export default function CustomerEcommerce() {
         );
     }
   };
+
+  // Delivery location dialog (location-first UX)
+  const [locationInputCity, setLocationInputCity] = useState('');
+  const [locationInputPincode, setLocationInputPincode] = useState('');
+  const [locationInputLat, setLocationInputLat] = useState('');
+  const [locationInputLon, setLocationInputLon] = useState('');
+  useEffect(() => {
+    if (showLocationDialog) {
+      setLocationInputCity(deliveryLocation.city);
+      setLocationInputPincode(deliveryLocation.pincode);
+      setLocationInputLat(deliveryLocation.latitude != null ? String(deliveryLocation.latitude) : '');
+      setLocationInputLon(deliveryLocation.longitude != null ? String(deliveryLocation.longitude) : '');
+    }
+  }, [showLocationDialog, deliveryLocation.city, deliveryLocation.pincode, deliveryLocation.latitude, deliveryLocation.longitude]);
 
   // Quote Dialog Component
   // Helper functions for multiple products
@@ -2837,6 +3177,154 @@ export default function CustomerEcommerce() {
             </Button>
             <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
               Continue Browsing
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Set delivery location (city + pincode) — location-first UX */}
+      <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set your delivery location</DialogTitle>
+            <DialogDescription>
+              Enter your city and pincode to see nearby vendors and accurate delivery options.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="location-city">City</Label>
+              <Input
+                id="location-city"
+                placeholder="e.g. Hyderabad, Miyapur"
+                value={locationInputCity}
+                onChange={(e) => setLocationInputCity(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="location-pincode">Pincode</Label>
+              <Input
+                id="location-pincode"
+                placeholder="e.g. 500049"
+                value={locationInputPincode}
+                onChange={(e) => setLocationInputPincode(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2">
+                <Label htmlFor="location-lat">Latitude (optional)</Label>
+                <Input
+                  id="location-lat"
+                  type="number"
+                  step="any"
+                  placeholder="e.g. 17.3850"
+                  value={locationInputLat}
+                  onChange={(e) => setLocationInputLat(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="location-lon">Longitude (optional)</Label>
+                <Input
+                  id="location-lon"
+                  type="number"
+                  step="any"
+                  placeholder="e.g. 78.4867"
+                  value={locationInputLon}
+                  onChange={(e) => setLocationInputLon(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setLocationInputLat(String(pos.coords.latitude));
+                      setLocationInputLon(String(pos.coords.longitude));
+                    },
+                    () => {},
+                    { enableHighAccuracy: true }
+                  );
+                }
+              }}
+            >
+              Use my location (for distance)
+            </Button>
+            <Button
+              onClick={() => {
+                const lat = locationInputLat.trim() ? parseFloat(locationInputLat) : undefined;
+                const lon = locationInputLon.trim() ? parseFloat(locationInputLon) : undefined;
+                saveDeliveryLocation(
+                  locationInputCity.trim(),
+                  locationInputPincode.trim(),
+                  lat != null && !Number.isNaN(lat) ? lat : undefined,
+                  lon != null && !Number.isNaN(lon) ? lon : undefined
+                );
+                setShowLocationDialog(false);
+              }}
+            >
+              Save location
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rate a shop */}
+      <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rate a shop</DialogTitle>
+            <DialogDescription>
+              Help others by rating a vendor. Select the shop and give 1–5 stars.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label>Shop</Label>
+              <Select value={ratingVendorId ?? ''} onValueChange={(v) => setRatingVendorId(v || null)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a shop" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vendorList.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.username}{v.city ? ` (${v.city})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Your rating</Label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setRatingStars(n)}
+                    className="p-1 rounded hover:bg-amber-100 focus:outline-none"
+                  >
+                    <Star className={`w-8 h-8 ${ratingStars >= n ? 'fill-amber-500 text-amber-500' : 'text-gray-300'}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Comment (optional)</Label>
+              <Textarea
+                placeholder="Your experience with this shop..."
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+                rows={2}
+              />
+            </div>
+            <Button
+              onClick={() => submitRatingMutation.mutate()}
+              disabled={!ratingVendorId || ratingStars < 1 || submitRatingMutation.isPending}
+            >
+              Submit rating
             </Button>
           </div>
         </DialogContent>
