@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +88,8 @@ export default function Vendors() {
     );
   }
 
+  const [, setLocation] = useLocation();
+
   const filteredVendors = vendorStats.filter(vendor => {
     if (!searchTerm) return true;
     
@@ -102,6 +105,34 @@ export default function Vendors() {
            (vendor.lowStockItems > 0 ? 'low stock' : '').includes(search) ||
            (vendor.outOfStockItems > 0 ? 'out of stock' : '').includes(search);
   });
+
+  const handleExportVendors = () => {
+    if (!filteredVendors.length) {
+      toast({ title: "No data", description: "No vendors to export.", variant: "destructive" });
+      return;
+    }
+    const headers = ["ID", "Name", "Email", "Role", "Products", "Total Value", "Low Stock", "Out of Stock", "Joined"];
+    const rows = filteredVendors.map((v) => [
+      v.id,
+      v.name,
+      v.email,
+      v.role,
+      v.productsCount,
+      v.totalValue,
+      v.lowStockItems,
+      v.outOfStockItems,
+      v.joinedDate,
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vendors-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Export done", description: `${filteredVendors.length} vendors exported.` });
+  };
 
   const totalVendors = vendorStats.length;
   const activeVendors = vendorStats.filter(v => v.isActive).length;
@@ -197,7 +228,12 @@ export default function Vendors() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Vendor Directory</CardTitle>
-                  <Button>
+                  <Button
+                    onClick={() => {
+                      setLocation("/admin-dashboard");
+                      toast({ title: "Add vendor", description: "Vendors sign up via Register. Approve them in Admin Dashboard → Users tab." });
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Vendor
                   </Button>
@@ -347,9 +383,18 @@ export default function Vendors() {
               </div>
               
               <div className="flex gap-3">
-                <Button>Send Message</Button>
-                <Button variant="outline">View Products</Button>
-                <Button variant="outline">Export Data</Button>
+                <Button onClick={() => toast({ title: "Send Message", description: "Messaging feature coming soon." })}>
+                  Send Message
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setShowVendorDetails(false); setLocation("/products"); toast({ title: "Products", description: "Use the Vendors filter to see this vendor's products." }); }}
+                >
+                  View Products
+                </Button>
+                <Button variant="outline" onClick={() => { handleExportVendors(); setShowVendorDetails(false); }}>
+                  Export Data
+                </Button>
               </div>
             </div>
           </DialogContent>

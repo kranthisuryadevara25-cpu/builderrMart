@@ -8,6 +8,15 @@ This guide explains how to access the admin panel, manage categories and product
 
 The account **admin@buildmart.ai** (UID `nOtjfkijQOfz3qg3ObRdtrDFqwE3`) is treated as **Super Admin**: it always has role `owner_admin`, can open the admin panel at **`/admin-dashboard`**, and will get access even if the Firestore user document is missing (the app uses a built-in fallback for this UID).
 
+## Test accounts (testing)
+
+| Role | Email | UID | Purpose |
+|------|--------|-----|---------|
+| **Manager** | manager@buildmart.ai | `X5Vf2GRrRnQK60kR5cFdtQbuvaI3` | Vendor management (`vendor_manager`) |
+| **Vendor** | vendor1@buildmart.ai | `qoiW5CqK4IM4wxz0rCwJd3H8AYZ2` | Product management (`vendor`) |
+
+These UIDs are recognized by the app: they always get the correct role (and access) even if the Firestore user document is missing. Create these users in **Firebase Console → Authentication** with the emails above; after sign-in they will have Manager and Vendor access respectively.
+
 ---
 
 ## Accessing the admin panel
@@ -28,13 +37,22 @@ When creating or editing a product (Admin Dashboard → **Products** tab, or **P
 | **Name** | Yes | Product name |
 | **Category** | Yes | Category from the category tree |
 | **Description** | No | Text description |
-| **Base price (₹)** | Yes | Base price in INR |
+| **Brand** | No | e.g. UltraTech, ACC; appears in storefront “All brands” filter |
+| **Company / Manufacturer** | No | Optional |
+| **Grade** | No | e.g. 43, 53, OPC; appears in storefront “All grades” filter (stored in specs) |
+| **Base price (₹)** | Yes | List price per unit in INR |
 | **Stock quantity** | Yes | Available quantity (number) |
 | **Vendor** | Yes (in admin) | Vendor user; on vendor pages it defaults to the logged-in vendor |
+| **Discount (%)** | No | Product-level discount 0–100%; selling price = base × (1 − discount/100) if selling price not set |
+| **Selling price (₹)** | No | Explicit price per unit; overrides base/discount when set. Leave blank to use base (or base − discount) |
+| **GST rate (%)** | No | GST percentage (e.g. 18). Used for exact price calculation |
+| **Quantity pricing slabs** | No | Min qty, max qty, price per unit (₹) for volume-based pricing |
+| **Bulk discount by quantity** | No | Min quantity and discount % (e.g. 5% off when min qty ≥ 100) |
+| **Specific charges** | No | Hamali (per bag), Transportation, Loading, Packing, Unloading, or custom: name, rate (₹), unit |
 | **Specifications** | No | Repeatable name/value pairs (e.g. Grade / 43) |
-| **Quantity pricing slabs** | No | Min qty, max qty, price per unit (₹) for bulk pricing |
-| **Dynamic charges** | No | Name, rate (₹), unit (e.g. Hamali, bag) |
 | **Featured / Trending** | No | Flags (in Admin Dashboard product form) |
+
+Together, these fields support **exact price**: base/selling price, discount, quantity slabs, GST, and per-unit or per-trip charges (hamali, transportation, etc.).
 
 ---
 
@@ -51,6 +69,14 @@ When creating or editing a product (Admin Dashboard → **Products** tab, or **P
 
 - **Admin Dashboard → Products tab:** Create and edit products, assign a **Vendor**, and set **Featured** / **Trending**.
 - **Products / My Products pages (**`/products`**,** `/my-products`**):** Use the same product form. Vendors see only their products; admins can manage all products.
+
+### Can admin create products?
+
+**Yes.** In Admin Dashboard → **Products**, use **Add Product** to create a new product. You must choose a **Vendor** (from the dropdown); that vendor will “own” the product. All fields (name, category, price, GST, slabs, charges, brand, grade, etc.) are available.
+
+### Can admin modify or alter products created by vendors?
+
+**Yes.** Admin (and Manager) can **edit or delete any product** in the system, including products created by vendors. In Admin Dashboard → **Products**, the table lists all products; click **Edit** on any row to change name, price, category, vendor, stock, featured/trending, or any other field. The backend does not restrict edits by “who created it”; only by role (owner_admin and vendor_manager can open Admin Dashboard and use the full product list).
 
 ---
 

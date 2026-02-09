@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/auth-context";
+import { useToast } from "@/hooks/use-toast";
 import { firebaseApi } from "@/lib/firebase-api";
 import { type Product, type Category } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,8 @@ interface CartItem {
 
 export default function CustomerApp() {
   const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<string>("all");
@@ -221,7 +225,12 @@ export default function CustomerApp() {
                         <Package className="h-16 w-16 text-gray-400" />
                       </div>
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => { e.stopPropagation(); toast({ title: "Wishlist", description: "Added to wishlist." }); }}
+                        >
                           <Heart className="h-4 w-4" />
                         </Button>
                       </div>
@@ -341,7 +350,11 @@ export default function CustomerApp() {
                     <span className="font-semibold">Total:</span>
                     <span className="font-bold text-lg">₹{getCartTotal().toLocaleString()}</span>
                   </div>
-                  <Button className="w-full" size="lg">
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={() => { setShowCart(false); setLocation("/"); toast({ title: "Checkout", description: "Complete checkout on the main storefront." }); }}
+                  >
                     Proceed to Checkout
                   </Button>
                 </div>

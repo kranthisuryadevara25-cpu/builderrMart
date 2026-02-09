@@ -457,10 +457,10 @@ export default function InteractiveVendorChat() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" data-testid="call-vendor">
+                      <Button variant="outline" size="sm" data-testid="call-vendor" onClick={() => toast({ title: "Call", description: "Connecting to vendor..." })}>
                         <Phone className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" data-testid="video-call-vendor">
+                      <Button variant="outline" size="sm" data-testid="video-call-vendor" onClick={() => toast({ title: "Video call", description: "Starting video call with vendor..." })}>
                         <Video className="h-4 w-4" />
                       </Button>
                     </div>
@@ -599,15 +599,15 @@ export default function InteractiveVendorChat() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full justify-start" variant="outline" data-testid="request-quote">
+                <Button className="w-full justify-start" variant="outline" data-testid="request-quote" onClick={() => toast({ title: "Bulk quote", description: "Your quote request has been sent to vendors." })}>
                   <Package className="h-4 w-4 mr-2" />
                   Request Bulk Quote
                 </Button>
-                <Button className="w-full justify-start" variant="outline" data-testid="emergency-order">
+                <Button className="w-full justify-start" variant="outline" data-testid="emergency-order" onClick={() => toast({ title: "Emergency order", description: "Support team will contact you shortly." })}>
                   <AlertCircle className="h-4 w-4 mr-2" />
                   Emergency Order
                 </Button>
-                <Button className="w-full justify-start" variant="outline" data-testid="technical-support">
+                <Button className="w-full justify-start" variant="outline" data-testid="technical-support" onClick={() => toast({ title: "Technical support", description: "A specialist will reach out soon." })}>
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Technical Support
                 </Button>

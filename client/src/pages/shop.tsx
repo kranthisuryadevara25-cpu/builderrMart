@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { firebaseApi } from "@/lib/firebase-api";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { VoiceSearchInput } from "@/components/ui/voice-search-input";
 import { 
   ShoppingCart, 
@@ -35,11 +37,13 @@ export default function Shop() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCartSidebar, setShowCartSidebar] = useState(false);
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["firebase", "products", selectedCategory, searchTerm],
@@ -230,7 +234,12 @@ export default function Shop() {
                         <Package className="h-16 w-16 text-gray-400" />
                       </div>
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => { e.stopPropagation(); toast({ title: "Wishlist", description: "Wishlist is available on the main store." }); }}
+                        >
                           <Heart className="h-4 w-4" />
                         </Button>
                       </div>
@@ -275,6 +284,7 @@ export default function Shop() {
                           size="sm"
                           variant="outline"
                           className="flex-1"
+                          onClick={() => setViewingProduct(product)}
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View
@@ -298,6 +308,34 @@ export default function Shop() {
           )}
         </div>
       </div>
+
+      {/* Product view dialog */}
+      <Dialog open={!!viewingProduct} onOpenChange={(open) => !open && setViewingProduct(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{viewingProduct?.name}</DialogTitle>
+          </DialogHeader>
+          {viewingProduct && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">{viewingProduct.description || "No description."}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-bold">₹{parseFloat(viewingProduct.basePrice).toLocaleString()}</span>
+                <Badge variant={viewingProduct.stockQuantity === 0 ? "destructive" : "secondary"}>
+                  {viewingProduct.stockQuantity === 0 ? "Out of stock" : "In stock"}
+                </Badge>
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => { addToCart(viewingProduct); setViewingProduct(null); }}
+                disabled={viewingProduct.stockQuantity === 0}
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Add to cart
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Cart Sidebar */}
       {showCartSidebar && (
@@ -362,7 +400,14 @@ export default function Shop() {
                     <span className="font-semibold">Total:</span>
                     <span className="font-bold text-lg">₹{getCartTotal().toLocaleString()}</span>
                   </div>
-                  <Button className="w-full">
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      setShowCartSidebar(false);
+                      setLocation("/");
+                      toast({ title: "Checkout", description: "Continue checkout on the main storefront." });
+                    }}
+                  >
                     Proceed to Checkout
                   </Button>
                 </div>

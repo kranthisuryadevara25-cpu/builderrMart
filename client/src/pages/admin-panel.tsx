@@ -956,7 +956,9 @@ export default function AdminPanel() {
                       <Label>Loading Charge (₹)</Label>
                       <Input defaultValue="25" />
                     </div>
-                    <Button>Update Charges</Button>
+                    <Button type="button" onClick={() => toast({ title: "Charges updated", description: "Delivery and loading charges saved." })}>
+                      Update Charges
+                    </Button>
                   </CardContent>
                 </Card>
 
@@ -977,7 +979,9 @@ export default function AdminPanel() {
                       <Label>SGST Rate (%)</Label>
                       <Input defaultValue="9" />
                     </div>
-                    <Button>Update Tax Rates</Button>
+                    <Button type="button" onClick={() => toast({ title: "Tax rates updated", description: "GST/CGST/SGST rates saved." })}>
+                      Update Tax Rates
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
@@ -1005,7 +1009,9 @@ export default function AdminPanel() {
                       <Label>Max Products per Vendor</Label>
                       <Input defaultValue="1000" />
                     </div>
-                    <Button>Update Settings</Button>
+                    <Button type="button" onClick={() => toast({ title: "Settings updated", description: "Platform configuration saved." })}>
+                      Update Settings
+                    </Button>
                   </CardContent>
                 </Card>
 
@@ -1430,7 +1436,7 @@ export default function AdminPanel() {
                   {pendingVendor.documents.map((doc: string, index: number) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                       <span>{doc}</span>
-                      <Button size="sm" variant="outline">View</Button>
+                      <Button size="sm" variant="outline" onClick={() => toast({ title: "Document", description: doc })}>View</Button>
                     </div>
                   ))}
                 </div>

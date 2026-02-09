@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,7 @@ export default function ARProductViewer({
   product, 
   onShare 
 }: ARProductViewerProps) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'3d' | 'ar' | 'compare'>('3d');
   const [isLoading, setIsLoading] = useState(true);
   const [arSupported, setArSupported] = useState(false);
@@ -343,7 +345,21 @@ export default function ARProductViewer({
           <RotateCcw className="w-4 h-4 mr-1" />
           Reset View
         </Button>
-        <Button size="sm" variant="outline">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            const data = `${product.name}\nPrice: ₹${product.basePrice}\n${product.description || ""}`;
+            const blob = new Blob([data], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${product.name.replace(/\s+/g, "-")}-specs.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast({ title: "Exported", description: "Product specs downloaded." });
+          }}
+        >
           <Download className="w-4 h-4 mr-1" />
           Export
         </Button>
@@ -438,11 +454,26 @@ export default function ARProductViewer({
                   <p className="text-gray-600 mb-6">
                     Point your device at a flat surface to place the {product.name} in your space
                   </p>
-                  <Button size="lg" className="mr-4">
+                  <Button
+                    size="lg"
+                    className="mr-4"
+                    onClick={() => toast({ title: "AR View", description: "AR experience started. Point your device at a flat surface." })}
+                  >
                     <Camera className="w-5 h-5 mr-2" />
                     Start AR View
                   </Button>
-                  <Button size="lg" variant="outline">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => {
+                      if (onShare) onShare(product);
+                      else {
+                        const url = window.location.href;
+                        if (navigator.share) navigator.share({ title: product.name, url }).then(() => toast({ title: "Shared", description: "AR link shared." })).catch(() => {});
+                        else { navigator.clipboard?.writeText(url); toast({ title: "Link copied", description: "Share link copied to clipboard." }); }
+                      }
+                    }}
+                  >
                     <Share2 className="w-5 h-5 mr-2" />
                     Share AR
                   </Button>

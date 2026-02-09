@@ -22,14 +22,24 @@ const USERS_COLLECTION = "users";
 /** Super Admin UID – always gets owner_admin access and admin panel, even if Firestore profile is missing. */
 export const SUPER_ADMIN_UID = "nOtjfkijQOfz3qg3ObRdtrDFqwE3";
 
+/** Test Manager UID – vendor management (vendor_manager role). */
+export const TEST_MANAGER_UID = "X5Vf2GRrRnQK60kR5cFdtQbuvaI3";
+
+/** Test Vendor UID – product management (vendor role). */
+export const TEST_VENDOR_UID = "qoiW5CqK4IM4wxz0rCwJd3H8AYZ2";
+
 function firestoreUserToAuthUser(u: FirestoreUser): AuthUser {
   const isSuperAdmin = u.id === SUPER_ADMIN_UID;
+  const isTestManager = u.id === TEST_MANAGER_UID;
+  const isTestVendor = u.id === TEST_VENDOR_UID;
+  const role = isSuperAdmin ? "owner_admin" : isTestManager ? "vendor_manager" : isTestVendor ? "vendor" : u.role;
+  const active = isSuperAdmin || isTestManager || isTestVendor ? true : u.isActive;
   return {
     id: u.id,
     username: u.username,
     email: u.email,
-    role: isSuperAdmin ? "owner_admin" : u.role,
-    isActive: isSuperAdmin ? true : u.isActive,
+    role,
+    isActive: active,
   };
 }
 
@@ -42,6 +52,18 @@ function superAdminAuthUser(uid: string): AuthUser {
     role: "owner_admin",
     isActive: true,
   };
+}
+
+/** Synthetic test Manager profile when Firestore doc is missing. */
+function testManagerAuthUser(uid: string, email?: string | null): AuthUser {
+  const e = email || "manager@buildmart.ai";
+  return { id: uid, username: e, email: e, role: "vendor_manager", isActive: true };
+}
+
+/** Synthetic test Vendor profile when Firestore doc is missing. */
+function testVendorAuthUser(uid: string, email?: string | null): AuthUser {
+  const e = email || "vendor1@buildmart.ai";
+  return { id: uid, username: e, email: e, role: "vendor", isActive: true };
 }
 
 /** Create Firestore user profile (call after createUserWithEmailAndPassword). */
@@ -122,10 +144,13 @@ export async function loginWithEmail(email: string, password: string): Promise<A
     throw new Error(getAuthErrorMessage(err));
   }
   const uid = auth.currentUser?.uid;
+  const fbEmail = auth.currentUser?.email ?? undefined;
   if (!uid) throw new Error("Login succeeded but no user");
   const profile = await getUserProfile(uid);
   if (!profile) {
     if (uid === SUPER_ADMIN_UID) return superAdminAuthUser(uid);
+    if (uid === TEST_MANAGER_UID) return testManagerAuthUser(uid, fbEmail);
+    if (uid === TEST_VENDOR_UID) return testVendorAuthUser(uid, fbEmail);
     throw new Error("User profile not found. If you just signed up, try logging in again.");
   }
   return firestoreUserToAuthUser(profile);
@@ -143,6 +168,8 @@ export async function getCurrentUserProfile(): Promise<AuthUser | null> {
   const profile = await getUserProfile(fbUser.uid);
   if (!profile) {
     if (fbUser.uid === SUPER_ADMIN_UID) return superAdminAuthUser(fbUser.uid);
+    if (fbUser.uid === TEST_MANAGER_UID) return testManagerAuthUser(fbUser.uid, fbUser.email);
+    if (fbUser.uid === TEST_VENDOR_UID) return testVendorAuthUser(fbUser.uid, fbUser.email);
     return null;
   }
   return firestoreUserToAuthUser(profile);
@@ -161,6 +188,10 @@ export function subscribeToAuth(callback: (user: AuthUser | null) => void): () =
       callback(firestoreUserToAuthUser(profile));
     } else if (fbUser.uid === SUPER_ADMIN_UID) {
       callback(superAdminAuthUser(fbUser.uid));
+    } else if (fbUser.uid === TEST_MANAGER_UID) {
+      callback(testManagerAuthUser(fbUser.uid, fbUser.email));
+    } else if (fbUser.uid === TEST_VENDOR_UID) {
+      callback(testVendorAuthUser(fbUser.uid, fbUser.email));
     } else {
       callback(null);
     }

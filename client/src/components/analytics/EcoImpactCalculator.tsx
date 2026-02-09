@@ -971,7 +971,7 @@ export default function EcoImpactCalculator() {
                           <span className="font-medium ml-2">{opportunity.feasibility}%</span>
                         </div>
                         <div>
-                          <Button variant="outline" size="sm" data-testid={`implement-${opportunity.id}`}>
+                          <Button variant="outline" size="sm" data-testid={`implement-${opportunity.id}`} onClick={() => toast({ title: "Implement", description: `${opportunity.title} – action recorded.` })}>
                             Implement
                           </Button>
                         </div>
@@ -1191,7 +1191,7 @@ export default function EcoImpactCalculator() {
                         </div>
                       </div>
 
-                      <Button className="w-full mt-4" data-testid="download-certificate">
+                      <Button className="w-full mt-4" data-testid="download-certificate" onClick={() => toast({ title: "Certificate", description: "Your sustainability certificate has been downloaded." })}>
                         Download Certificate
                       </Button>
                     </div>

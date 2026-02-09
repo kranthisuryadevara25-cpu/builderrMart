@@ -62,13 +62,19 @@ export interface FirestoreProduct {
   categoryId: string;
   description?: string;
   specs?: Record<string, unknown>;
+  /** List price per unit (₹) */
   basePrice: number;
+  /** Product-level discount 0–100; selling price = basePrice * (1 - discountPercent/100) if sellingPrice not set */
+  discountPercent?: number;
+  /** Explicit selling price per unit (₹); overrides discountPercent when set */
+  sellingPrice?: number;
   quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>;
   dynamicCharges?: Record<string, { rate: number; unit: string; description?: string }>;
   bulkDiscountSlabs?: Array<{ min_qty: number; discount_percent: number }>;
   deliveryDiscountSlabs?: Array<{ location: string; discount_percent: number }>;
   brand?: string;
   company?: string;
+  /** GST rate 0–100 (e.g. 18 for 18%) */
   gstRate?: number;
   imageUrl?: string;
   vendorId: string;

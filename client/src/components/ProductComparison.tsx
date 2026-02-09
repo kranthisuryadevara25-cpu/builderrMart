@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ export default function ProductComparison({
   initialProducts = [],
   onAddToCart 
 }: ProductComparisonProps) {
+  const { toast } = useToast();
   const [compareProducts, setCompareProducts] = useState<Product[]>(initialProducts);
   const [showProductSelector, setShowProductSelector] = useState(false);
 
@@ -242,7 +244,12 @@ export default function ProductComparison({
                       <ShoppingCart className="w-4 h-4 mr-1" />
                       Add to Cart
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => toast({ title: "Wishlist", description: `${product.name} added to wishlist.` })}
+                    >
                       <Heart className="w-4 h-4 mr-1" />
                       Wishlist
                     </Button>

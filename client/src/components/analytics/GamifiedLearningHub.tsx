@@ -581,7 +581,7 @@ export default function GamifiedLearningHub() {
                           {module.progress > 0 ? 'Continue' : 'Start Learning'}
                         </Button>
                       ) : (
-                        <Button variant="secondary" className="flex-1 gap-1">
+                        <Button variant="secondary" className="flex-1 gap-1" onClick={() => toast({ title: "Completed", description: "You've already completed this module." })}>
                           <CheckCircle2 className="w-4 h-4" />
                           Completed
                         </Button>
@@ -760,7 +760,7 @@ export default function GamifiedLearningHub() {
                 <h3 className="font-semibold mb-2">Premium Course Access</h3>
                 <p className="text-sm text-gray-600 mb-4">Unlock advanced construction courses</p>
                 <div className="text-yellow-600 font-bold mb-4">1,000 points</div>
-                <Button className="w-full">Redeem</Button>
+                <Button className="w-full" onClick={() => toast({ title: "Redeem", description: "Premium course access redemption requested." })}>Redeem</Button>
               </CardContent>
             </Card>
             
@@ -770,7 +770,7 @@ export default function GamifiedLearningHub() {
                 <h3 className="font-semibold mb-2">Digital Certificate</h3>
                 <p className="text-sm text-gray-600 mb-4">Official construction expertise certificate</p>
                 <div className="text-yellow-600 font-bold mb-4">500 points</div>
-                <Button variant="outline" className="w-full">Redeem</Button>
+                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Redeem", description: "Certificate redemption requested." })}>Redeem</Button>
               </CardContent>
             </Card>
             
@@ -780,7 +780,7 @@ export default function GamifiedLearningHub() {
                 <h3 className="font-semibold mb-2">VIP Status</h3>
                 <p className="text-sm text-gray-600 mb-4">Get priority support and exclusive content</p>
                 <div className="text-yellow-600 font-bold mb-4">2,000 points</div>
-                <Button variant="outline" className="w-full">Redeem</Button>
+                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Redeem", description: "VIP status redemption requested." })}>Redeem</Button>
               </CardContent>
             </Card>
           </div>

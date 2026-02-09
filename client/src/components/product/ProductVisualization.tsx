@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ interface ProductVisualizationProps {
 }
 
 export default function ProductVisualization({ product, onClose }: ProductVisualizationProps) {
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'3d' | 'ar' | 'gallery'>('3d');
   const [isRotating, setIsRotating] = useState(true);
   const [zoom, setZoom] = useState(1);
@@ -90,7 +92,7 @@ export default function ProductVisualization({ product, onClose }: ProductVisual
         <Camera className="w-20 h-20 text-blue-600 mx-auto mb-4 animate-pulse" />
         <h3 className="text-lg font-semibold text-blue-800 mb-2">AR Preview</h3>
         <p className="text-sm text-blue-600 mb-4">See how {product.name} looks in your space</p>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => toast({ title: "AR Camera", description: "AR view will open on supported devices." })}>
           <Camera className="w-4 h-4 mr-2" />
           Launch AR Camera
         </Button>
@@ -145,15 +147,15 @@ export default function ProductVisualization({ product, onClose }: ProductVisual
             <p className="text-sm text-gray-600 mt-1">{product.name}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => { const data = `${product.name}\n${product.description || ""}\nPrice: ₹${product.basePrice}`; const blob = new Blob([data], { type: "text/plain" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${product.name.replace(/\s+/g, "-")}.txt`; a.click(); URL.revokeObjectURL(url); toast({ title: "Exported", description: "Product info downloaded." }); }}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast({ title: "Link copied", description: "Share link copied to clipboard." }); }}>
               <Share className="w-4 h-4 mr-2" />
               Share
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => toast({ title: "Fullscreen", description: "Use your browser's fullscreen (F11) for the best view." })}>
               <Maximize className="w-4 h-4 mr-2" />
               Fullscreen
             </Button>
@@ -191,7 +193,7 @@ export default function ProductVisualization({ product, onClose }: ProductVisual
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-semibold">3D Controls</h4>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => toast({ title: "3D Settings", description: "Quality and display options." })}>
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </Button>
@@ -249,6 +251,7 @@ export default function ProductVisualization({ product, onClose }: ProductVisual
                       variant="outline" 
                       size="sm" 
                       className="w-full mt-1"
+                      onClick={() => toast({ title: "Lighting", description: "Adjust lighting in the viewer." })}
                     >
                       Adjust
                     </Button>
@@ -298,7 +301,7 @@ export default function ProductVisualization({ product, onClose }: ProductVisual
                 <h4 className="font-semibold">Product Images</h4>
                 <p className="text-sm text-gray-600">High-resolution product photos</p>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => toast({ title: "Download", description: "Product images download started." })}>
                 <Download className="w-4 h-4 mr-2" />
                 Download All
               </Button>

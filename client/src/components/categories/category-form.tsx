@@ -154,14 +154,17 @@ export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Parent Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                  <Select
+                    onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                    value={field.value || "none"}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select parent category (optional)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No parent category</SelectItem>
+                      <SelectItem value="none">No parent category</SelectItem>
                       {parentOptions.map((cat: Category) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}

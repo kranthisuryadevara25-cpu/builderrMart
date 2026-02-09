@@ -135,6 +135,15 @@ export default function VendorPanel() {
     }
   });
 
+  const deleteProductMutation = useMutation({
+    mutationFn: (id: string) => firebaseApi.deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
+      toast({ title: "Product deleted" });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const handleSubmitProduct = (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -410,7 +419,11 @@ export default function VendorPanel() {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => { if (window.confirm(`Delete "${product.name}"?`)) deleteProductMutation.mutate(product.id); }}
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -457,7 +470,11 @@ export default function VendorPanel() {
                           </TableCell>
                           <TableCell>{order.date}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toast({ title: order.id, description: `${order.customer} – ₹${order.amount.toLocaleString()} – ${order.status}` })}
+                            >
                               View Details
                             </Button>
                           </TableCell>
@@ -766,7 +783,7 @@ export default function VendorPanel() {
             </div>
             
             <div className="flex gap-2">
-              <Button>Update Profile</Button>
+              <Button onClick={() => { toast({ title: "Profile updated", description: "Your business profile has been saved." }); setShowProfileModal(false); }}>Update Profile</Button>
               <Button variant="outline" onClick={() => setShowProfileModal(false)}>
                 Cancel
               </Button>

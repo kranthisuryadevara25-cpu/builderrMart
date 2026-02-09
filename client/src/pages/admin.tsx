@@ -42,6 +42,12 @@ const productFormSchema = z.object({
   description: z.string().optional(),
   basePrice: z.string().min(1, 'Price is required'),
   stockQuantity: z.number().min(0, 'Stock must be positive'),
+  brand: z.string().optional(),
+  company: z.string().optional(),
+  grade: z.string().optional(),
+  discountPercent: z.number().min(0).max(100).optional(),
+  sellingPrice: z.string().optional(),
+  gstRate: z.number().min(0).max(100).optional(),
   isFeatured: z.boolean().optional(),
   isTrending: z.boolean().optional(),
   vendorId: z.string().min(1, 'Vendor is required'),
@@ -115,6 +121,12 @@ export default function AdminPanel() {
       description: '',
       basePrice: '',
       stockQuantity: 0,
+      brand: '',
+      company: '',
+      grade: '',
+      discountPercent: 0,
+      sellingPrice: '',
+      gstRate: 18,
       isFeatured: false,
       isTrending: false,
       vendorId: '',
@@ -170,7 +182,19 @@ export default function AdminPanel() {
   });
 
   const createProductMutation = useMutation({
-    mutationFn: (data: any) => firebaseApi.createProduct({ ...data, basePrice: Number(data.basePrice) || 0, stockQuantity: data.stockQuantity ?? 0, vendorId: data.vendorId, isActive: true }),
+    mutationFn: (data: any) => firebaseApi.createProduct({
+      ...data,
+      basePrice: Number(data.basePrice) || 0,
+      stockQuantity: data.stockQuantity ?? 0,
+      vendorId: data.vendorId,
+      brand: data.brand?.trim() || undefined,
+      company: data.company?.trim() || undefined,
+      specs: data.specs,
+      discountPercent: data.discountPercent != null ? Number(data.discountPercent) : undefined,
+      sellingPrice: data.sellingPrice ? Number(data.sellingPrice) : undefined,
+      gstRate: data.gstRate != null ? Number(data.gstRate) : undefined,
+      isActive: true,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['firebase', 'products'] });
       toast({ title: 'Success', description: 'Product created successfully' });
@@ -183,8 +207,17 @@ export default function AdminPanel() {
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => 
-      firebaseApi.updateProduct(id, { ...data, basePrice: Number(data.basePrice) || 0 }),
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      firebaseApi.updateProduct(id, {
+        ...data,
+        basePrice: Number(data.basePrice) || 0,
+        brand: data.brand?.trim() || undefined,
+        company: data.company?.trim() || undefined,
+        specs: data.specs,
+        discountPercent: data.discountPercent != null ? Number(data.discountPercent) : undefined,
+        sellingPrice: data.sellingPrice ? Number(data.sellingPrice) : undefined,
+        gstRate: data.gstRate != null ? Number(data.gstRate) : undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['firebase', 'products'] });
       toast({ title: 'Success', description: 'Product updated successfully' });
@@ -257,10 +290,21 @@ export default function AdminPanel() {
   };
 
   const handleProductSubmit = (data: any) => {
+    const existingSpecs = editingItem?.specs && typeof editingItem.specs === 'object' ? { ...(editingItem.specs as Record<string, unknown>) } : {};
+    const specsWithGrade = data.grade?.trim()
+      ? { ...existingSpecs, Grade: data.grade.trim() }
+      : Object.keys(existingSpecs).length ? existingSpecs : undefined;
     const productData = {
       ...data,
       basePrice: data.basePrice,
-      stockQuantity: parseInt(data.stockQuantity),
+      stockQuantity: parseInt(data.stockQuantity) ?? 0,
+      brand: data.brand,
+      company: data.company,
+      grade: data.grade,
+      specs: specsWithGrade,
+      discountPercent: data.discountPercent,
+      sellingPrice: data.sellingPrice || undefined,
+      gstRate: data.gstRate,
     };
 
     if (editingItem) {
@@ -290,10 +334,17 @@ export default function AdminPanel() {
     if (type === 'category') {
       categoryForm.reset(item);
     } else if (type === 'product') {
+      const specs = item.specs && typeof item.specs === 'object' ? item.specs as Record<string, unknown> : {};
       productForm.reset({
         ...item,
         basePrice: item.basePrice.toString(),
         stockQuantity: item.stockQuantity || 0,
+        brand: item.brand ?? '',
+        company: item.company ?? '',
+        grade: specs.Grade != null ? String(specs.Grade) : specs.grade != null ? String(specs.grade) : '',
+        discountPercent: item.discountPercent ?? 0,
+        sellingPrice: item.sellingPrice != null ? String(item.sellingPrice) : '',
+        gstRate: item.gstRate ?? 18,
       });
     } else if (type === 'discount') {
       discountForm.reset({
@@ -472,14 +523,17 @@ export default function AdminPanel() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Parent Category (Optional)</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select
+                              onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                              value={field.value || "none"}
+                            >
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select parent category" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="">None</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                                 {categories.map((cat: Category) => (
                                   <SelectItem key={cat.id} value={cat.id}>
                                     {cat.name}
@@ -608,12 +662,109 @@ export default function AdminPanel() {
                       <div className="grid grid-cols-3 gap-4">
                         <FormField
                           control={productForm.control}
+                          name="brand"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Brand</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g. UltraTech, ACC" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="company"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company / Manufacturer</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Optional" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="grade"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Grade</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g. 43, 53, OPC" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <FormField
+                          control={productForm.control}
                           name="basePrice"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Base Price</FormLabel>
+                              <FormLabel>Base Price (₹)</FormLabel>
                               <FormControl>
                                 <Input type="number" placeholder="0.00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="discountPercent"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Discount (%)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  step={0.5}
+                                  placeholder="0"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="sellingPrice"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Selling price (₹)</FormLabel>
+                              <FormControl>
+                                <Input type="number" step="0.01" placeholder="Optional" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={productForm.control}
+                          name="gstRate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>GST rate (%)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  step={0.01}
+                                  placeholder="18"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value) ?? 18)}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

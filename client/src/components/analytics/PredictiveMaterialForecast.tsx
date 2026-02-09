@@ -1151,7 +1151,7 @@ export default function PredictiveMaterialForecast() {
                         <h5 className="font-medium text-sm mb-1">Action Required:</h5>
                         <p className="text-xs text-green-700 dark:text-green-300">{opportunity.actionRequired}</p>
                       </div>
-                      <Button variant="outline" size="sm" className="mt-3" data-testid={`pursue-${opportunity.id}`}>
+                      <Button variant="outline" size="sm" className="mt-3" data-testid={`pursue-${opportunity.id}`} onClick={() => toast({ title: "Pursue", description: `${opportunity.title} – we'll help you follow up.` })}>
                         Pursue Opportunity
                       </Button>
                     </motion.div>

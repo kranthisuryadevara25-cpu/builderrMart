@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +42,8 @@ interface DashboardProps {
 
 export default function PersonalizedDashboard({ onClose }: DashboardProps) {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
 
   // Mock data for demonstration
@@ -213,7 +217,7 @@ export default function PersonalizedDashboard({ onClose }: DashboardProps) {
                     <Badge className="bg-green-100 text-green-700">{rec.discount}% OFF</Badge>
                   </div>
                   <p className="text-xs text-gray-600 mb-3">{rec.reason}</p>
-                  <Button size="sm" className="w-full">
+                  <Button size="sm" className="w-full" onClick={() => { setLocation("/"); toast({ title: "Store", description: `Search for "${rec.name}" on the store.` }); }}>
                     View Product
                   </Button>
                 </CardContent>
@@ -229,7 +233,21 @@ export default function PersonalizedDashboard({ onClose }: DashboardProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Order History</h3>
-        <Button variant="outline" size="sm">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const csv = ["Order ID,Date,Amount,Status,Items", ...dashboardData.recentOrders.map((o) => `${o.id},${o.date},${o.amount},${o.status},${o.items}`)].join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "my-orders.csv";
+            a.click();
+            URL.revokeObjectURL(url);
+            toast({ title: "Exported", description: "Order history downloaded." });
+          }}
+        >
           <Download className="h-4 w-4 mr-2" />
           Export Orders
         </Button>
@@ -268,11 +286,11 @@ export default function PersonalizedDashboard({ onClose }: DashboardProps) {
                 <div className="text-right">
                   <div className="text-lg font-semibold">₹{order.amount.toLocaleString()}</div>
                   <div className="flex gap-2 mt-2">
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => toast({ title: order.id, description: `₹${order.amount.toLocaleString()} – ${order.status}` })}>
                       <Eye className="h-3 w-3 mr-1" />
                       View
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => toast({ title: "Track order", description: `Tracking for ${order.id} will be sent to your email.` })}>
                       <Truck className="h-3 w-3 mr-1" />
                       Track
                     </Button>
@@ -368,19 +386,19 @@ export default function PersonalizedDashboard({ onClose }: DashboardProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="justify-start" onClick={() => setLocation("/profile")}>
               <User className="h-4 w-4 mr-2" />
               Edit Profile
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="justify-start" onClick={() => toast({ title: "Addresses", description: "Manage addresses in Profile or at checkout." })}>
               <MapPin className="h-4 w-4 mr-2" />
               Manage Addresses
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="justify-start" onClick={() => toast({ title: "Payment methods", description: "Add or edit payment methods at checkout." })}>
               <CreditCard className="h-4 w-4 mr-2" />
               Payment Methods
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="justify-start" onClick={() => toast({ title: "Preferences", description: "Notification and display preferences coming soon." })}>
               <Settings className="h-4 w-4 mr-2" />
               Preferences
             </Button>

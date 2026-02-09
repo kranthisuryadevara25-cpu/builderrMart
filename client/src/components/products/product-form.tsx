@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -59,6 +59,20 @@ interface DynamicChargeField {
   unit: string;
 }
 
+interface BulkDiscountSlabField {
+  id: string;
+  minQty: number;
+  discountPercent: number;
+}
+
+const DYNAMIC_CHARGE_PRESETS: { name: string; rate: number; unit: string }[] = [
+  { name: "Hamali", rate: 0, unit: "bag" },
+  { name: "Transportation", rate: 0, unit: "trip" },
+  { name: "Loading", rate: 0, unit: "trip" },
+  { name: "Packing", rate: 0, unit: "unit" },
+  { name: "Unloading", rate: 0, unit: "trip" },
+];
+
 export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -73,6 +87,58 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   const [dynamicCharges, setDynamicCharges] = useState<DynamicChargeField[]>([
     { id: "1", name: "", rate: 0, unit: "" },
   ]);
+  const [bulkDiscountSlabs, setBulkDiscountSlabs] = useState<BulkDiscountSlabField[]>(() =>
+    (product as any)?.bulkDiscountSlabs?.length
+      ? (product as any).bulkDiscountSlabs.map((s: { min_qty: number; discount_percent: number }, i: number) => ({
+          id: String(i + 1),
+          minQty: s.min_qty,
+          discountPercent: s.discount_percent,
+        }))
+      : [{ id: "1", minQty: 1, discountPercent: 0 }]
+  );
+  const [discountPercent, setDiscountPercent] = useState<number>((product as any)?.discountPercent ?? 0);
+  const [sellingPrice, setSellingPrice] = useState<string>((product as any)?.sellingPrice != null ? String((product as any).sellingPrice) : "");
+  const [gstRate, setGstRate] = useState<number>((product as any)?.gstRate ?? 18);
+  const [brand, setBrand] = useState<string>((product as any)?.brand ?? "");
+  const [company, setCompany] = useState<string>((product as any)?.company ?? "");
+  const [grade, setGrade] = useState<string>(() => {
+    const p = product as any;
+    if (!p?.specs || typeof p.specs !== "object") return "";
+    const s = p.specs as Record<string, unknown>;
+    const g = s.Grade ?? s.grade;
+    return g != null ? String(g) : "";
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const p = product as any;
+    if (p) {
+      setDiscountPercent(p.discountPercent ?? 0);
+      setSellingPrice(p.sellingPrice != null ? String(p.sellingPrice) : "");
+      setGstRate(p.gstRate ?? 18);
+      setBrand(p.brand ?? "");
+      setCompany(p.company ?? "");
+      const s = p.specs && typeof p.specs === "object" ? (p.specs as Record<string, unknown>) : {};
+      setGrade(s.Grade != null ? String(s.Grade) : s.grade != null ? String(s.grade) : "");
+      setBulkDiscountSlabs(
+        p.bulkDiscountSlabs?.length
+          ? p.bulkDiscountSlabs.map((s: { min_qty: number; discount_percent: number }, i: number) => ({
+              id: String(i + 1),
+              minQty: s.min_qty,
+              discountPercent: s.discount_percent,
+            }))
+          : [{ id: "1", minQty: 1, discountPercent: 0 }]
+      );
+    } else {
+      setDiscountPercent(0);
+      setSellingPrice("");
+      setGstRate(18);
+      setBrand("");
+      setCompany("");
+      setGrade("");
+      setBulkDiscountSlabs([{ id: "1", minQty: 1, discountPercent: 0 }]);
+    }
+  }, [open, product]);
 
   const form = useForm<InsertProduct>({
     resolver: zodResolver(insertProductSchema),
@@ -92,7 +158,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   });
 
   const createProductMutation = useMutation({
-    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }> }) => {
+    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }>; bulkDiscountSlabs?: Array<{ min_qty: number; discount_percent: number }>; discountPercent?: number; sellingPrice?: number; gstRate?: number; brand?: string; company?: string }) => {
       const payload = {
         name: data.name,
         categoryId: data.categoryId,
@@ -103,6 +169,12 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
         specs: data.specs ?? undefined,
         quantitySlabs: data.quantitySlabs ?? undefined,
         dynamicCharges: data.dynamicCharges ?? undefined,
+        bulkDiscountSlabs: data.bulkDiscountSlabs ?? undefined,
+        discountPercent: data.discountPercent ?? undefined,
+        sellingPrice: data.sellingPrice ?? undefined,
+        gstRate: data.gstRate ?? undefined,
+        brand: data.brand ?? undefined,
+        company: data.company ?? undefined,
         isFeatured: false,
         isTrending: false,
         isActive: true,
@@ -117,6 +189,13 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
       });
       onOpenChange(false);
       form.reset();
+      setDiscountPercent(0);
+      setSellingPrice("");
+      setGstRate(18);
+      setBrand("");
+      setCompany("");
+      setGrade("");
+      setBulkDiscountSlabs([{ id: "1", minQty: 1, discountPercent: 0 }]);
     },
     onError: (error: any) => {
       toast({
@@ -128,7 +207,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }> }) =>
+    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }>; bulkDiscountSlabs?: Array<{ min_qty: number; discount_percent: number }>; discountPercent?: number; sellingPrice?: number; gstRate?: number; brand?: string; company?: string }) =>
       firebaseApi.updateProduct(product!.id, {
         name: data.name,
         categoryId: data.categoryId,
@@ -139,6 +218,12 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
         specs: data.specs ?? undefined,
         quantitySlabs: data.quantitySlabs ?? undefined,
         dynamicCharges: data.dynamicCharges ?? undefined,
+        bulkDiscountSlabs: data.bulkDiscountSlabs ?? undefined,
+        discountPercent: data.discountPercent ?? undefined,
+        sellingPrice: data.sellingPrice ?? undefined,
+        gstRate: data.gstRate ?? undefined,
+        brand: data.brand ?? undefined,
+        company: data.company ?? undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
@@ -158,13 +243,14 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   });
 
   const onSubmit = (data: InsertProduct) => {
-    // Build specs object
+    // Build specs object (include Grade for storefront filter)
     const specs: Record<string, string> = {};
     specifications.forEach((spec) => {
       if (spec.name && spec.value) {
         specs[spec.name] = spec.value;
       }
     });
+    if (grade.trim()) specs.Grade = grade.trim();
 
     // Build quantity slabs array
     const quantitySlabs = pricingSlabs
@@ -186,11 +272,25 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
       }
     });
 
+    const bulkSlabs =
+      bulkDiscountSlabs.filter((s) => s.minQty >= 0 && s.discountPercent >= 0).length > 0
+        ? bulkDiscountSlabs
+            .filter((s) => s.minQty >= 0 && s.discountPercent > 0)
+            .map((s) => ({ min_qty: s.minQty, discount_percent: s.discountPercent }))
+        : undefined;
+    const sellingPriceNum = sellingPrice.trim() ? Number(sellingPrice) : undefined;
+
     const productData = {
       ...data,
       specs: Object.keys(specs).length > 0 ? specs : null,
       quantitySlabs: quantitySlabs.length > 0 ? quantitySlabs : null,
       dynamicCharges: Object.keys(dynamicChargesObj).length > 0 ? dynamicChargesObj : null,
+      bulkDiscountSlabs: bulkSlabs,
+      discountPercent: discountPercent > 0 ? discountPercent : undefined,
+      sellingPrice: sellingPriceNum,
+      gstRate: gstRate >= 0 ? gstRate : undefined,
+      brand: brand.trim() || undefined,
+      company: company.trim() || undefined,
     };
 
     if (product) {
@@ -231,6 +331,24 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
 
   const removeDynamicCharge = (id: string) => {
     setDynamicCharges(dynamicCharges.filter((charge) => charge.id !== id));
+  };
+
+  const addBulkDiscountSlab = () => {
+    setBulkDiscountSlabs([
+      ...bulkDiscountSlabs,
+      { id: Date.now().toString(), minQty: 1, discountPercent: 0 },
+    ]);
+  };
+
+  const removeBulkDiscountSlab = (id: string) => {
+    setBulkDiscountSlabs(bulkDiscountSlabs.filter((s) => s.id !== id));
+  };
+
+  const addPresetCharge = (preset: { name: string; rate: number; unit: string }) => {
+    setDynamicCharges((prev) => [
+      ...prev.filter((c) => c.name || c.rate || c.unit),
+      { id: Date.now().toString(), name: preset.name, rate: preset.rate, unit: preset.unit },
+    ]);
   };
 
   return (
@@ -309,6 +427,38 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
                     )}
                   />
 
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <FormLabel className="text-sm">Brand</FormLabel>
+                      <Input
+                        placeholder="e.g. UltraTech, ACC"
+                        value={brand}
+                        onChange={(e) => setBrand(e.target.value)}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-0.5">Shows in storefront &quot;All brands&quot; filter</p>
+                    </div>
+                    <div>
+                      <FormLabel className="text-sm">Company / Manufacturer</FormLabel>
+                      <Input
+                        placeholder="Optional"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <FormLabel className="text-sm">Grade</FormLabel>
+                      <Input
+                        placeholder="e.g. 43, 53, OPC"
+                        value={grade}
+                        onChange={(e) => setGrade(e.target.value)}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-0.5">Shows in storefront &quot;All grades&quot; filter</p>
+                    </div>
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="basePrice"
@@ -353,6 +503,53 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
                       </FormItem>
                     )}
                   />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
+                    <div>
+                      <FormLabel className="text-sm">Discount (%)</FormLabel>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.5}
+                        placeholder="0"
+                        value={discountPercent}
+                        onChange={(e) => setDiscountPercent(Number(e.target.value) || 0)}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-0.5">Product-level discount 0–100%</p>
+                    </div>
+                    <div>
+                      <FormLabel className="text-sm">Selling price (₹)</FormLabel>
+                      <div className="relative mt-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="Leave blank to use base price"
+                          value={sellingPrice}
+                          onChange={(e) => setSellingPrice(e.target.value)}
+                          className="pl-8"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">Override price per unit; blank = use base (or base − discount)</p>
+                    </div>
+                    <div>
+                      <FormLabel className="text-sm">GST rate (%)</FormLabel>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.01}
+                        placeholder="18"
+                        value={gstRate}
+                        onChange={(e) => setGstRate(Number(e.target.value) ?? 18)}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-0.5">e.g. 18 for 18% GST</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -498,20 +695,99 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
               </CardContent>
             </Card>
 
-            {/* Dynamic Charges */}
+            {/* Bulk discount by quantity */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-md">Dynamic Charges</CardTitle>
+                  <CardTitle className="text-md">Bulk discount by quantity</CardTitle>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={addDynamicCharge}
+                    onClick={addBulkDiscountSlab}
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Add Charge
+                    Add slab
                   </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">e.g. 5% off when min qty ≥ 100</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {bulkDiscountSlabs.map((slab, index) => (
+                  <div key={slab.id} className="grid grid-cols-3 gap-3 p-4 border rounded-lg items-end">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Min quantity</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="100"
+                        value={slab.minQty}
+                        onChange={(e) => {
+                          const next = [...bulkDiscountSlabs];
+                          next[index].minQty = Number(e.target.value) || 0;
+                          setBulkDiscountSlabs(next);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Discount (%)</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.5}
+                        placeholder="5"
+                        value={slab.discountPercent}
+                        onChange={(e) => {
+                          const next = [...bulkDiscountSlabs];
+                          next[index].discountPercent = Number(e.target.value) || 0;
+                          setBulkDiscountSlabs(next);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removeBulkDiscountSlab(slab.id)}
+                        className="w-full"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Dynamic Charges (Hamali, Transportation, etc.) */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="text-md">Specific charges (Hamali, Transportation, etc.)</CardTitle>
+                  <div className="flex flex-wrap gap-1">
+                    {DYNAMIC_CHARGE_PRESETS.map((preset) => (
+                      <Button
+                        key={preset.name}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addPresetCharge(preset)}
+                      >
+                        + {preset.name}
+                      </Button>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addDynamicCharge}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Custom
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">

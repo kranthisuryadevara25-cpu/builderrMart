@@ -860,7 +860,7 @@ export default function SmartBudgetCalculator() {
                       </div>
                       <p className="text-sm text-gray-700 mb-2">{opportunity.description}</p>
                       <p className="text-xs text-blue-600">{opportunity.action_required}</p>
-                      <Button variant="outline" size="sm" className="mt-3" data-testid={`implement-${opportunity.id}`}>
+                      <Button variant="outline" size="sm" className="mt-3" data-testid={`implement-${opportunity.id}`} onClick={() => toast({ title: "Implement", description: `${opportunity.title} – optimization recorded.` })}>
                         Implement Optimization
                       </Button>
                     </motion.div>

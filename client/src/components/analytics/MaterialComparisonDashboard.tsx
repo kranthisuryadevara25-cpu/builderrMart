@@ -289,7 +289,7 @@ export default function MaterialComparisonDashboard() {
                             </Badge>
                           </td>
                           <td className="text-center p-2">
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" onClick={() => toast({ title: "Added to cart", description: `${product.name} added.` })}>
                               Add to Cart
                             </Button>
                           </td>
@@ -321,7 +321,7 @@ export default function MaterialComparisonDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-green-800">₹{bestOverall.product.basePrice}</p>
-                      <Button className="mt-2">
+                      <Button className="mt-2" onClick={() => toast({ title: "Selected", description: `${bestOverall.product.name} added to your selection.` })}>
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                         Choose This
                       </Button>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/auth-context";
+import { useToast } from "@/hooks/use-toast";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { type Product, type Category } from "@shared/schema";
@@ -58,10 +59,12 @@ interface Order {
 
 export default function Orders() {
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | undefined>();
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [orderStatusUpdates, setOrderStatusUpdates] = useState<Record<string, Order["status"]>>({});
 
   // Mock orders data (in a real app, this would come from an API)
   const mockOrders: Order[] = [
@@ -128,10 +131,15 @@ export default function Orders() {
     }
   ];
 
-  // Filter orders based on user role
-  const orders = user?.role === "vendor" 
-    ? mockOrders.filter(order => order.vendorId === user.id)
-    : mockOrders;
+  const [ordersList, setOrdersList] = useState<Order[] | null>(null);
+  React.useEffect(() => {
+    if (user && ordersList === null) setOrdersList(mockOrders);
+  }, [user]);
+
+  const baseOrders = ordersList ?? mockOrders;
+  const orders = user?.role === "vendor"
+    ? baseOrders.filter((order: Order) => order.vendorId === user.id)
+    : baseOrders;
 
   if (!user) return null;
 
@@ -424,10 +432,45 @@ export default function Orders() {
                 </div>
               </div>
               
-              <div className="flex gap-3">
-                <Button>Update Status</Button>
-                <Button variant="outline">Print Invoice</Button>
-                <Button variant="outline">Send Email</Button>
+              <div className="flex flex-wrap items-center gap-3">
+                <Select
+                  value={orderStatusUpdates[selectedOrder.id] ?? selectedOrder.status}
+                  onValueChange={(value: Order["status"]) => setOrderStatusUpdates((prev) => ({ ...prev, [selectedOrder.id]: value }))}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="shipped">Shipped</SelectItem>
+                    <SelectItem value="delivered">Delivered</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() => {
+                    const newStatus = orderStatusUpdates[selectedOrder.id] ?? selectedOrder.status;
+                    setOrdersList((prev) => (prev ?? mockOrders).map((o) => (o.id === selectedOrder.id ? { ...o, status: newStatus } : o)));
+                    setSelectedOrder({ ...selectedOrder, status: newStatus });
+                    setOrderStatusUpdates((prev) => { const next = { ...prev }; delete next[selectedOrder.id]; return next; });
+                    toast({ title: "Status updated", description: `Order set to ${newStatus}.` });
+                  }}
+                >
+                  Update Status
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.print()}
+                >
+                  Print Invoice
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => toast({ title: "Email sent", description: `Order summary sent to ${selectedOrder.customerEmail}` })}
+                >
+                  Send Email
+                </Button>
               </div>
             </div>
           </DialogContent>

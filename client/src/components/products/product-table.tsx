@@ -52,9 +52,9 @@ export function ProductTable({ vendorId }: ProductTableProps) {
   const [deletingProduct, setDeletingProduct] = useState<Product | undefined>();
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["firebase", "products", vendorId, selectedCategory, searchTerm],
+    queryKey: ["firebase", "products", vendorId, selectedCategory, selectedVendor, searchTerm],
     queryFn: () => firebaseApi.getProducts({
-      ...(vendorId ? { vendorId } : {}),
+      ...(vendorId ? { vendorId } : isAdmin && selectedVendor && selectedVendor !== "all" ? { vendorId: selectedVendor } : {}),
       ...(selectedCategory && selectedCategory !== "all" ? { categoryId: selectedCategory } : {}),
       ...(searchTerm ? { search: searchTerm } : {}),
     }),
@@ -64,6 +64,12 @@ export function ProductTable({ vendorId }: ProductTableProps) {
     queryKey: ["firebase", "categories"],
     queryFn: () => firebaseApi.getCategories(),
   });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ["firebase", "users"],
+    queryFn: () => firebaseApi.getUsers(),
+  });
+  const vendors = users.filter((u: { role?: string }) => u.role === "vendor");
 
   const deleteProductMutation = useMutation({
     mutationFn: (id: string) => firebaseApi.deleteProduct(id),
@@ -111,10 +117,28 @@ export function ProductTable({ vendorId }: ProductTableProps) {
   };
 
   const exportData = () => {
-    toast({
-      title: "Export started",
-      description: "Your data export will be ready shortly.",
-    });
+    if (!products?.length) {
+      toast({ title: "No data", description: "No products to export.", variant: "destructive" });
+      return;
+    }
+    const headers = ["Name", "Category", "Vendor ID", "Base Price", "Stock", "Active"];
+    const rows = products.map((p) => [
+      p.name,
+      getCategoryName(p.categoryId),
+      p.vendorId,
+      p.basePrice,
+      p.stockQuantity ?? 0,
+      p.isActive !== false ? "Yes" : "No",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `products-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Export done", description: `${products.length} products exported.` });
   };
 
   if (productsLoading) {
@@ -155,7 +179,11 @@ export function ProductTable({ vendorId }: ProductTableProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Vendors</SelectItem>
-                {/* Add vendor options here */}
+                {vendors.map((v: { id: string; username?: string; email?: string }) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.username || v.email || v.id}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}

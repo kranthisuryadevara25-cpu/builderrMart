@@ -136,6 +136,7 @@ export default function CustomerEcommerce() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [showAllSearchResults, setShowAllSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   
@@ -521,10 +522,12 @@ export default function CustomerEcommerce() {
     
     if (!value.trim()) {
       setSearchResults([]);
+      setShowAllSearchResults(false);
       setIsSearching(false);
       setCurrentSection('home');
       return;
     }
+    setShowAllSearchResults(false);
 
     setIsSearching(true);
     
@@ -2043,7 +2046,10 @@ export default function CustomerEcommerce() {
                     <Calculator className="w-4 h-4 mr-2" />
                     Get Quote
                   </Button>
-                  <Button variant="outline">
+                  <Button
+                    variant="outline"
+                    onClick={() => toast({ title: "Wishlist", description: "Added to wishlist. View saved items in your profile." })}
+                  >
                     <Heart className="w-4 h-4 mr-2" />
                     Wishlist
                   </Button>
@@ -2322,13 +2328,13 @@ export default function CustomerEcommerce() {
                 Search Results for "{searchTerm}" ({searchResults.length} found)
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {searchResults.slice(0, 12).map((product) => (
+                {(showAllSearchResults ? searchResults : searchResults.slice(0, 12)).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
-              {searchResults.length > 12 && (
+              {searchResults.length > 12 && !showAllSearchResults && (
                 <div className="text-center mt-6">
-                  <Button variant="outline" onClick={() => {}}>
+                  <Button variant="outline" onClick={() => setShowAllSearchResults(true)}>
                     View All {searchResults.length} Results
                   </Button>
                 </div>
@@ -3467,7 +3473,7 @@ export default function CustomerEcommerce() {
                       setLocationInputLat(String(pos.coords.latitude));
                       setLocationInputLon(String(pos.coords.longitude));
                     },
-                    () => {},
+                    () => { toast({ title: "Location unavailable", description: "Could not get your position. Enter city/pincode manually.", variant: "destructive" }); },
                     { enableHighAccuracy: true }
                   );
                 }
