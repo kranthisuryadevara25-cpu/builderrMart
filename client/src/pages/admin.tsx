@@ -28,29 +28,13 @@ import SustainabilityComparisonWizard from '@/components/analytics/Sustainabilit
 import AIPersonalityMatcher from '@/components/analytics/AIPersonalityMatcher';
 import VendorPerformanceStorytellingDashboard from '@/components/analytics/VendorPerformanceStorytellingDashboard';
 import PlayfulProjectJourneyAnimator from '@/components/analytics/PlayfulProjectJourneyAnimator';
+import { ProductForm } from '@/components/products/product-form';
 
 // Form schemas for validation
 const categoryFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   parentId: z.string().optional(),
-});
-
-const productFormSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  categoryId: z.string().min(1, 'Category is required'),
-  description: z.string().optional(),
-  basePrice: z.string().min(1, 'Price is required'),
-  stockQuantity: z.number().min(0, 'Stock must be positive'),
-  brand: z.string().optional(),
-  company: z.string().optional(),
-  grade: z.string().optional(),
-  discountPercent: z.number().min(0).max(100).optional(),
-  sellingPrice: z.string().optional(),
-  gstRate: z.number().min(0).max(100).optional(),
-  isFeatured: z.boolean().optional(),
-  isTrending: z.boolean().optional(),
-  vendorId: z.string().min(1, 'Vendor is required'),
 });
 
 const discountFormSchema = z.object({
@@ -70,6 +54,8 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [productEditingItem, setProductEditingItem] = useState<Product | null>(null);
 
   // Data queries - Firebase
   const { data: categories = [] } = useQuery<Category[]>({
@@ -109,27 +95,6 @@ export default function AdminPanel() {
       name: '',
       description: '',
       parentId: '',
-    },
-  });
-
-  // Product form
-  const productForm = useForm({
-    resolver: zodResolver(productFormSchema),
-    defaultValues: {
-      name: '',
-      categoryId: '',
-      description: '',
-      basePrice: '',
-      stockQuantity: 0,
-      brand: '',
-      company: '',
-      grade: '',
-      discountPercent: 0,
-      sellingPrice: '',
-      gstRate: 18,
-      isFeatured: false,
-      isTrending: false,
-      vendorId: '',
     },
   });
 
@@ -178,52 +143,6 @@ export default function AdminPanel() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['firebase', 'categories'] });
       toast({ title: 'Success', description: 'Category deleted successfully' });
-    },
-  });
-
-  const createProductMutation = useMutation({
-    mutationFn: (data: any) => firebaseApi.createProduct({
-      ...data,
-      basePrice: Number(data.basePrice) || 0,
-      stockQuantity: data.stockQuantity ?? 0,
-      vendorId: data.vendorId,
-      brand: data.brand?.trim() || undefined,
-      company: data.company?.trim() || undefined,
-      specs: data.specs,
-      discountPercent: data.discountPercent != null ? Number(data.discountPercent) : undefined,
-      sellingPrice: data.sellingPrice ? Number(data.sellingPrice) : undefined,
-      gstRate: data.gstRate != null ? Number(data.gstRate) : undefined,
-      isActive: true,
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['firebase', 'products'] });
-      toast({ title: 'Success', description: 'Product created successfully' });
-      productForm.reset();
-      setDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      firebaseApi.updateProduct(id, {
-        ...data,
-        basePrice: Number(data.basePrice) || 0,
-        brand: data.brand?.trim() || undefined,
-        company: data.company?.trim() || undefined,
-        specs: data.specs,
-        discountPercent: data.discountPercent != null ? Number(data.discountPercent) : undefined,
-        sellingPrice: data.sellingPrice ? Number(data.sellingPrice) : undefined,
-        gstRate: data.gstRate != null ? Number(data.gstRate) : undefined,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['firebase', 'products'] });
-      toast({ title: 'Success', description: 'Product updated successfully' });
-      productForm.reset();
-      setDialogOpen(false);
-      setEditingItem(null);
     },
   });
 
@@ -289,31 +208,6 @@ export default function AdminPanel() {
     }
   };
 
-  const handleProductSubmit = (data: any) => {
-    const existingSpecs = editingItem?.specs && typeof editingItem.specs === 'object' ? { ...(editingItem.specs as Record<string, unknown>) } : {};
-    const specsWithGrade = data.grade?.trim()
-      ? { ...existingSpecs, Grade: data.grade.trim() }
-      : Object.keys(existingSpecs).length ? existingSpecs : undefined;
-    const productData = {
-      ...data,
-      basePrice: data.basePrice,
-      stockQuantity: parseInt(data.stockQuantity) ?? 0,
-      brand: data.brand,
-      company: data.company,
-      grade: data.grade,
-      specs: specsWithGrade,
-      discountPercent: data.discountPercent,
-      sellingPrice: data.sellingPrice || undefined,
-      gstRate: data.gstRate,
-    };
-
-    if (editingItem) {
-      updateProductMutation.mutate({ id: editingItem.id, data: productData });
-    } else {
-      createProductMutation.mutate(productData);
-    }
-  };
-
   const handleDiscountSubmit = (data: any) => {
     const discountData = {
       ...data,
@@ -330,22 +224,14 @@ export default function AdminPanel() {
   };
 
   const openEditDialog = (item: any, type: string) => {
+    if (type === 'product') {
+      setProductEditingItem(item);
+      setProductDialogOpen(true);
+      return;
+    }
     setEditingItem(item);
     if (type === 'category') {
       categoryForm.reset(item);
-    } else if (type === 'product') {
-      const specs = item.specs && typeof item.specs === 'object' ? item.specs as Record<string, unknown> : {};
-      productForm.reset({
-        ...item,
-        basePrice: item.basePrice.toString(),
-        stockQuantity: item.stockQuantity || 0,
-        brand: item.brand ?? '',
-        company: item.company ?? '',
-        grade: specs.Grade != null ? String(specs.Grade) : specs.grade != null ? String(specs.grade) : '',
-        discountPercent: item.discountPercent ?? 0,
-        sellingPrice: item.sellingPrice != null ? String(item.sellingPrice) : '',
-        gstRate: item.gstRate ?? 18,
-      });
     } else if (type === 'discount') {
       discountForm.reset({
         ...item,
@@ -360,7 +246,6 @@ export default function AdminPanel() {
   const resetForms = () => {
     setEditingItem(null);
     categoryForm.reset();
-    productForm.reset();
     discountForm.reset();
   };
 
@@ -589,275 +474,15 @@ export default function AdminPanel() {
           <TabsContent value="products" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Products Management</h2>
-              <Dialog open={dialogOpen} onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) resetForms();
-              }}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingItem ? 'Edit' : 'Add'} Product</DialogTitle>
-                  </DialogHeader>
-                  <Form {...productForm}>
-                    <form onSubmit={productForm.handleSubmit(handleProductSubmit)} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={productForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Product Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Product name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="categoryId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Category</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {categories.map((cat: Category) => (
-                                    <SelectItem key={cat.id} value={cat.id}>
-                                      {cat.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={productForm.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="Product description" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <FormField
-                          control={productForm.control}
-                          name="brand"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Brand</FormLabel>
-                              <FormControl>
-                                <Input placeholder="e.g. UltraTech, ACC" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="company"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Company / Manufacturer</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Optional" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="grade"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Grade</FormLabel>
-                              <FormControl>
-                                <Input placeholder="e.g. 43, 53, OPC" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <FormField
-                          control={productForm.control}
-                          name="basePrice"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Base Price (₹)</FormLabel>
-                              <FormControl>
-                                <Input type="number" placeholder="0.00" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="discountPercent"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Discount (%)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  step={0.5}
-                                  placeholder="0"
-                                  {...field}
-                                  onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="sellingPrice"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Selling price (₹)</FormLabel>
-                              <FormControl>
-                                <Input type="number" step="0.01" placeholder="Optional" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="gstRate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>GST rate (%)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  step={0.01}
-                                  placeholder="18"
-                                  {...field}
-                                  onChange={(e) => field.onChange(Number(e.target.value) ?? 18)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="stockQuantity"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Stock Quantity</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="0"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="vendorId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Vendor</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select vendor" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {users.filter((u: any) => u.role === 'vendor').map((vendor: any) => (
-                                    <SelectItem key={vendor.id} value={vendor.id}>
-                                      {vendor.username}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="flex gap-4">
-                        <FormField
-                          control={productForm.control}
-                          name="isFeatured"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                              <div className="space-y-1 leading-none">
-                                <FormLabel>Featured Product</FormLabel>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={productForm.control}
-                          name="isTrending"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                              <div className="space-y-1 leading-none">
-                                <FormLabel>Trending Product</FormLabel>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <Button type="submit" className="w-full">
-                        {editingItem ? 'Update' : 'Create'} Product
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
+              <Button
+                onClick={() => {
+                  setProductEditingItem(null);
+                  setProductDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1390,6 +1015,17 @@ export default function AdminPanel() {
         </Tabs>
         </div>
       </main>
+      <ProductForm
+        open={productDialogOpen}
+        onOpenChange={(open) => {
+          setProductDialogOpen(open);
+          if (!open) setProductEditingItem(null);
+        }}
+        product={productEditingItem ?? undefined}
+        showVendorSelector
+        vendors={users.filter((u: any) => u.role === "vendor").map((u: any) => ({ id: u.id, username: u.username }))}
+        showFeatureFlags
+      />
     </div>
   );
 }

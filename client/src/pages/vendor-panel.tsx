@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
+import {
   Store, 
   Package, 
   BarChart3, 
@@ -44,6 +44,7 @@ import {
   Award,
   Target
 } from "lucide-react";
+import { ProductForm } from "@/components/products/product-form";
 
 export default function VendorPanel() {
   const { user } = useAuth();
@@ -69,17 +70,6 @@ export default function VendorPanel() {
     employeeCount: ""
   });
 
-  // Product form state
-  const [productForm, setProductForm] = useState({
-    name: "",
-    description: "",
-    categoryId: "",
-    basePrice: "",
-    stockQuantity: "",
-    specifications: "{}",
-    quantitySlabs: "[]",
-    dynamicCharges: "{}"
-  });
 
   const { data: vendorProducts, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["firebase", "products", user?.id],
@@ -111,30 +101,6 @@ export default function VendorPanel() {
   ];
 
   // Mutations
-  const createProductMutation = useMutation({
-    mutationFn: (data: any) => firebaseApi.createProduct({ ...data, vendorId: user!.id, basePrice: Number(data.basePrice) || 0, stockQuantity: Number(data.stockQuantity) || 0 }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
-      setShowProductModal(false);
-      setProductForm({
-        name: "", description: "", categoryId: "", basePrice: "",
-        stockQuantity: "", specifications: "{}", quantitySlabs: "[]", dynamicCharges: "{}"
-      });
-      toast({ title: "Product created successfully" });
-    }
-  });
-
-  const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => 
-      firebaseApi.updateProduct(id, { ...data, basePrice: Number(data.basePrice) || 0, stockQuantity: Number(data.stockQuantity) ?? 0 }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
-      setShowProductModal(false);
-      setEditingProduct(undefined);
-      toast({ title: "Product updated successfully" });
-    }
-  });
-
   const deleteProductMutation = useMutation({
     mutationFn: (id: string) => firebaseApi.deleteProduct(id),
     onSuccess: () => {
@@ -144,49 +110,8 @@ export default function VendorPanel() {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const handleSubmitProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const specifications = JSON.parse(productForm.specifications || "{}");
-      const quantitySlabs = JSON.parse(productForm.quantitySlabs || "[]");
-      const dynamicCharges = JSON.parse(productForm.dynamicCharges || "{}");
-      
-      const productData = {
-        ...productForm,
-        basePrice: parseFloat(productForm.basePrice),
-        stockQuantity: parseInt(productForm.stockQuantity),
-        specifications,
-        quantitySlabs,
-        dynamicCharges,
-        vendorId: user?.id
-      };
-
-      if (editingProduct) {
-        updateProductMutation.mutate({ id: editingProduct.id, data: productData });
-      } else {
-        createProductMutation.mutate(productData);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Invalid JSON in specifications, quantity slabs, or dynamic charges",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
-    setProductForm({
-      name: product.name,
-      description: product.description || "",
-      categoryId: product.categoryId,
-      basePrice: product.basePrice,
-      stockQuantity: (product.stockQuantity || 0).toString(),
-      specifications: JSON.stringify(product.specifications || {}, null, 2),
-      quantitySlabs: JSON.stringify(product.quantitySlabs || [], null, 2),
-      dynamicCharges: JSON.stringify(product.dynamicCharges || {}, null, 2)
-    });
     setShowProductModal(true);
   };
 
@@ -347,10 +272,6 @@ export default function VendorPanel() {
                 <h2 className="text-2xl font-bold">My Products</h2>
                 <Button onClick={() => {
                   setEditingProduct(undefined);
-                  setProductForm({
-                    name: "", description: "", categoryId: "", basePrice: "",
-                    stockQuantity: "", specifications: "{}", quantitySlabs: "[]", dynamicCharges: "{}"
-                  });
                   setShowProductModal(true);
                 }}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -611,112 +532,14 @@ export default function VendorPanel() {
         </div>
       </main>
 
-      {/* Product Modal */}
-      <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? "Edit Product" : "Add New Product"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmitProduct} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="productName">Product Name</Label>
-                <Input
-                  id="productName"
-                  value={productForm.name}
-                  onChange={(e) => setProductForm({...productForm, name: e.target.value})}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="productCategory">Category</Label>
-                <Select value={productForm.categoryId} onValueChange={(value) => 
-                  setProductForm({...productForm, categoryId: value})
-                }>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories?.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="productDescription">Description</Label>
-              <Textarea
-                id="productDescription"
-                value={productForm.description}
-                onChange={(e) => setProductForm({...productForm, description: e.target.value})}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="basePrice">Base Price (₹)</Label>
-                <Input
-                  id="basePrice"
-                  type="number"
-                  value={productForm.basePrice}
-                  onChange={(e) => setProductForm({...productForm, basePrice: e.target.value})}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="stockQuantity">Stock Quantity</Label>
-                <Input
-                  id="stockQuantity"
-                  type="number"
-                  value={productForm.stockQuantity}
-                  onChange={(e) => setProductForm({...productForm, stockQuantity: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="specifications">Specifications (JSON)</Label>
-              <Textarea
-                id="specifications"
-                placeholder='{"grade": "53", "size": "50kg"}'
-                value={productForm.specifications}
-                onChange={(e) => setProductForm({...productForm, specifications: e.target.value})}
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="quantitySlabs">Quantity Slabs (JSON)</Label>
-              <Textarea
-                id="quantitySlabs"
-                placeholder='[{"minQty": 1, "maxQty": 10, "price": 500}, {"minQty": 11, "maxQty": 50, "price": 480}]'
-                value={productForm.quantitySlabs}
-                onChange={(e) => setProductForm({...productForm, quantitySlabs: e.target.value})}
-                rows={3}
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              <Button type="submit">
-                {editingProduct ? "Update" : "Create"} Product
-              </Button>
-              <Button type="button" variant="outline" onClick={() => {
-                setShowProductModal(false);
-                setEditingProduct(undefined);
-              }}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ProductForm
+        open={showProductModal}
+        onOpenChange={(open) => {
+          setShowProductModal(open);
+          if (!open) setEditingProduct(undefined);
+        }}
+        product={editingProduct}
+      />
 
       {/* Profile Modal */}
       <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>

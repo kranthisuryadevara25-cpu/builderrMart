@@ -31,12 +31,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2 } from "lucide-react";
 
 interface ProductFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product?: Product;
+  /** Show vendor dropdown (admin); when false, vendorId = current user for vendors */
+  showVendorSelector?: boolean;
+  vendors?: { id: string; username: string }[];
+  /** Show Featured / Trending checkboxes (admin) */
+  showFeatureFlags?: boolean;
 }
 
 interface SpecificationField {
@@ -73,7 +79,7 @@ const DYNAMIC_CHARGE_PRESETS: { name: string; rate: number; unit: string }[] = [
   { name: "Unloading", rate: 0, unit: "trip" },
 ];
 
-export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
+export function ProductForm({ open, onOpenChange, product, showVendorSelector, vendors = [], showFeatureFlags }: ProductFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -140,15 +146,35 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
     }
   }, [open, product]);
 
-  const form = useForm<InsertProduct>({
+  // Reset form when dialog opens or product changes (so edit shows correct values)
+  useEffect(() => {
+    if (!open) return;
+    const p = product as any;
+    const basePrice = p?.basePrice != null ? (typeof p.basePrice === "number" ? String(p.basePrice) : String(p.basePrice)) : "0";
+    form.reset({
+      name: p?.name || "",
+      categoryId: p?.categoryId || "",
+      description: p?.description || "",
+      basePrice,
+      vendorId: showVendorSelector ? (p?.vendorId || vendors[0]?.id ?? "") : (user?.role === "vendor" ? user?.id ?? "" : p?.vendorId || ""),
+      stockQuantity: p?.stockQuantity ?? 0,
+      isFeatured: showFeatureFlags ? (p?.isFeatured ?? false) : false,
+      isTrending: showFeatureFlags ? (p?.isTrending ?? false) : false,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, product, showVendorSelector, showFeatureFlags, vendors, user?.id, user?.role]);
+
+  const form = useForm<InsertProduct & { isFeatured?: boolean; isTrending?: boolean }>({
     resolver: zodResolver(insertProductSchema),
     defaultValues: {
       name: product?.name || "",
       categoryId: product?.categoryId || "",
       description: product?.description || "",
-      basePrice: product?.basePrice || "0",
-      vendorId: user?.role === "vendor" ? user.id : product?.vendorId || "",
+      basePrice: product?.basePrice ?? (typeof product?.basePrice === "number" ? String(product.basePrice) : "0"),
+      vendorId: showVendorSelector ? (product?.vendorId || (vendors[0]?.id ?? "")) : (user?.role === "vendor" ? user.id : product?.vendorId || ""),
       stockQuantity: product?.stockQuantity || 0,
+      isFeatured: showFeatureFlags ? (product as any)?.isFeatured ?? false : false,
+      isTrending: showFeatureFlags ? (product as any)?.isTrending ?? false : false,
     },
   });
 
@@ -158,7 +184,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   });
 
   const createProductMutation = useMutation({
-    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }>; bulkDiscountSlabs?: Array<{ min_qty: number; discount_percent: number }>; discountPercent?: number; sellingPrice?: number; gstRate?: number; brand?: string; company?: string }) => {
+    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }>; bulkDiscountSlabs?: Array<{ min_qty: number; discount_percent: number }>; discountPercent?: number; sellingPrice?: number; gstRate?: number; brand?: string; company?: string; isFeatured?: boolean; isTrending?: boolean }) => {
       const payload = {
         name: data.name,
         categoryId: data.categoryId,
@@ -175,8 +201,8 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
         gstRate: data.gstRate ?? undefined,
         brand: data.brand ?? undefined,
         company: data.company ?? undefined,
-        isFeatured: false,
-        isTrending: false,
+        isFeatured: showFeatureFlags ? (data as any).isFeatured ?? false : false,
+        isTrending: showFeatureFlags ? (data as any).isTrending ?? false : false,
         isActive: true,
       };
       return firebaseApi.createProduct(payload);
@@ -207,7 +233,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }>; bulkDiscountSlabs?: Array<{ min_qty: number; discount_percent: number }>; discountPercent?: number; sellingPrice?: number; gstRate?: number; brand?: string; company?: string }) =>
+    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }>; bulkDiscountSlabs?: Array<{ min_qty: number; discount_percent: number }>; discountPercent?: number; sellingPrice?: number; gstRate?: number; brand?: string; company?: string; isFeatured?: boolean; isTrending?: boolean }) =>
       firebaseApi.updateProduct(product!.id, {
         name: data.name,
         categoryId: data.categoryId,
@@ -224,6 +250,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
         gstRate: data.gstRate ?? undefined,
         brand: data.brand ?? undefined,
         company: data.company ?? undefined,
+        ...(showFeatureFlags && { isFeatured: (data as any).isFeatured ?? false, isTrending: (data as any).isTrending ?? false }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
@@ -291,6 +318,7 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
       gstRate: gstRate >= 0 ? gstRate : undefined,
       brand: brand.trim() || undefined,
       company: company.trim() || undefined,
+      ...(showFeatureFlags && { isFeatured: (data as any).isFeatured ?? false, isTrending: (data as any).isTrending ?? false }),
     };
 
     if (product) {
@@ -550,6 +578,72 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
                       <p className="text-xs text-muted-foreground mt-0.5">e.g. 18 for 18% GST</p>
                     </div>
                   </div>
+
+                  {showVendorSelector && vendors.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="vendorId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select vendor" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {vendors.map((v) => (
+                                <SelectItem key={v.id} value={v.id}>
+                                  {v.username}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {showFeatureFlags && (
+                    <div className="flex gap-6 pt-2 border-t">
+                      <FormField
+                        control={form.control}
+                        name="isFeatured"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Featured Product</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="isTrending"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Trending Product</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
