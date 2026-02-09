@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { firebaseApi } from "@/lib/firebase-api";
 import { useAuth } from "@/components/auth/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -203,25 +203,22 @@ export default function CustomerEcommerce() {
 
   // Quote and booking mutations - Real-time with admin sharing
   const createQuoteMutation = useMutation({
-    mutationFn: (data: any) => {
-      if (!quoteProduct) {
-        throw new Error('No product selected for quote');
-      }
+    mutationFn: async (data: any) => {
+      if (!quoteProduct) throw new Error('No product selected for quote');
       const pricing = getProductPricing(quoteProduct, data.quantity);
-      const quoteData = {
-        ...data,
-        productId: quoteProduct.id,
-        productName: quoteProduct.name,
-        productBasePrice: pricing.basePrice,
-        productFinalPrice: pricing.finalPrice,
-        estimatedPrice: pricing.totalPrice,
-        discount: pricing.discount,
-        status: 'pending',
-        leadType: 'quote_request',
-        submittedAt: new Date().toISOString(),
-        requiresFollowUp: true
-      };
-      return apiRequest('POST', '/api/quotes', quoteData);
+      const items = [{ productId: quoteProduct.id, productName: quoteProduct.name, quantity: data.quantity, unitPrice: pricing.finalPrice, totalPrice: pricing.totalPrice }];
+      return firebaseApi.createQuote({
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
+        projectType: data.projectType,
+        projectLocation: data.projectLocation,
+        requirements: data.requirements ? { notes: data.requirements } : undefined,
+        items,
+        subtotal: pricing.totalPrice,
+        totalAmount: pricing.totalPrice,
+        createdBy: user?.id,
+      });
     },
     onSuccess: (response: any) => {
       toast({ 
@@ -230,9 +227,7 @@ export default function CustomerEcommerce() {
         duration: 5000
       });
       setShowQuoteDialog(false);
-      // Invalidate admin queries to show new lead
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/quotes'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'quotes'] });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -240,40 +235,33 @@ export default function CustomerEcommerce() {
   });
 
   const createBookingMutation = useMutation({
-    mutationFn: (data: any) => {
-      if (!bookingProduct) {
-        throw new Error('No product selected for booking');
-      }
+    mutationFn: async (data: any) => {
+      if (!bookingProduct) throw new Error('No product selected for booking');
       const pricing = getProductPricing(bookingProduct, data.quantity);
       const totalAmount = pricing.totalPrice;
-      const advanceAmount = Math.max(totalAmount * 0.1, 100); // Minimum 10% or ₹100
-      
-      const bookingData = {
-        ...data,
-        productId: bookingProduct.id,
-        productName: bookingProduct.name,
-        productBasePrice: pricing.basePrice,
-        productFinalPrice: pricing.finalPrice,
-        totalAmount,
-        advancePayment: advanceAmount,
-        paymentStatus: 'advance_pending',
-        bookingStatus: 'pending_payment',
-        leadType: 'booking_request',
-        submittedAt: new Date().toISOString(),
-        requiresFollowUp: true
-      };
-      return apiRequest('POST', '/api/bookings', bookingData);
+      const advanceAmount = Math.max(totalAmount * 0.1, 100);
+      return firebaseApi.createBooking({
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
+        serviceType: data.serviceType,
+        scheduledDate: data.scheduledDate,
+        scheduledTime: data.scheduledTime,
+        location: data.location,
+        requirements: data.requirements ? { notes: data.requirements, advancePayment: advanceAmount } : { advancePayment: advanceAmount },
+        cost: totalAmount,
+        status: 'pending',
+        createdBy: user?.id,
+      });
     },
     onSuccess: (response: any) => {
       toast({ 
         title: 'Booking Request Sent!', 
-        description: `Booking #${response.bookingNumber || 'BK001'} created. Pay 10% advance (₹${response.advancePayment}) to confirm!`,
+        description: `Booking #${response.bookingNumber || 'BK001'} created. Pay 10% advance to confirm!`,
         duration: 5000
       });
       setShowBookingDialog(false);
-      // Invalidate admin queries
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'bookings'] });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -296,21 +284,25 @@ export default function CustomerEcommerce() {
     setShowBookingDialog(true);
   };
 
-  // Data fetching - Public access (no auth required)
+  // Data fetching - Firebase
   const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ['/api/categories/hierarchy'],
+    queryKey: ['firebase', 'categories', 'hierarchy'],
+    queryFn: () => firebaseApi.getCategoriesHierarchy(),
   });
 
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: ['/api/products'],
+    queryKey: ['firebase', 'products'],
+    queryFn: () => firebaseApi.getProducts(),
   });
 
   const { data: featuredProducts = [] } = useQuery<Product[]>({
-    queryKey: ['/api/products/featured'],
+    queryKey: ['firebase', 'products', 'featured'],
+    queryFn: () => firebaseApi.getFeaturedProducts(),
   });
 
   const { data: trendingProducts = [] } = useQuery<Product[]>({
-    queryKey: ['/api/products/trending'],
+    queryKey: ['firebase', 'products', 'trending'],
+    queryFn: () => firebaseApi.getTrendingProducts(),
   });
 
   // Translation mapping for regional languages to English  
@@ -521,12 +513,9 @@ export default function CustomerEcommerce() {
   // Get AI recommendations for a product
   const getProductRecommendations = async (product: Product) => {
     try {
-      const response = await apiRequest('POST', '/api/products/recommendations', {
-        currentProductId: product.id,
-        categoryId: product.categoryId,
-      });
-      const products = Array.isArray(response) ? response : [];
-      setAiRecommendations(products.slice(0, 6));
+      const all = await firebaseApi.getProducts({ categoryId: product.categoryId });
+      const others = all.filter((p) => p.id !== product.id);
+      setAiRecommendations(others.slice(0, 6));
     } catch (error) {
       console.error('Failed to get recommendations:', error);
       setAiRecommendations([]);

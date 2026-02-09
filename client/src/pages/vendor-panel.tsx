@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { firebaseApi } from "@/lib/firebase-api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/auth-context";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -82,19 +82,14 @@ export default function VendorPanel() {
   });
 
   const { data: vendorProducts, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products", user?.id],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (user?.id) params.append('vendorId', user.id);
-      
-      const response = await fetch(`/api/products?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch products');
-      return response.json();
-    },
+    queryKey: ["firebase", "products", user?.id],
+    queryFn: () => firebaseApi.getProducts(user?.id ? { vendorId: user.id } : {}),
+    enabled: !!user?.id,
   });
 
   const { data: categories } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["firebase", "categories"],
+    queryFn: () => firebaseApi.getCategories(),
   });
 
   // Mock data for vendor analytics
@@ -117,9 +112,9 @@ export default function VendorPanel() {
 
   // Mutations
   const createProductMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/products", data),
+    mutationFn: (data: any) => firebaseApi.createProduct({ ...data, vendorId: user!.id, basePrice: Number(data.basePrice) || 0, stockQuantity: Number(data.stockQuantity) || 0 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
       setShowProductModal(false);
       setProductForm({
         name: "", description: "", categoryId: "", basePrice: "",
@@ -131,9 +126,9 @@ export default function VendorPanel() {
 
   const updateProductMutation = useMutation({
     mutationFn: ({ id, data }: { id: string, data: any }) => 
-      apiRequest("PUT", `/api/products/${id}`, data),
+      firebaseApi.updateProduct(id, { ...data, basePrice: Number(data.basePrice) || 0, stockQuantity: Number(data.stockQuantity) ?? 0 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
       setShowProductModal(false);
       setEditingProduct(undefined);
       toast({ title: "Product updated successfully" });

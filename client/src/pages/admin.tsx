@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { firebaseApi } from '@/lib/firebase-api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/auth/auth-context';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -64,29 +64,35 @@ export default function AdminPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  // Data queries
+  // Data queries - Firebase
   const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ['/api/categories'],
+    queryKey: ['firebase', 'categories'],
+    queryFn: () => firebaseApi.getCategories(),
   });
 
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: ['/api/products'],
+    queryKey: ['firebase', 'products'],
+    queryFn: () => firebaseApi.getProducts(),
   });
 
   const { data: users = [] } = useQuery<any[]>({
-    queryKey: ['/api/users'],
+    queryKey: ['firebase', 'users'],
+    queryFn: () => firebaseApi.getUsers(),
   });
 
   const { data: discounts = [] } = useQuery<Discount[]>({
-    queryKey: ['/api/discounts'],
+    queryKey: ['firebase', 'discounts'],
+    queryFn: () => firebaseApi.getDiscounts(),
   });
 
   const { data: quotes = [] } = useQuery<Quote[]>({
-    queryKey: ['/api/quotes'],
+    queryKey: ['firebase', 'quotes'],
+    queryFn: () => firebaseApi.getQuotes(),
   });
 
   const { data: bookings = [] } = useQuery<Booking[]>({
-    queryKey: ['/api/bookings'],
+    queryKey: ['firebase', 'bookings'],
+    queryFn: () => firebaseApi.getBookings(),
   });
 
   // Category form
@@ -130,9 +136,9 @@ export default function AdminPanel() {
 
   // Mutations
   const createCategoryMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/categories', data),
+    mutationFn: (data: any) => firebaseApi.createCategory({ ...data, parentId: data.parentId || null, isActive: true }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'categories'] });
       toast({ title: 'Success', description: 'Category created successfully' });
       categoryForm.reset();
       setDialogOpen(false);
@@ -144,9 +150,9 @@ export default function AdminPanel() {
 
   const updateCategoryMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => 
-      apiRequest('PUT', `/api/categories/${id}`, data),
+      firebaseApi.updateCategory(id, { ...data, parentId: data.parentId || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'categories'] });
       toast({ title: 'Success', description: 'Category updated successfully' });
       categoryForm.reset();
       setDialogOpen(false);
@@ -155,17 +161,17 @@ export default function AdminPanel() {
   });
 
   const deleteCategoryMutation = useMutation({
-    mutationFn: (id: string) => apiRequest('DELETE', `/api/categories/${id}`),
+    mutationFn: (id: string) => firebaseApi.deleteCategory(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'categories'] });
       toast({ title: 'Success', description: 'Category deleted successfully' });
     },
   });
 
   const createProductMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/products', data),
+    mutationFn: (data: any) => firebaseApi.createProduct({ ...data, basePrice: Number(data.basePrice) || 0, stockQuantity: data.stockQuantity ?? 0, vendorId: data.vendorId, isActive: true }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'products'] });
       toast({ title: 'Success', description: 'Product created successfully' });
       productForm.reset();
       setDialogOpen(false);
@@ -177,9 +183,9 @@ export default function AdminPanel() {
 
   const updateProductMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => 
-      apiRequest('PUT', `/api/products/${id}`, data),
+      firebaseApi.updateProduct(id, { ...data, basePrice: Number(data.basePrice) || 0 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'products'] });
       toast({ title: 'Success', description: 'Product updated successfully' });
       productForm.reset();
       setDialogOpen(false);
@@ -188,17 +194,17 @@ export default function AdminPanel() {
   });
 
   const deleteProductMutation = useMutation({
-    mutationFn: (id: string) => apiRequest('DELETE', `/api/products/${id}`),
+    mutationFn: (id: string) => firebaseApi.deleteProduct(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'products'] });
       toast({ title: 'Success', description: 'Product deleted successfully' });
     },
   });
 
   const createDiscountMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/discounts', data),
+    mutationFn: (data: any) => firebaseApi.createDiscount({ ...data, discountValue: Number(data.discountValue) || 0, minOrderAmount: Number(data.minOrderAmount) || 0, usageCount: 0 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/discounts'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'discounts'] });
       toast({ title: 'Success', description: 'Discount created successfully' });
       discountForm.reset();
       setDialogOpen(false);
@@ -210,9 +216,9 @@ export default function AdminPanel() {
 
   const updateDiscountMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => 
-      apiRequest('PUT', `/api/discounts/${id}`, data),
+      firebaseApi.updateDiscount(id, { ...data, discountValue: Number(data.discountValue) || 0 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/discounts'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'discounts'] });
       toast({ title: 'Success', description: 'Discount updated successfully' });
       discountForm.reset();
       setDialogOpen(false);
@@ -221,9 +227,9 @@ export default function AdminPanel() {
   });
 
   const deleteDiscountMutation = useMutation({
-    mutationFn: (id: string) => apiRequest('DELETE', `/api/discounts/${id}`),
+    mutationFn: (id: string) => firebaseApi.deleteDiscount(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/discounts'] });
+      queryClient.invalidateQueries({ queryKey: ['firebase', 'discounts'] });
       toast({ title: 'Success', description: 'Discount deleted successfully' });
     },
   });

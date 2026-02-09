@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/components/auth/auth-context";
+import { isFirebaseConfigured } from "@/lib/firebase";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -169,14 +170,41 @@ function Router() {
   );
 }
 
+function FirebaseSetupMessage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+      <div className="max-w-md text-center space-y-4">
+        <h1 className="text-2xl font-semibold">BuildMart AI – Firebase setup</h1>
+        <p className="text-muted-foreground">
+          Configure Firebase to use this app. Create a project at{" "}
+          <a href="https://console.firebase.google.com" className="text-primary underline" target="_blank" rel="noreferrer">Firebase Console</a>, then add to <code className="bg-muted px-1 rounded">.env</code>:
+        </p>
+        <pre className="text-left bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+{`VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...`}
+        </pre>
+        <p className="text-sm text-muted-foreground">See .env.example in the project root.</p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Router />
-        </AuthProvider>
+        {!isFirebaseConfigured ? (
+          <FirebaseSetupMessage />
+        ) : (
+          <AuthProvider>
+            <Toaster />
+            <Router />
+          </AuthProvider>
+        )}
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { insertProductSchema, type InsertProduct, type Product, type Category } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { firebaseApi } from "@/lib/firebase-api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/auth-context";
 import {
@@ -87,13 +87,30 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   });
 
   const { data: categories } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["firebase", "categories"],
+    queryFn: () => firebaseApi.getCategories(),
   });
 
   const createProductMutation = useMutation({
-    mutationFn: (data: InsertProduct) => apiRequest("POST", "/api/products", data),
+    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }> }) => {
+      const payload = {
+        name: data.name,
+        categoryId: data.categoryId,
+        description: data.description ?? "",
+        basePrice: Number(data.basePrice) || 0,
+        vendorId: data.vendorId || user?.id!,
+        stockQuantity: data.stockQuantity ?? 0,
+        specs: data.specs ?? undefined,
+        quantitySlabs: data.quantitySlabs ?? undefined,
+        dynamicCharges: data.dynamicCharges ?? undefined,
+        isFeatured: false,
+        isTrending: false,
+        isActive: true,
+      };
+      return firebaseApi.createProduct(payload);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
       toast({
         title: "Product created",
         description: "Product has been created successfully.",
@@ -111,10 +128,20 @@ export function ProductForm({ open, onOpenChange, product }: ProductFormProps) {
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: (data: InsertProduct) =>
-      apiRequest("PUT", `/api/products/${product?.id}`, data),
+    mutationFn: (data: InsertProduct & { specs?: Record<string, unknown>; quantitySlabs?: Array<{ min_qty: number; max_qty: number; price_per_unit: number }>; dynamicCharges?: Record<string, { rate: number; unit: string }> }) =>
+      firebaseApi.updateProduct(product!.id, {
+        name: data.name,
+        categoryId: data.categoryId,
+        description: data.description ?? "",
+        basePrice: Number(data.basePrice) || 0,
+        vendorId: data.vendorId || product?.vendorId,
+        stockQuantity: data.stockQuantity ?? 0,
+        specs: data.specs ?? undefined,
+        quantitySlabs: data.quantitySlabs ?? undefined,
+        dynamicCharges: data.dynamicCharges ?? undefined,
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
       toast({
         title: "Product updated",
         description: "Product has been updated successfully.",

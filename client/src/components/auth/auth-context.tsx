@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi, type AuthUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { isFirebaseConfigured, subscribeToAuth } from "@/lib/firebase";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -17,34 +18,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(!isFirebaseConfigured);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: userData, isLoading } = useQuery({
-    queryKey: ["/api/auth/me"],
-    queryFn: () => authApi.getCurrentUser(),
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-
   useEffect(() => {
-    if (userData?.user) {
-      setUser(userData.user);
+    if (!isFirebaseConfigured) {
+      setAuthReady(true);
+      return;
     }
-  }, [userData]);
+    const unsub = subscribeToAuth((authUser: AuthUser | null) => {
+      setUser(authUser);
+      setAuthReady(true);
+    });
+    return unsub;
+  }, []);
 
   const loginMutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       authApi.login({ email, password }),
     onSuccess: (data) => {
       setUser(data.user);
-      queryClient.setQueryData(["/api/auth/me"], data);
+      queryClient.setQueryData(["auth", "me"], data);
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Login failed",
         description: error.message || "Invalid credentials",
@@ -58,13 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authApi.register({ username, email, password, role }),
     onSuccess: (data) => {
       setUser(data.user);
-      queryClient.setQueryData(["/api/auth/me"], data);
+      queryClient.setQueryData(["auth", "me"], data);
       toast({
         title: "Registration successful",
         description: "Welcome to BuildMart AI!",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Registration failed",
         description: error.message || "Failed to create account",
@@ -101,6 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.role === "owner_admin" || user?.role === "vendor_manager";
   const isVendor = user?.role === "vendor";
+
+  const isLoading = !authReady;
 
   return (
     <AuthContext.Provider

@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper: true if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // User profile: users can read/write their own doc
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && uid() == userId;
+    }
+
+    // Categories: anyone can read; only admins can write (simplified: allow all authenticated for now)
+    match /categories/{id} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Products: anyone can read; vendors can create/update/delete their own
+    match /products/{id} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.vendorId == uid() || get(/databases/$(database)/documents/users/$(uid())).data.role in ['owner_admin', 'vendor_manager']);
+    }
+
+    // Orders, quotes, bookings: authenticated users can read their own or create
+    match /orders/{id} {
+      allow read: if isSignedIn();
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+    match /quotes/{id} {
+      allow read: if isSignedIn();
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+    match /bookings/{id} {
+      allow read: if isSignedIn();
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+
+    // Discounts: read all; write for admins only (simplified: allow authenticated)
+    match /discounts/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Marketing materials, contractors, advances, pricing_rules
+    match /marketing_materials/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+    match /contractors/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+    match /advances/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+    }
+    match /pricing_rules/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+  }
+}

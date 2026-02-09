@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { firebaseApi } from "@/lib/firebase-api";
+import { useAuth } from "@/components/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ interface Order {
 }
 
 export default function UserProfile() {
+  const { user: authUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
   const [showReorderDialog, setShowReorderDialog] = useState(false);
@@ -59,32 +61,35 @@ export default function UserProfile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch user profile data
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["/api/user/profile"],
+  const { data: profileRaw, isLoading: profileLoading } = useQuery({
+    queryKey: ["firebase", "user", "profile", authUser?.id],
+    queryFn: () => firebaseApi.getUserProfile(authUser!.id),
+    enabled: !!authUser?.id,
     retry: false,
   });
+  const profile = profileRaw ? { ...profileRaw, memberSince: profileRaw.createdAt } : undefined;
 
-  // Fetch user orders
   const { data: orders, isLoading: ordersLoading } = useQuery({
-    queryKey: ["/api/user/orders"],
+    queryKey: ["firebase", "orders", authUser?.id],
+    queryFn: () => firebaseApi.getOrders({ createdBy: authUser!.id }),
+    enabled: !!authUser?.id,
     retry: false,
   });
 
-  // Update profile mutation
   const updateProfile = useMutation({
     mutationFn: async (data: Partial<UserProfile>) => {
-      return await apiRequest("PUT", "/api/user/profile", data);
+      if (!authUser?.id) throw new Error("Not logged in");
+      await firebaseApi.updateUser(authUser.id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "user", "profile", authUser?.id] });
       setIsEditing(false);
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Update Failed",
         description: error.message || "Failed to update profile",
@@ -93,20 +98,31 @@ export default function UserProfile() {
     },
   });
 
-  // Reorder mutation
   const reorderMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      return await apiRequest("POST", `/api/orders/${orderId}/reorder`);
+      const order = await firebaseApi.getOrder(orderId);
+      if (!order) throw new Error("Order not found");
+      return firebaseApi.createOrder({
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        customerPhone: order.customerPhone,
+        customerAddress: order.deliveryAddress,
+        items: order.items,
+        subtotal: order.subtotal,
+        totalAmount: order.totalAmount,
+        balanceAmount: order.balanceAmount,
+        createdBy: authUser?.id,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "orders", authUser?.id] });
       setShowReorderDialog(false);
       toast({
         title: "Order Created",
         description: "Your repeat order has been successfully created!",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Reorder Failed",
         description: error.message || "Failed to create repeat order",

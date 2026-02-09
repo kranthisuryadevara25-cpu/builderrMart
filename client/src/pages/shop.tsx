@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { firebaseApi } from "@/lib/firebase-api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/auth-context";
 import { type Product, type Category } from "@shared/schema";
@@ -42,20 +42,16 @@ export default function Shop() {
   const [showCartSidebar, setShowCartSidebar] = useState(false);
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products", selectedCategory, searchTerm],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (selectedCategory && selectedCategory !== 'all') params.append('categoryId', selectedCategory);
-      if (searchTerm) params.append('search', searchTerm);
-      
-      const response = await fetch(`/api/products?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch products');
-      return response.json();
-    },
+    queryKey: ["firebase", "products", selectedCategory, searchTerm],
+    queryFn: () => firebaseApi.getProducts({
+      ...(selectedCategory && selectedCategory !== "all" ? { categoryId: selectedCategory } : {}),
+      ...(searchTerm ? { search: searchTerm } : {}),
+    }),
   });
 
   const { data: categories } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["firebase", "categories"],
+    queryFn: () => firebaseApi.getCategories(),
   });
 
   // Cart functions

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { firebaseApi } from "@/lib/firebase-api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/auth-context";
 import { type Product, type Category } from "@shared/schema";
@@ -52,27 +52,23 @@ export function ProductTable({ vendorId }: ProductTableProps) {
   const [deletingProduct, setDeletingProduct] = useState<Product | undefined>();
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products", vendorId, selectedCategory, searchTerm],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (vendorId) params.append('vendorId', vendorId);
-      if (selectedCategory && selectedCategory !== 'all') params.append('categoryId', selectedCategory);
-      if (searchTerm) params.append('search', searchTerm);
-      
-      const response = await fetch(`/api/products?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch products');
-      return response.json();
-    },
+    queryKey: ["firebase", "products", vendorId, selectedCategory, searchTerm],
+    queryFn: () => firebaseApi.getProducts({
+      ...(vendorId ? { vendorId } : {}),
+      ...(selectedCategory && selectedCategory !== "all" ? { categoryId: selectedCategory } : {}),
+      ...(searchTerm ? { search: searchTerm } : {}),
+    }),
   });
 
   const { data: categories } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["firebase", "categories"],
+    queryFn: () => firebaseApi.getCategories(),
   });
 
   const deleteProductMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/products/${id}`),
+    mutationFn: (id: string) => firebaseApi.deleteProduct(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "products"] });
       toast({
         title: "Product deleted",
         description: "Product has been deleted successfully.",

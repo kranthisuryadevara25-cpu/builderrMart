@@ -1,13 +1,13 @@
-import { apiRequest } from "./queryClient";
-import type { User } from "@shared/schema";
+import {
+  isFirebaseConfigured,
+  registerWithEmail,
+  loginWithEmail,
+  signOut,
+  getCurrentUserProfile,
+  type AuthUser,
+} from "@/lib/firebase";
 
-export interface AuthUser {
-  id: string;
-  username: string;
-  email: string;
-  role: string;
-  isActive: boolean;
-}
+export type { AuthUser };
 
 export interface LoginCredentials {
   email: string;
@@ -23,21 +23,30 @@ export interface RegisterData {
 
 export const authApi = {
   async login(credentials: LoginCredentials): Promise<{ user: AuthUser }> {
-    const res = await apiRequest("POST", "/api/auth/login", credentials);
-    return res.json();
+    if (!isFirebaseConfigured) throw new Error("Firebase is not configured. Add VITE_FIREBASE_* env vars.");
+    const user = await loginWithEmail(credentials.email, credentials.password);
+    return { user };
   },
 
   async register(data: RegisterData): Promise<{ user: AuthUser }> {
-    const res = await apiRequest("POST", "/api/auth/register", data);
-    return res.json();
+    if (!isFirebaseConfigured) throw new Error("Firebase is not configured. Add VITE_FIREBASE_* env vars.");
+    const user = await registerWithEmail(
+      data.email,
+      data.password,
+      data.username,
+      (data.role as "owner_admin" | "vendor_manager" | "vendor" | "user") ?? "user"
+    );
+    return { user };
   },
 
   async logout(): Promise<void> {
-    await apiRequest("POST", "/api/auth/logout");
+    if (!isFirebaseConfigured) return;
+    await signOut();
   },
 
-  async getCurrentUser(): Promise<{ user: AuthUser }> {
-    const res = await apiRequest("GET", "/api/auth/me");
-    return res.json();
+  async getCurrentUser(): Promise<{ user: AuthUser } | { user: null }> {
+    if (!isFirebaseConfigured) return { user: null };
+    const user = await getCurrentUserProfile();
+    return { user: user ?? null } as { user: AuthUser } | { user: null };
   },
 };

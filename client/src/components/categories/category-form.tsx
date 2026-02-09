@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { insertCategorySchema, type InsertCategory, type Category } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { firebaseApi } from "@/lib/firebase-api";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -49,13 +49,14 @@ export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps
   });
 
   const { data: categories } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["firebase", "categories"],
+    queryFn: () => firebaseApi.getCategories(),
   });
 
   const createCategoryMutation = useMutation({
-    mutationFn: (data: InsertCategory) => apiRequest("POST", "/api/categories", data),
+    mutationFn: (data: InsertCategory) => firebaseApi.createCategory({ ...data, parentId: data.parentId || null, isActive: true }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "categories"] });
       toast({
         title: "Category created",
         description: "Category has been created successfully.",
@@ -74,9 +75,9 @@ export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps
 
   const updateCategoryMutation = useMutation({
     mutationFn: (data: InsertCategory) =>
-      apiRequest("PUT", `/api/categories/${category?.id}`, data),
+      firebaseApi.updateCategory(category!.id, { ...data, parentId: data.parentId || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "categories"] });
       toast({
         title: "Category updated",
         description: "Category has been updated successfully.",

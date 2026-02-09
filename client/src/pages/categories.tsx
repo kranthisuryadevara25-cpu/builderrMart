@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { firebaseApi } from "@/lib/firebase-api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/auth-context";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -42,13 +42,14 @@ export default function Categories() {
   const [deletingCategory, setDeletingCategory] = useState<Category | undefined>();
 
   const { data: categories, isLoading } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["firebase", "categories"],
+    queryFn: () => firebaseApi.getCategories(),
   });
 
   const deleteCategoryMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/categories/${id}`),
+    mutationFn: (id: string) => firebaseApi.deleteCategory(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["firebase", "categories"] });
       toast({
         title: "Category deleted",
         description: "Category has been deleted successfully.",
