@@ -7,3 +7,5 @@ vite.config.ts.*
 .env
 .firebase
 .local
+.vercel
+.env*.local

@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Search, 
   ShoppingCart, 
@@ -202,6 +203,8 @@ export default function CustomerEcommerce() {
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [quickFeaturesOpen, setQuickFeaturesOpen] = useState(false);
   const [ratingVendorId, setRatingVendorId] = useState<string | null>(null);
   const [ratingStars, setRatingStars] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
@@ -910,13 +913,153 @@ export default function CustomerEcommerce() {
     )
   ).sort();
 
-  // Header Component
+  // Header Component - responsive: mobile menu (Sheet) + desktop row
   const Header = () => (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
+        {/* Mobile row: logo + cart + menu */}
+        <div className="flex md:hidden items-center justify-between gap-2">
+          <button
+            onClick={navigateHome}
+            className="text-lg font-bold text-blue-600 hover:text-blue-700 flex items-center min-h-[44px] shrink-0"
+          >
+            <Building2 className="w-7 h-7 sm:w-8 sm:h-8 mr-1.5" />
+            <span className="truncate">BuildMart AI</span>
+          </button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="relative h-10 w-10 shrink-0"
+              onClick={() => setCurrentSection('cart')}
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {cartItems.length > 0 && (
+                <Badge className="absolute -top-0.5 -right-0.5 px-1.5 py-0 min-w-[1.25rem] h-4 text-[10px]">
+                  {cartItems.length}
+                </Badge>
+              )}
+            </Button>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[min(100vw-2rem,320px)] overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 flex flex-col gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Search</Label>
+                    <VoiceSearchInput
+                      placeholder="Search materials..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      className="w-full"
+                      language={voiceLanguage}
+                      onLanguageChange={setVoiceLanguage}
+                      showLanguageSelector={false}
+                      testId="mobile-voice-search"
+                    />
+                  </div>
+                  <Button variant={deliveryLocation.city ? "secondary" : "outline"} className="justify-start" onClick={() => { setShowLocationDialog(true); setMobileMenuOpen(false); }}>
+                    <MapPin className="w-4 h-4 mr-2" />
+                    {deliveryLocation.city ? `${deliveryLocation.city}${deliveryLocation.pincode ? ` ${deliveryLocation.pincode}` : ''}` : "Set location"}
+                  </Button>
+                  <Button variant="ghost" className="justify-start" onClick={() => { setShowAIAssistant(true); setMobileMenuOpen(false); }}>
+                    <Bot className="w-4 h-4 mr-2" />
+                    AI Assistant
+                  </Button>
+                  <Button variant="ghost" className="justify-start" onClick={() => { setShowLoyaltyProgram(true); setMobileMenuOpen(false); }}>
+                    <Trophy className="w-4 h-4 mr-2" />
+                    Rewards
+                  </Button>
+                  {comparisonProducts.length > 0 && (
+                    <Button variant="outline" className="justify-start" onClick={() => { setShowComparison(true); setMobileMenuOpen(false); }}>
+                      <Scale className="w-4 h-4 mr-2" />
+                      Compare ({comparisonProducts.length})
+                    </Button>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <Languages className="w-4 h-4 mr-2" />
+                        Language
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      {[
+                        { code: 'en-US', name: 'English' },
+                        { code: 'hi-IN', name: 'हिंदी' },
+                        { code: 'te-IN', name: 'తెలుగు' },
+                        { code: 'ta-IN', name: 'தமிழ்' },
+                        { code: 'bn-IN', name: 'বাংলা' },
+                        { code: 'mr-IN', name: 'मराठी' },
+                        { code: 'gu-IN', name: 'ગુજરાતી' },
+                        { code: 'kn-IN', name: 'ಕನ್ನಡ' }
+                      ].map((lang) => (
+                        <DropdownMenuItem key={lang.code} onClick={() => setVoiceLanguage(lang.code)}>
+                          {lang.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {user ? (
+                    <>
+                      {user.role === 'owner_admin' && (
+                        <Button variant="ghost" asChild className="justify-start">
+                          <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Admin Panel
+                          </Link>
+                        </Button>
+                      )}
+                      {user.role === 'vendor_manager' && (
+                        <Button variant="ghost" asChild className="justify-start">
+                          <Link href="/manager-dashboard" onClick={() => setMobileMenuOpen(false)}>
+                            <Brain className="w-4 h-4 mr-2" />
+                            Manager Dashboard
+                          </Link>
+                        </Button>
+                      )}
+                      {user.role === 'vendor' && (
+                        <Button variant="ghost" asChild className="justify-start">
+                          <Link href="/vendor-dashboard" onClick={() => setMobileMenuOpen(false)}>
+                            <Package className="w-4 h-4 mr-2" />
+                            Vendor Dashboard
+                          </Link>
+                        </Button>
+                      )}
+                      <Button variant="outline" asChild className="justify-start">
+                        <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
+                          <Zap className="w-4 h-4 mr-2" />
+                          Analytics
+                        </Link>
+                      </Button>
+                      <Button variant="outline" asChild className="justify-start">
+                        <Link href="/profile" onClick={() => setMobileMenuOpen(false)}>
+                          <User className="w-4 h-4 mr-2" />
+                          {user.username}
+                        </Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <Button className="w-full justify-center" onClick={() => { setShowAuthDialog(true); setMobileMenuOpen(false); }}>
+                      Sign In
+                    </Button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+
+        {/* Desktop row */}
+        <div className="hidden md:flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button 
+            <button
               onClick={navigateHome}
               className="text-2xl font-bold text-blue-600 hover:text-blue-700 flex items-center"
             >
@@ -924,8 +1067,6 @@ export default function CustomerEcommerce() {
               BuildMart AI
             </button>
           </div>
-          
-          {/* Voice Search Bar */}
           <div className="flex-1 max-w-2xl mx-8 relative">
             <VoiceSearchInput
               placeholder="Search for cement, steel, bricks, plumbing materials..."
@@ -938,20 +1079,11 @@ export default function CustomerEcommerce() {
               testId="header-voice-search"
             />
           </div>
-          
-          {/* Language Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-1">
                 <Languages className="w-4 h-4" />
-                {voiceLanguage === 'en-US' ? '🇺🇸' : 
-                 voiceLanguage === 'hi-IN' ? '🇮🇳' :
-                 voiceLanguage === 'te-IN' ? '🇮🇳' :
-                 voiceLanguage === 'ta-IN' ? '🇮🇳' :
-                 voiceLanguage === 'bn-IN' ? '🇮🇳' :
-                 voiceLanguage === 'mr-IN' ? '🇮🇳' :
-                 voiceLanguage === 'gu-IN' ? '🇮🇳' :
-                 voiceLanguage === 'kn-IN' ? '🇮🇳' : '🇺🇸'}
+                {voiceLanguage === 'en-US' ? '🇺🇸' : voiceLanguage === 'hi-IN' ? '🇮🇳' : voiceLanguage === 'te-IN' ? '🇮🇳' : voiceLanguage === 'ta-IN' ? '🇮🇳' : voiceLanguage === 'bn-IN' ? '🇮🇳' : voiceLanguage === 'mr-IN' ? '🇮🇳' : voiceLanguage === 'gu-IN' ? '🇮🇳' : voiceLanguage === 'kn-IN' ? '🇮🇳' : '🇺🇸'}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -965,11 +1097,7 @@ export default function CustomerEcommerce() {
                 { code: 'gu-IN', name: 'ગુજરાતી', flag: '🇮🇳' },
                 { code: 'kn-IN', name: 'ಕನ್ನಡ', flag: '🇮🇳' }
               ].map((lang) => (
-                <DropdownMenuItem
-                  key={lang.code}
-                  onClick={() => setVoiceLanguage(lang.code)}
-                  className={`flex items-center gap-2 cursor-pointer ${voiceLanguage === lang.code ? 'bg-blue-50' : ''}`}
-                >
+                <DropdownMenuItem key={lang.code} onClick={() => setVoiceLanguage(lang.code)} className={voiceLanguage === lang.code ? 'bg-blue-50' : ''}>
                   <span>{lang.flag}</span>
                   <span>{lang.name}</span>
                   {voiceLanguage === lang.code && <Check className="w-4 h-4 ml-auto" />}
@@ -977,14 +1105,8 @@ export default function CustomerEcommerce() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          
           <div className="flex items-center space-x-2">
-            <Button
-              variant={deliveryLocation.city ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setShowLocationDialog(true)}
-              className="flex items-center gap-1"
-            >
+            <Button variant={deliveryLocation.city ? "secondary" : "outline"} size="sm" onClick={() => setShowLocationDialog(true)} className="flex items-center gap-1">
               <MapPin className="w-4 h-4" />
               {deliveryLocation.city ? `${deliveryLocation.city}${deliveryLocation.pincode ? ` ${deliveryLocation.pincode}` : ''}` : "Set location"}
             </Button>
@@ -1002,69 +1124,131 @@ export default function CustomerEcommerce() {
                 Compare ({comparisonProducts.length})
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              className="relative"
-              onClick={() => setCurrentSection('cart')}
-            >
+            <Button variant="outline" className="relative" onClick={() => setCurrentSection('cart')}>
               <ShoppingCart className="w-5 h-5" />
               {cartItems.length > 0 && (
-                <Badge className="absolute -top-2 -right-2 px-2 py-1 min-w-[1.25rem] h-5 text-xs">
-                  {cartItems.length}
-                </Badge>
+                <Badge className="absolute -top-2 -right-2 px-2 py-1 min-w-[1.25rem] h-5 text-xs">{cartItems.length}</Badge>
               )}
             </Button>
-            
             {user ? (
               <div className="flex items-center space-x-2">
-                {/* Role-based Dashboard Navigation */}
                 {user.role === 'owner_admin' && (
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href="/admin">
-                      <Building2 className="w-4 h-4 mr-1" />
-                      Admin Panel
-                    </Link>
+                    <Link href="/admin"><Building2 className="w-4 h-4 mr-1" />Admin Panel</Link>
                   </Button>
                 )}
                 {user.role === 'vendor_manager' && (
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href="/manager-dashboard">
-                      <Brain className="w-4 h-4 mr-1" />
-                      Manager Dashboard
-                    </Link>
+                    <Link href="/manager-dashboard"><Brain className="w-4 h-4 mr-1" />Manager Dashboard</Link>
                   </Button>
                 )}
                 {user.role === 'vendor' && (
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href="/vendor-dashboard">
-                      <Package className="w-4 h-4 mr-1" />
-                      Vendor Dashboard
-                    </Link>
+                    <Link href="/vendor-dashboard"><Package className="w-4 h-4 mr-1" />Vendor Dashboard</Link>
                   </Button>
                 )}
-                
-                {/* Advanced Analytics - Available to all users */}
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin">
-                    <Zap className="w-4 h-4 mr-1" />
-                    Analytics
-                  </Link>
+                  <Link href="/admin"><Zap className="w-4 h-4 mr-1" />Analytics</Link>
                 </Button>
-                
                 <Button variant="outline" className="flex items-center">
                   <User className="w-4 h-4 mr-2" />
                   {user.username}
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => setShowAuthDialog(true)}>
-                Sign In
-              </Button>
+              <Button onClick={() => setShowAuthDialog(true)}>Sign In</Button>
             )}
           </div>
         </div>
       </div>
     </header>
+  );
+
+  // Footer – quick links, contact, copyright (mobile-friendly)
+  const Footer = () => (
+    <footer className="bg-white border-t mt-auto pb-24 sm:pb-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:py-10">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
+          <div>
+            <h3 className="font-semibold text-sm text-gray-900 mb-3">Quick links</h3>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>
+                <button type="button" onClick={navigateHome} className="hover:text-blue-600 flex items-center gap-1">
+                  <Home className="w-4 h-4" /> Home
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => setCurrentSection('home')} className="hover:text-blue-600">
+                  Categories
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => setCurrentSection('cart')} className="hover:text-blue-600 flex items-center gap-1">
+                  <ShoppingCart className="w-4 h-4" /> Cart {cartItems.length > 0 && `(${cartItems.length})`}
+                </button>
+              </li>
+              {user && (
+                <li>
+                  <Link href="/profile" className="hover:text-blue-600 flex items-center gap-1">
+                    <User className="w-4 h-4" /> Profile
+                  </Link>
+                </li>
+              )}
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm text-gray-900 mb-3">Quick actions</h3>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>
+                <button type="button" onClick={() => { openQuoteDialog(); setQuickFeaturesOpen(false); }} className="hover:text-blue-600 flex items-center gap-1">
+                  <Quote className="w-4 h-4" /> Get Quote
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => { openBookingDialog(); setQuickFeaturesOpen(false); }} className="hover:text-blue-600 flex items-center gap-1">
+                  <Calendar className="w-4 h-4" /> Book Now
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => { setShowAIAssistant(true); setQuickFeaturesOpen(false); }} className="hover:text-blue-600 flex items-center gap-1">
+                  <Bot className="w-4 h-4" /> AI Assistant
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => { setShowAIEstimator(true); setQuickFeaturesOpen(false); }} className="hover:text-blue-600 flex items-center gap-1">
+                  <Calculator className="w-4 h-4" /> Material Estimator
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm text-gray-900 mb-3">Support</h3>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>
+                <a href="mailto:support@buildmart.ai" className="hover:text-blue-600 flex items-center gap-1">
+                  <MessageCircle className="w-4 h-4" /> Contact
+                </a>
+              </li>
+              <li>
+                <button type="button" onClick={() => { setShowLocationDialog(true); setQuickFeaturesOpen(false); }} className="hover:text-blue-600 flex items-center gap-1">
+                  <MapPin className="w-4 h-4" /> Set location
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div className="col-span-2 sm:col-span-1">
+            <div className="flex items-center gap-2 mb-3">
+              <Building2 className="w-8 h-8 text-blue-600" />
+              <span className="font-bold text-gray-900">BuildMart AI</span>
+            </div>
+            <p className="text-xs text-gray-500">Construction materials, quotes & delivery.</p>
+          </div>
+        </div>
+        <div className="mt-8 pt-6 border-t text-center text-sm text-gray-500">
+          © {new Date().getFullYear()} BuildMart AI. All rights reserved.
+        </div>
+      </div>
+    </footer>
   );
 
   // New Features Banner Component
@@ -2176,11 +2360,11 @@ export default function CustomerEcommerce() {
           <>
             {/* Shop & Area filters - visible on home */}
             {(vendorList.length > 0 || areas.length > 0) && (
-              <section className="py-4 px-4 bg-white/80 border-b">
-                <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-4">
-                  <span className="text-sm font-medium text-gray-600">Filter by:</span>
+              <section className="py-4 px-3 sm:px-4 bg-white/80 border-b">
+                <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3 sm:gap-4">
+                  <span className="text-sm font-medium text-gray-600 w-full sm:w-auto">Filter by:</span>
                   <Select value={selectedVendorId ?? 'all'} onValueChange={(v) => setSelectedVendorId(v === 'all' ? null : v)}>
-                    <SelectTrigger className="w-[240px]">
+                    <SelectTrigger className="w-full sm:w-[240px] min-h-[44px]">
                       <SelectValue placeholder="All shops" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2208,7 +2392,7 @@ export default function CustomerEcommerce() {
                   </Select>
                   {areas.length > 0 && (
                     <Select value={selectedArea ?? 'all'} onValueChange={(v) => setSelectedArea(v === 'all' ? null : v)}>
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-full sm:w-[180px] min-h-[44px]">
                         <SelectValue placeholder="All areas" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2219,9 +2403,9 @@ export default function CustomerEcommerce() {
                       </SelectContent>
                     </Select>
                   )}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <Select value={maxDistanceKm == null ? 'any' : String(maxDistanceKm)} onValueChange={(v) => setMaxDistanceKm(v === 'any' ? null : parseInt(v, 10))}>
-                      <SelectTrigger className="w-[130px]">
+                      <SelectTrigger className="w-full sm:w-[130px] min-h-[44px]">
                         <SelectValue placeholder="Within km" />
                       </SelectTrigger>
                       <SelectContent>
@@ -3114,10 +3298,74 @@ export default function CustomerEcommerce() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden flex flex-col">
       <Header />
-      {renderCurrentSection()}
-      
+      <main className="flex-1">
+        {renderCurrentSection()}
+      </main>
+      <Footer />
+
+      {/* Quick features FAB – + toggle for mobile */}
+      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2 pb-[env(safe-area-inset-bottom,0)]">
+        {quickFeaturesOpen && (
+          <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700"
+              onClick={() => { openQuoteDialog(); setQuickFeaturesOpen(false); }}
+              title="Get Quote"
+            >
+              <Quote className="w-5 h-5" />
+            </Button>
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full shadow-lg bg-amber-600 hover:bg-amber-700"
+              onClick={() => { openBookingDialog(); setQuickFeaturesOpen(false); }}
+              title="Book Now"
+            >
+              <Calendar className="w-5 h-5" />
+            </Button>
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full shadow-lg bg-purple-600 hover:bg-purple-700"
+              onClick={() => { setShowAIAssistant(true); setQuickFeaturesOpen(false); }}
+              title="AI Assistant"
+            >
+              <Bot className="w-5 h-5" />
+            </Button>
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full shadow-lg bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => { setShowAIEstimator(true); setQuickFeaturesOpen(false); }}
+              title="Material Estimator"
+            >
+              <Calculator className="w-5 h-5" />
+            </Button>
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full shadow-lg bg-gray-600 hover:bg-gray-700"
+              onClick={() => { setShowLocationDialog(true); setQuickFeaturesOpen(false); }}
+              title="Set location"
+            >
+              <MapPin className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
+        <Button
+          size="icon"
+          className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 transition-transform"
+          onClick={() => setQuickFeaturesOpen((o) => !o)}
+          title={quickFeaturesOpen ? "Close" : "Quick actions"}
+          aria-expanded={quickFeaturesOpen}
+        >
+          {quickFeaturesOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Plus className="w-6 h-6" />
+          )}
+        </Button>
+      </div>
+
       {/* AI Estimator Dialog */}
       <Dialog open={showAIEstimator} onOpenChange={setShowAIEstimator}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
