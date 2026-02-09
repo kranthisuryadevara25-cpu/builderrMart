@@ -151,12 +151,18 @@ export function ProductForm({ open, onOpenChange, product, showVendorSelector, v
     if (!open) return;
     const p = product as any;
     const basePrice = p?.basePrice != null ? (typeof p.basePrice === "number" ? String(p.basePrice) : String(p.basePrice)) : "0";
+    let vendorId: string;
+    if (showVendorSelector) {
+      vendorId = p?.vendorId || (vendors[0] && vendors[0].id ? vendors[0].id : "") || "";
+    } else {
+      vendorId = user?.role === "vendor" ? (user?.id ?? "") : (p?.vendorId || "");
+    }
     form.reset({
       name: p?.name || "",
       categoryId: p?.categoryId || "",
       description: p?.description || "",
       basePrice,
-      vendorId: showVendorSelector ? (p?.vendorId || vendors[0]?.id ?? "") : (user?.role === "vendor" ? user?.id ?? "" : p?.vendorId || ""),
+      vendorId,
       stockQuantity: p?.stockQuantity ?? 0,
       isFeatured: showFeatureFlags ? (p?.isFeatured ?? false) : false,
       isTrending: showFeatureFlags ? (p?.isTrending ?? false) : false,
@@ -171,7 +177,9 @@ export function ProductForm({ open, onOpenChange, product, showVendorSelector, v
       categoryId: product?.categoryId || "",
       description: product?.description || "",
       basePrice: product?.basePrice ?? (typeof product?.basePrice === "number" ? String(product.basePrice) : "0"),
-      vendorId: showVendorSelector ? (product?.vendorId || (vendors[0]?.id ?? "")) : (user?.role === "vendor" ? user.id : product?.vendorId || ""),
+      vendorId: showVendorSelector
+        ? (product?.vendorId || (vendors.length > 0 ? vendors[0].id : ""))
+        : (user?.role === "vendor" ? user.id : (product?.vendorId || "")),
       stockQuantity: product?.stockQuantity || 0,
       isFeatured: showFeatureFlags ? (product as any)?.isFeatured ?? false : false,
       isTrending: showFeatureFlags ? (product as any)?.isTrending ?? false : false,
