@@ -80,6 +80,7 @@ import AIShoppingAssistant from "@/components/AIShoppingAssistant";
 import LoyaltyProgram from "@/components/LoyaltyProgram";
 import ARProductViewer from "@/components/ARProductViewer";
 import SocialSharing from "@/components/SocialSharing";
+import { PaintColorVisualizer, type PaintSelection } from "@/components/painting/PaintColorVisualizer";
 
 interface CartItem {
   product: Product;
@@ -187,6 +188,7 @@ export default function CustomerEcommerce() {
   
   // AI features and voice search
   const [showAIEstimator, setShowAIEstimator] = useState(false);
+  const [paintVisualizerOpen, setPaintVisualizerOpen] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<Product[]>([]);
   const [voiceLanguage, setVoiceLanguage] = useState("hi-IN"); // Default to Hindi for Indian market
   
@@ -1901,12 +1903,23 @@ export default function CustomerEcommerce() {
 
           {/* Products Grid */}
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
               <div>
                 <h1 className="text-2xl font-bold">{category?.name}</h1>
                 <p className="text-gray-600">{filteredProducts.length} products</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {category?.name?.toLowerCase().includes("paint") && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-amber-600 hover:bg-amber-700"
+                    onClick={() => setPaintVisualizerOpen(true)}
+                  >
+                    <Sparkles className="w-4 h-4 mr-1" />
+                    Try Color
+                  </Button>
+                )}
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'outline'}
                   size="sm"
@@ -3346,6 +3359,31 @@ export default function CustomerEcommerce() {
         </div>,
         document.body
       )}
+
+      {/* Paint Color Visualizer */}
+      <PaintColorVisualizer
+        open={paintVisualizerOpen}
+        onOpenChange={setPaintVisualizerOpen}
+        onAddToCart={(selection: PaintSelection) => {
+          const prods = getCategoryFilteredProducts();
+          const match = prods.find(
+            (p) =>
+              p.brand &&
+              p.brand.toLowerCase().includes(selection.brandName.toLowerCase())
+          );
+          const product = match ?? prods[0];
+          if (product) {
+            addToCart(product, 1);
+            setPaintVisualizerOpen(false);
+          } else {
+            toast({
+              title: "No product found",
+              description: "Add a paint product from this category to cart first.",
+              variant: "destructive",
+            });
+          }
+        }}
+      />
 
       {/* AI Estimator Dialog */}
       <Dialog open={showAIEstimator} onOpenChange={setShowAIEstimator}>
